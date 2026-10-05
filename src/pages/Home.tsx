@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Train, Building2, Map, ShieldAlert, Sparkles } from 'lucide-react';
+import { Search, Train, Building2, Map, ShieldAlert, Sparkles, History } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import api from '../services/api';
+import { searchHistoryService } from '../services/searchHistoryService';
+import RecentSearchesBar from '../components/RecentSearchesBar';
+import RecentSearchesDropdown from '../components/RecentSearchesDropdown';
 
 export default function Home() {
   const [trainQuery, setTrainQuery] = useState('');
@@ -13,8 +16,26 @@ export default function Home() {
   const [showTrainDrop, setShowTrainDrop] = useState(false);
   const [showStationDrop, setShowStationDrop] = useState(false);
 
+  const trainSearchBoxRef = useRef<HTMLDivElement>(null);
+  const stationSearchBoxRef = useRef<HTMLDivElement>(null);
+
   const navigate = useNavigate();
   const { t } = useLanguage();
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (trainSearchBoxRef.current && !trainSearchBoxRef.current.contains(event.target as Node)) {
+        setShowTrainDrop(false);
+      }
+      if (stationSearchBoxRef.current && !stationSearchBoxRef.current.contains(event.target as Node)) {
+        setShowStationDrop(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Debounced Train Search
   useEffect(() => {
@@ -58,23 +79,45 @@ export default function Home() {
     return () => clearTimeout(delayDebounce);
   }, [stationQuery]);
 
-  const handleTrainSelect = (trainNumber: string) => {
+  const handleTrainSelect = (trainNumber: string, itemData?: any) => {
+    const match = itemData || trainsList.find((t) => t.trainNumber === trainNumber);
+    searchHistoryService.addSearch({
+      type: 'TRAIN',
+      code: trainNumber,
+      title: match?.trainName ? match.trainName : `Train ${trainNumber}`,
+      subtitle: match?.trainType || 'Live Tracking',
+    });
+
     setShowTrainDrop(false);
     navigate(`/trains/${trainNumber}`);
   };
 
-  const handleStationSelect = (stationCode: string) => {
+  const handleStationSelect = (stationCode: string, itemData?: any) => {
+    const cleanCode = stationCode.toUpperCase();
+    const match = itemData || stationsList.find((s) => s.stationCode.toUpperCase() === cleanCode);
+    
+    const locationSubtitle = match
+      ? [match.district, match.state].filter(Boolean).filter((x) => x !== '-').join(', ')
+      : undefined;
+
+    searchHistoryService.addSearch({
+      type: 'STATION',
+      code: cleanCode,
+      title: match?.stationName ? match.stationName : `Station ${cleanCode}`,
+      subtitle: locationSubtitle,
+    });
+
     setShowStationDrop(false);
-    navigate(`/stations?code=${stationCode}`);
+    navigate(`/stations?code=${cleanCode}`);
   };
 
   const handleSearchTrainSubmit = () => {
     if (!trainQuery.trim()) return;
-    const exactMatch = trainsList.find(t => t.trainNumber === trainQuery.trim());
+    const exactMatch = trainsList.find((t) => t.trainNumber === trainQuery.trim());
     if (exactMatch) {
-      handleTrainSelect(exactMatch.trainNumber);
+      handleTrainSelect(exactMatch.trainNumber, exactMatch);
     } else if (trainsList.length > 0) {
-      handleTrainSelect(trainsList[0].trainNumber);
+      handleTrainSelect(trainsList[0].trainNumber, trainsList[0]);
     } else {
       handleTrainSelect(trainQuery.trim());
     }
@@ -82,11 +125,13 @@ export default function Home() {
 
   const handleSearchStationSubmit = () => {
     if (!stationQuery.trim()) return;
-    const exactMatch = stationsList.find(s => s.stationCode.toUpperCase() === stationQuery.trim().toUpperCase());
+    const exactMatch = stationsList.find(
+      (s) => s.stationCode.toUpperCase() === stationQuery.trim().toUpperCase()
+    );
     if (exactMatch) {
-      handleStationSelect(exactMatch.stationCode);
+      handleStationSelect(exactMatch.stationCode, exactMatch);
     } else if (stationsList.length > 0) {
-      handleStationSelect(stationsList[0].stationCode);
+      handleStationSelect(stationsList[0].stationCode, stationsList[0]);
     } else {
       handleStationSelect(stationQuery.trim().toUpperCase());
     }
@@ -114,7 +159,7 @@ export default function Home() {
       {/* Main Search Panel */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto px-4">
         {/* Train Search */}
-        <div className="bg-slate-900/70 border border-slate-800 p-6 rounded-xl shadow-lg relative">
+        <div ref={trainSearchBoxRef} className="bg-slate-900/70 border border-slate-800 p-6 rounded-xl shadow-lg relative">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2.5 bg-indigo-950/80 border border-indigo-800/40 rounded-lg text-indigo-400">
               <Train className="h-6 w-6" />
@@ -150,14 +195,14 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Dropdown */}
+            {/* Dropdown for Live Search Results */}
             {showTrainDrop && trainsList.length > 0 && (
               <div className="absolute left-0 right-0 mt-2 bg-[#1c212e] border border-white/10 rounded-xl shadow-2xl max-h-60 overflow-y-auto z-20 backdrop-blur-xl divide-y divide-white/5 animate-fade-in">
                 {trainsList.map((t) => (
                   <button
                     key={t.trainNumber}
                     type="button"
-                    onClick={() => handleTrainSelect(t.trainNumber)}
+                    onClick={() => handleTrainSelect(t.trainNumber, t)}
                     className="w-full text-left px-4 py-3 hover:bg-white/10 hover:text-sky-300 flex items-center justify-between text-xs transition-all duration-150 cursor-pointer"
                   >
                     <div>
@@ -169,11 +214,26 @@ export default function Home() {
                 ))}
               </div>
             )}
+
+            {/* Recent Searches Dropdown when input is empty & focused */}
+            <RecentSearchesDropdown
+              type="TRAIN"
+              limit={5}
+              isOpen={showTrainDrop && trainQuery.trim().length === 0}
+              onSelect={(code, item) => handleTrainSelect(code, { trainName: item.title, trainType: item.subtitle })}
+            />
+
+            {/* Recent Searches Chips Bar near search bar (Last 5) */}
+            <RecentSearchesBar
+              type="TRAIN"
+              limit={5}
+              onSelect={(code, item) => handleTrainSelect(code, { trainName: item.title, trainType: item.subtitle })}
+            />
           </div>
         </div>
 
         {/* Station Search */}
-        <div className="bg-slate-900/70 border border-slate-800 p-6 rounded-xl shadow-lg relative">
+        <div ref={stationSearchBoxRef} className="bg-slate-900/70 border border-slate-800 p-6 rounded-xl shadow-lg relative">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2.5 bg-indigo-950/80 border border-indigo-800/40 rounded-lg text-indigo-400">
               <Building2 className="h-6 w-6" />
@@ -209,14 +269,14 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Dropdown */}
+            {/* Dropdown for Live Station Search Results */}
             {showStationDrop && stationsList.length > 0 && (
               <div className="absolute left-0 right-0 mt-2 bg-[#1c212e] border border-white/10 rounded-xl shadow-2xl max-h-72 overflow-y-auto z-20 backdrop-blur-xl divide-y divide-white/5 animate-fade-in">
                 {stationsList.map((s) => (
                   <button
                     key={s.stationCode}
                     type="button"
-                    onClick={() => handleStationSelect(s.stationCode)}
+                    onClick={() => handleStationSelect(s.stationCode, s)}
                     className="w-full text-left px-4 py-2.5 hover:bg-white/10 hover:text-sky-300 flex items-center justify-between text-xs transition-all duration-150 cursor-pointer"
                   >
                     <div className="flex items-center space-x-3 min-w-0 pr-2">
@@ -238,6 +298,20 @@ export default function Home() {
               </div>
             )}
 
+            {/* Recent Searches Dropdown when input is empty & focused */}
+            <RecentSearchesDropdown
+              type="STATION"
+              limit={5}
+              isOpen={showStationDrop && stationQuery.trim().length === 0}
+              onSelect={(code, item) => handleStationSelect(code, { stationName: item.title, district: item.subtitle })}
+            />
+
+            {/* Recent Searches Chips Bar near search bar (Last 5) */}
+            <RecentSearchesBar
+              type="STATION"
+              limit={5}
+              onSelect={(code, item) => handleStationSelect(code, { stationName: item.title, district: item.subtitle })}
+            />
           </div>
         </div>
       </section>
@@ -280,14 +354,14 @@ export default function Home() {
           </div>
 
           <div
-            onClick={() => navigate('/')}
-            className="bg-slate-900/40 border border-slate-800/40 p-6 rounded-xl cursor-not-allowed opacity-60"
+            onClick={() => navigate('/history')}
+            className="bg-slate-900 border border-slate-800 hover:border-indigo-550/40 p-6 rounded-xl hover:shadow-lg transition-all group cursor-pointer"
           >
-            <div className="p-3 bg-indigo-950/20 w-fit rounded-lg text-indigo-400/40 mb-4">
-              <Sparkles className="h-6 w-6" />
+            <div className="p-3 bg-indigo-950/60 w-fit rounded-lg text-indigo-400 mb-4 group-hover:scale-105 transition-transform">
+              <History className="h-6 w-6" />
             </div>
-            <h4 className="font-bold text-slate-200/50 mb-1">RailAI Chat</h4>
-            <p className="text-xs text-slate-500">Ask journey comparisons or delay warnings in native Hindi/Telugu (Phase 12).</p>
+            <h4 className="font-bold text-slate-200 mb-1">Search History</h4>
+            <p className="text-xs text-slate-450">Filter past 10, 20, or all searched trains & stations with 1-click tracking.</p>
           </div>
         </div>
       </section>

@@ -4,6 +4,7 @@ import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Tr
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
+import { searchHistoryService } from '../services/searchHistoryService';
 
 export default function TrainDetails() {
   const { trainNumber } = useParams<{ trainNumber: string }>();
@@ -203,8 +204,18 @@ export default function TrainDetails() {
       try {
         const url = `/api/v1/trains/${trainNumber}` + (selectedJourneyDate ? `?journeyDate=${selectedJourneyDate}` : '');
         const detailsResponse: any = await api.get(url);
-        if (detailsResponse.success) {
+        if (detailsResponse.success && detailsResponse.data) {
           setTrain(detailsResponse.data);
+          const t = detailsResponse.data;
+          const routeSubtitle = (t.sourceStation && t.destinationStation)
+            ? `${t.sourceStation} → ${t.destinationStation}`
+            : t.trainType || 'Train';
+          searchHistoryService.addSearch({
+            type: 'TRAIN',
+            code: t.trainNumber || trainNumber,
+            title: t.trainName || `Train ${trainNumber}`,
+            subtitle: routeSubtitle,
+          });
         }
       } catch (err: any) {
         try {
@@ -215,7 +226,7 @@ export default function TrainDetails() {
             setLiveStatus(live);
             setShowLive(true);
             setSyncState('POLLING');
-            setTrain({
+            const liveTrain = {
               trainNumber: live.trainNumber || trainNumber,
               trainName: live.trainName || `Train ${trainNumber}`,
               trainType: 'Live',
@@ -225,6 +236,13 @@ export default function TrainDetails() {
               distance: null,
               duration: null,
               runningDays: 'Live data only',
+            };
+            setTrain(liveTrain);
+            searchHistoryService.addSearch({
+              type: 'TRAIN',
+              code: liveTrain.trainNumber,
+              title: liveTrain.trainName,
+              subtitle: 'Live Tracking',
             });
             setRouteError('Static train details are unavailable, but RailRadar live telemetry is connected.');
           } else {

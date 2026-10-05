@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Search, Train, Building2, Clock, AlertTriangle, ArrowRight, Heart, CalendarDays, ArrowLeft } from 'lucide-react';
 import api from '../services/api';
 import { stationService } from '../services/stationService';
+import { searchHistoryService } from '../services/searchHistoryService';
+import RecentSearchesBar from '../components/RecentSearchesBar';
+import RecentSearchesDropdown from '../components/RecentSearchesDropdown';
 
 export default function StationExplorer() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -11,6 +14,8 @@ export default function StationExplorer() {
   const [stationQuery, setStationQuery] = useState('');
   const [stationsList, setStationsList] = useState<any[]>([]);
   const [selectedStation, setSelectedStation] = useState<any>(null);
+  const [showStationDrop, setShowStationDrop] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   
   const [boardMode, setBoardMode] = useState<'SCHEDULED' | 'LIVE'>('SCHEDULED');
   const [liveHours, setLiveHours] = useState(4);
@@ -183,8 +188,15 @@ export default function StationExplorer() {
       try {
         // Get details
         const detailsResponse: any = await api.get(`/api/v1/stations/${stationCodeParam}`);
-        if (detailsResponse.success) {
+        if (detailsResponse.success && detailsResponse.data) {
           setSelectedStation(detailsResponse.data);
+          const s = detailsResponse.data;
+          searchHistoryService.addSearch({
+            type: 'STATION',
+            code: s.stationCode,
+            title: s.stationName,
+            subtitle: [s.district, s.state].filter(Boolean).filter((x: string) => x !== '-').join(', '),
+          });
         }
 
         // Get board trains (filtered on backend or mapped)
@@ -201,6 +213,17 @@ export default function StationExplorer() {
 
     fetchStationData();
   }, [stationCodeParam, filterType]);
+
+  // Click outside to close station dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowStationDrop(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const fetchLiveBoard = async (showSpinner = true) => {
     if (!stationCodeParam) return;
@@ -234,10 +257,21 @@ export default function StationExplorer() {
     return () => clearInterval(intervalId);
   }, [stationCodeParam, boardMode, liveHours]);
 
-  const handleStationSelect = (code: string) => {
-    setSearchParams({ code });
+  const handleStationSelect = (code: string, itemData?: any) => {
+    const cleanCode = code.toUpperCase();
+    const match = itemData || stationsList.find((s) => s.stationCode.toUpperCase() === cleanCode) || selectedStation;
+    
+    searchHistoryService.addSearch({
+      type: 'STATION',
+      code: cleanCode,
+      title: match?.stationName ? match.stationName : `Station ${cleanCode}`,
+      subtitle: match ? [match.district, match.state].filter(Boolean).filter((x: string) => x !== '-').join(', ') : undefined,
+    });
+
+    setSearchParams({ code: cleanCode });
     setStationQuery('');
     setStationsList([]);
+    setShowStationDrop(false);
   };
 
   return (
@@ -259,26 +293,30 @@ export default function StationExplorer() {
           <Building2 className="h-5 w-5 text-indigo-400" />
           <span>Select Station to Explore</span>
         </h2>
-        <div className="relative max-w-lg">
+        <div ref={searchContainerRef} className="relative max-w-lg">
           <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
             <Search className="h-5 w-5" />
           </span>
           <input
             type="text"
             value={stationQuery}
-            onChange={(e) => setStationQuery(e.target.value)}
+            onChange={(e) => {
+              setStationQuery(e.target.value);
+              setShowStationDrop(true);
+            }}
+            onFocus={() => setShowStationDrop(true)}
             className="bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg w-full pl-10 pr-3 py-2.5 text-slate-200 outline-none transition-all placeholder:text-slate-650 text-sm"
             placeholder="Search by Station Code or Name (e.g. BZA, NDLS)"
           />
 
           {/* Autocomplete Dropdown */}
-          {stationsList.length > 0 && (
+          {showStationDrop && stationsList.length > 0 && (
             <div className="absolute left-0 right-0 mt-2 bg-[#1c212e] border border-white/10 rounded-xl shadow-2xl max-h-72 overflow-y-auto z-20 backdrop-blur-xl divide-y divide-white/5 animate-fade-in">
               {stationsList.map((s) => (
                 <button
                   key={s.stationCode}
                   type="button"
-                  onClick={() => handleStationSelect(s.stationCode)}
+                  onClick={() => handleStationSelect(s.stationCode, s)}
                   className="w-full text-left px-4 py-2.5 hover:bg-white/10 hover:text-sky-300 flex items-center justify-between text-xs transition-all duration-150 cursor-pointer"
                 >
                   <div className="flex items-center space-x-3 min-w-0 pr-2">
@@ -286,7 +324,7 @@ export default function StationExplorer() {
                     <div className="flex flex-col min-w-0 text-left">
                       <span className="text-slate-100 font-semibold text-xs truncate">{s.stationName}</span>
                       <span className="text-[11px] text-slate-400 truncate">
-                        {[s.district, s.state].filter(Boolean).filter(x => x !== '-').join(', ')}
+                        {[s.district, s.state].filter(Boolean).filter((x: string) => x !== '-').join(', ')}
                       </span>
                     </div>
                   </div>
@@ -299,6 +337,21 @@ export default function StationExplorer() {
               ))}
             </div>
           )}
+
+          {/* Recent Searches Dropdown when input is empty & focused */}
+          <RecentSearchesDropdown
+            type="STATION"
+            limit={5}
+            isOpen={showStationDrop && stationQuery.trim().length === 0}
+            onSelect={(code, item) => handleStationSelect(code, { stationName: item.title, district: item.subtitle })}
+          />
+
+          {/* Recent Searches Chips near search bar (Last 5) */}
+          <RecentSearchesBar
+            type="STATION"
+            limit={5}
+            onSelect={(code, item) => handleStationSelect(code, { stationName: item.title, district: item.subtitle })}
+          />
         </div>
       </div>
 

@@ -4,6 +4,8 @@ import { MapPin, ArrowRight, RefreshCw, AlertTriangle, Clock, Calendar, HelpCirc
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
+import { searchHistoryService } from '../services/searchHistoryService';
+import RecentSearchesBar from '../components/RecentSearchesBar';
 
 export default function JourneyPlanner() {
   const { language, t } = useLanguage();
@@ -66,6 +68,20 @@ export default function JourneyPlanner() {
       setError('Please select both origin and destination stations.');
       return;
     }
+
+    // Record both stations to search history
+    searchHistoryService.addSearch({
+      type: 'STATION',
+      code: selectedSource.stationCode,
+      title: selectedSource.stationName,
+      subtitle: [selectedSource.district, selectedSource.state].filter(Boolean).filter((x: string) => x !== '-').join(', '),
+    });
+    searchHistoryService.addSearch({
+      type: 'STATION',
+      code: selectedDest.stationCode,
+      title: selectedDest.stationName,
+      subtitle: [selectedDest.district, selectedDest.state].filter(Boolean).filter((x: string) => x !== '-').join(', '),
+    });
 
     setLoading(true);
     setError('');
@@ -199,7 +215,7 @@ export default function JourneyPlanner() {
                         <div className="flex flex-col min-w-0 text-left">
                           <span className="text-slate-100 font-semibold text-xs truncate">{translateName(s.stationName, language)}</span>
                           <span className="text-[11px] text-slate-400 truncate">
-                            {[s.district, s.state].filter(Boolean).filter(x => x !== '-').join(', ')}
+                            {[s.district, s.state].filter(Boolean).filter((x: string) => x !== '-').join(', ')}
                           </span>
                         </div>
                       </div>
@@ -212,6 +228,17 @@ export default function JourneyPlanner() {
                   ))}
                 </div>
               )}
+
+              {/* Recent Stations for Origin */}
+              <RecentSearchesBar
+                type="STATION"
+                limit={4}
+                onSelect={(code, item) => {
+                  setSelectedSource({ stationCode: code, stationName: item.title, district: item.subtitle });
+                  setSourceQuery(`${item.title} (${code})`);
+                  setSourceList([]);
+                }}
+              />
             </div>
 
             {/* Swap Button (Desktop floating) */}
@@ -279,7 +306,7 @@ export default function JourneyPlanner() {
                         <div className="flex flex-col min-w-0 text-left">
                           <span className="text-slate-100 font-semibold text-xs truncate">{translateName(d.stationName, language)}</span>
                           <span className="text-[11px] text-slate-400 truncate">
-                            {[d.district, d.state].filter(Boolean).filter(x => x !== '-').join(', ')}
+                            {[d.district, d.state].filter(Boolean).filter((x: string) => x !== '-').join(', ')}
                           </span>
                         </div>
                       </div>
@@ -292,6 +319,17 @@ export default function JourneyPlanner() {
                   ))}
                 </div>
               )}
+
+              {/* Recent Stations for Destination */}
+              <RecentSearchesBar
+                type="STATION"
+                limit={4}
+                onSelect={(code, item) => {
+                  setSelectedDest({ stationCode: code, stationName: item.title, district: item.subtitle });
+                  setDestQuery(`${item.title} (${code})`);
+                  setDestList([]);
+                }}
+              />
             </div>
 
           </div>

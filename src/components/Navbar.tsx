@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, Train, LogOut, User as UserIcon, Heart, Globe } from 'lucide-react';
+import { Menu, X, Train, LogOut, User as UserIcon, Heart, Globe, History } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function Navbar() {
@@ -43,6 +43,10 @@ export default function Navbar() {
             <Link to="/stations" className={isActive('/stations')}>{t('navStations')}</Link>
             <Link to="/map" className={isActive('/map')}>{t('navLiveMap')}</Link>
             <Link to="/journey" className={isActive('/journey')}>{t('navPlanner')}</Link>
+            <Link to="/history" className={`${isActive('/history')} flex items-center space-x-1`}>
+              <History className="h-4 w-4" />
+              <span>{t('navHistory')}</span>
+            </Link>
 
             {/* Language Selector */}
             <div className="flex items-center space-x-1 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-slate-400 focus-within:border-indigo-500 transition-colors">
@@ -139,6 +143,14 @@ export default function Navbar() {
             className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-indigo-400 hover:bg-slate-800 transition-all"
           >
             {t('navPlanner')}
+          </Link>
+          <Link
+            to="/history"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-indigo-400 hover:bg-slate-800 transition-all"
+          >
+            <History className="h-5 w-5 text-indigo-400" />
+            <span>{t('navHistory')}</span>
           </Link>
 
           {/* Mobile Language Selector */}
