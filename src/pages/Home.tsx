@@ -22,6 +22,9 @@ export default function Home() {
   const navigate = useNavigate();
   const { t } = useLanguage();
 
+  const trainCacheRef = useRef<Record<string, any[]>>({});
+  const stationCacheRef = useRef<Record<string, any[]>>({});
+
   // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -37,11 +40,17 @@ export default function Home() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Debounced Train Search
+  // Debounced Train Search with client-side caching (saves tokens and reduces calls)
   useEffect(() => {
     const trimmed = trainQuery.trim();
-    if (trimmed.length < 1 || (!/^\d+$/.test(trimmed) && trimmed.length < 2)) {
+    if (trimmed.length < 2) {
       setTrainsList([]);
+      return;
+    }
+
+    const cacheKey = trimmed.toLowerCase();
+    if (trainCacheRef.current[cacheKey]) {
+      setTrainsList(trainCacheRef.current[cacheKey]);
       return;
     }
 
@@ -49,33 +58,42 @@ export default function Home() {
       try {
         const response: any = await api.get(`/api/v1/trains?query=${trimmed}`);
         if (response.success && response.data) {
+          trainCacheRef.current[cacheKey] = response.data;
           setTrainsList(response.data);
         }
       } catch (err) {
         console.error('Error fetching trains', err);
       }
-    }, 250);
+    }, 400);
 
     return () => clearTimeout(delayDebounce);
   }, [trainQuery]);
 
-  // Debounced Station Search
+  // Debounced Station Search with client-side caching
   useEffect(() => {
-    if (stationQuery.trim().length < 2) {
+    const trimmed = stationQuery.trim();
+    if (trimmed.length < 2) {
       setStationsList([]);
+      return;
+    }
+
+    const cacheKey = trimmed.toLowerCase();
+    if (stationCacheRef.current[cacheKey]) {
+      setStationsList(stationCacheRef.current[cacheKey]);
       return;
     }
 
     const delayDebounce = setTimeout(async () => {
       try {
-        const response: any = await api.get(`/api/v1/stations?query=${stationQuery}`);
+        const response: any = await api.get(`/api/v1/stations?query=${trimmed}`);
         if (response.success && response.data) {
+          stationCacheRef.current[cacheKey] = response.data;
           setStationsList(response.data);
         }
       } catch (err) {
         console.error('Error fetching stations', err);
       }
-    }, 300);
+    }, 400);
 
     return () => clearTimeout(delayDebounce);
   }, [stationQuery]);
