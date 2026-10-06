@@ -39,21 +39,22 @@ export default function Home() {
 
   // Debounced Train Search
   useEffect(() => {
-    if (trainQuery.trim().length < 2) {
+    const trimmed = trainQuery.trim();
+    if (trimmed.length < 1 || (!/^\d+$/.test(trimmed) && trimmed.length < 2)) {
       setTrainsList([]);
       return;
     }
 
     const delayDebounce = setTimeout(async () => {
       try {
-        const response: any = await api.get(`/api/v1/trains?query=${trainQuery}`);
+        const response: any = await api.get(`/api/v1/trains?query=${trimmed}`);
         if (response.success && response.data) {
           setTrainsList(response.data);
         }
       } catch (err) {
         console.error('Error fetching trains', err);
       }
-    }, 300);
+    }, 250);
 
     return () => clearTimeout(delayDebounce);
   }, [trainQuery]);
@@ -197,19 +198,24 @@ export default function Home() {
 
             {/* Dropdown for Live Search Results */}
             {showTrainDrop && trainsList.length > 0 && (
-              <div className="absolute left-0 right-0 mt-2 bg-[#1c212e] border border-white/10 rounded-xl shadow-2xl max-h-60 overflow-y-auto z-20 backdrop-blur-xl divide-y divide-white/5 animate-fade-in">
+              <div className="absolute left-0 right-0 mt-2 bg-[#1c212e] border border-white/10 rounded-xl shadow-2xl max-h-64 overflow-y-auto z-20 backdrop-blur-xl divide-y divide-white/5 animate-fade-in">
                 {trainsList.map((t) => (
                   <button
                     key={t.trainNumber}
                     type="button"
                     onClick={() => handleTrainSelect(t.trainNumber, t)}
-                    className="w-full text-left px-4 py-3 hover:bg-white/10 hover:text-sky-300 flex items-center justify-between text-xs transition-all duration-150 cursor-pointer"
+                    className="w-full text-left px-4 py-3 hover:bg-white/10 hover:text-sky-300 flex items-center justify-between text-xs transition-all duration-150 cursor-pointer group"
                   >
                     <div>
                       <span className="font-bold text-indigo-400 group-hover:text-indigo-300 transition-colors mr-2">{t.trainNumber}</span>
-                      <span className="text-slate-200">{t.trainName}</span>
+                      <span className="text-slate-200 font-medium">{t.trainName}</span>
+                      {t.sourceStation && t.destinationStation && (
+                        <span className="block text-[11px] text-slate-400 mt-0.5">
+                          {t.sourceStation} &rarr; {t.destinationStation}
+                        </span>
+                      )}
                     </div>
-                    <span className="text-xs text-slate-500 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">{t.trainType}</span>
+                    <span className="text-xs text-slate-500 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 shrink-0 ml-2">{t.trainType}</span>
                   </button>
                 ))}
               </div>
