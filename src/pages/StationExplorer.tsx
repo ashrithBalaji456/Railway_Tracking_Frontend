@@ -424,49 +424,84 @@ export default function StationExplorer() {
             <div className="flex border-b border-slate-800 bg-slate-950/70 p-1">
               <button
                 onClick={() => setBoardMode('SCHEDULED')}
-                className={`flex-1 py-3 text-center text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
+                className={`flex-1 py-3 text-center text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer flex items-center justify-center gap-2 ${
                   boardMode === 'SCHEDULED'
                     ? 'border-indigo-500 text-indigo-400 bg-indigo-950/10'
                     : 'border-transparent text-slate-450 hover:text-slate-200'
                 }`}
               >
-                📅 Scheduled Timetable
+                <span>📅 Scheduled Timetable</span>
+                {!loading && trains.length > 0 && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                    boardMode === 'SCHEDULED'
+                      ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
+                      : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {filteredTrains.length}
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => setBoardMode('LIVE')}
-                className={`flex-1 py-3 text-center text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
+                className={`flex-1 py-3 text-center text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer flex items-center justify-center gap-2 ${
                   boardMode === 'LIVE'
                     ? 'border-indigo-500 text-indigo-400 bg-indigo-950/10'
                     : 'border-transparent text-slate-450 hover:text-slate-200'
                 }`}
               >
-                ⚡ Live Station Board
+                <span>⚡ Live Station Board</span>
+                {liveData?.trains && liveData.trains.length > 0 && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                    boardMode === 'LIVE'
+                      ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
+                      : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {liveData.trains.length}
+                  </span>
+                )}
               </button>
             </div>
 
             {boardMode === 'SCHEDULED' ? (
               <>
                 {/* Filter Tabs */}
-                <div className="border-b border-slate-800 bg-slate-950/50 p-2 space-y-2">
-                  <div className="flex flex-wrap gap-2">
-                    {['ALL', 'STOPPING', 'NON_STOP'].map((type) => (
-                      <button
-                        key={type}
-                        onClick={() => setFilterType(type)}
-                        className={`flex-1 md:flex-initial px-6 py-2.5 rounded-lg text-sm font-semibold tracking-wide transition-all cursor-pointer ${
-                          filterType === type
-                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/10'
-                            : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        {type === 'ALL' && 'All Trains'}
-                        {type === 'STOPPING' && 'Halting / Stopping'}
-                        {type === 'NON_STOP' && 'Pass-Through (Non-Stop)'}
-                      </button>
-                    ))}
+                <div className="border-b border-slate-800 bg-slate-950/50 p-3 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      {['ALL', 'STOPPING', 'NON_STOP'].map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => setFilterType(type)}
+                          className={`flex-1 md:flex-initial px-5 py-2 rounded-lg text-sm font-semibold tracking-wide transition-all cursor-pointer ${
+                            filterType === type
+                              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/10'
+                              : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-800/80 hover:bg-slate-850'
+                          }`}
+                        >
+                          {type === 'ALL' && 'All Trains'}
+                          {type === 'STOPPING' && 'Halting / Stopping'}
+                          {type === 'NON_STOP' && 'Pass-Through (Non-Stop)'}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Prominent Train Count Badge */}
+                    {!loading && trains.length > 0 && (
+                      <div className="flex items-center gap-2 px-3.5 py-1.5 bg-indigo-950/40 border border-indigo-500/30 rounded-lg text-xs shrink-0 shadow-sm">
+                        <Train className="h-4 w-4 text-indigo-400" />
+                        <span className="text-slate-200 font-medium">
+                          Train Count: <span className="text-indigo-300 font-bold text-sm">{filteredTrains.length}</span>
+                          {dayFilter !== 'ALL_DAYS' && (
+                            <span className="text-slate-400 text-[11px] ml-1">
+                              (of {trains.length} total)
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1">
                     <CalendarDays className="h-4 w-4 text-slate-500 shrink-0 ml-1" />
                     {dayOptions.map((day) => (
                       <button
@@ -474,7 +509,7 @@ export default function StationExplorer() {
                         onClick={() => setDayFilter(day.value)}
                         className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
                           dayFilter === day.value
-                            ? 'bg-slate-200 text-slate-950'
+                            ? 'bg-slate-200 text-slate-950 font-bold'
                             : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-100'
                         }`}
                       >
@@ -482,6 +517,12 @@ export default function StationExplorer() {
                       </button>
                     ))}
                   </div>
+
+                  {dayFilter !== 'ALL_DAYS' && !loading && (
+                    <div className="text-xs text-slate-400 flex items-center gap-1.5 px-1 pt-0.5">
+                      <span>Showing <strong className="text-indigo-400">{filteredTrains.length}</strong> trains running on <strong className="text-slate-200">{dayOptions.find(d => d.value === dayFilter)?.label}</strong></span>
+                    </div>
+                  )}
                 </div>
 
                 {/* List */}
@@ -581,7 +622,14 @@ export default function StationExplorer() {
                 {/* Live Board Window Selector */}
                 <div className="border-b border-slate-800 bg-slate-950/40 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-1">
-                    <h3 className="font-bold text-slate-200">Trains Arriving / Passing Through</h3>
+                    <div className="flex items-center gap-2.5">
+                      <h3 className="font-bold text-slate-200">Trains Arriving / Passing Through</h3>
+                      {liveData?.trains && (
+                        <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-indigo-950/60 text-indigo-300 border border-indigo-500/30">
+                          {liveData.trains.length} {liveData.trains.length === 1 ? 'Train' : 'Trains'}
+                        </span>
+                      )}
+                    </div>
                     {liveData && liveData.window && (
                       <p className="text-xs text-slate-500">
                         Window: {liveData.window.from} to {liveData.window.to} (Next {liveData.window.hours} Hours)
