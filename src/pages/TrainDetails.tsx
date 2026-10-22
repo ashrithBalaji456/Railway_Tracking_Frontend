@@ -662,6 +662,47 @@ export default function TrainDetails() {
           </div>
         </div>
 
+        {/* Journey Date Selector — for tracking yesterday's/today's/tomorrow's rake */}
+        <div className="border-t border-slate-800/80 pt-3 pb-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-[11px] uppercase font-bold tracking-wider text-slate-500 mr-1">🗓 Journey Started:</span>
+            {[
+              { label: 'Yesterday', offset: -1 },
+              { label: 'Today', offset: 0 },
+              { label: 'Tomorrow', offset: 1 },
+            ].map(({ label, offset }) => {
+              const d = new Date();
+              d.setDate(d.getDate() + offset);
+              const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+              const isSelected = selectedJourneyDate === dateStr;
+              return (
+                <button
+                  key={label}
+                  onClick={() => setSelectedJourneyDate(dateStr)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-indigo-600/30 border-indigo-500/50 text-indigo-300 shadow-sm shadow-indigo-500/10'
+                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-300'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+            <input
+              type="date"
+              value={selectedJourneyDate}
+              onChange={(e) => setSelectedJourneyDate(e.target.value)}
+              className="bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold outline-none focus:border-indigo-500 [color-scheme:dark] cursor-pointer"
+            />
+            {selectedJourneyDate !== getTodayDateString() && (
+              <span className="text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold animate-pulse">
+                Tracking {selectedJourneyDate < getTodayDateString() ? "previous day's" : "future"} rake
+              </span>
+            )}
+          </div>
+        </div>
+
         {/* Route Summary */}
         <div className="border-t border-slate-800/80 pt-4 flex flex-wrap items-center justify-between text-sm gap-4">
           <div className="flex items-center space-x-4">
