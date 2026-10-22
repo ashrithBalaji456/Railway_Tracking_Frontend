@@ -345,14 +345,14 @@ export default function StationExplorer() {
             isOpen={showStationDrop && stationQuery.trim().length === 0}
             onSelect={(code, item) => handleStationSelect(code, { stationName: item.title, district: item.subtitle })}
           />
-
-          {/* Recent Searches Chips near search bar (Last 5) */}
-          <RecentSearchesBar
-            type="STATION"
-            limit={5}
-            onSelect={(code, item) => handleStationSelect(code, { stationName: item.title, district: item.subtitle })}
-          />
         </div>
+
+        {/* Recent Searches Chips below search bar (Last 5) */}
+        <RecentSearchesBar
+          type="STATION"
+          limit={5}
+          onSelect={(code, item) => handleStationSelect(code, { stationName: item.title, district: item.subtitle })}
+        />
       </div>
 
       {error && (
