@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MessageSquare, X, Send, Sparkles, AlertCircle, Brain, Search, Zap, CheckCircle2, ChevronDown, Cpu } from 'lucide-react';
+import { X, Send, AlertCircle, Brain, Search, Zap, CheckCircle2, Cpu } from 'lucide-react';
 import api from '../services/api';
 
 interface RailAiResponseData {
@@ -22,7 +22,7 @@ interface Message {
 function renderFormattedText(text: string) {
   // Split into lines and process
   const lines = text.split('\n');
-  const elements: JSX.Element[] = [];
+  const elements: ReactNode[] = [];
   let listItems: string[] = [];
   let listKey = 0;
 
@@ -71,9 +71,9 @@ function renderFormattedText(text: string) {
   return <>{elements}</>;
 }
 
-function processInlineFormatting(text: string): JSX.Element {
+function processInlineFormatting(text: string): ReactNode {
   // Bold: **text**
-  const parts: (string | JSX.Element)[] = [];
+  const parts: ReactNode[] = [];
   const regex = /\*\*(.*?)\*\*/g;
   let lastIndex = 0;
   let match;
