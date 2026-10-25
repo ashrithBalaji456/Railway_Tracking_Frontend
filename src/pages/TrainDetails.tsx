@@ -326,7 +326,7 @@ export default function TrainDetails() {
     setSyncState('CONNECTING');
     setShowLive(true);
 
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://railway-tracking-backend-gwa2.onrender.com';
     const sseUrl = `${API_BASE_URL}/api/v1/live-updates/${trainNumber}` + (selectedJourneyDate ? `?journeyDate=${selectedJourneyDate}` : '');
     const sse = new EventSource(sseUrl);
     sseRef.current = sse;

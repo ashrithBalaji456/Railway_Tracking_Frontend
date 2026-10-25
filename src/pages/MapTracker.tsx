@@ -146,7 +146,7 @@ export default function MapTracker() {
     // Setup Live Updates via SSE + Polling Fallback
     setSyncState('CONNECTING');
     
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://railway-tracking-backend-gwa2.onrender.com';
     const sse = new EventSource(`${API_BASE_URL}/api/v1/live-updates/${trainParam}`);
     sseRef.current = sse;
 
