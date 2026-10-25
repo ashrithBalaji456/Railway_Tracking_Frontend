@@ -359,9 +359,9 @@ export default function MapTracker() {
         </button>
       </div>
 
-      <div className="flex flex-col md:flex-row h-[700px] md:h-[calc(100vh-10rem)] min-h-[500px] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl bg-slate-900/60">
+      <div className="flex flex-col md:flex-row h-[calc(100vh-8rem)] min-h-[520px] border border-slate-800 rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl bg-slate-900/60">
       {/* Sidebar Controls */}
-      <aside className="w-full md:w-80 lg:w-96 h-[300px] md:h-full bg-slate-900 border-b md:border-b-0 md:border-r border-slate-800 flex flex-col shrink-0">
+      <aside className="w-full md:w-80 lg:w-96 h-[220px] sm:h-[280px] md:h-full bg-slate-900 border-b md:border-b-0 md:border-r border-slate-800 flex flex-col shrink-0">
         {/* Search Panel */}
         <div className="p-4 border-b border-slate-800 space-y-3 bg-slate-950/20">
           <h3 className="font-bold text-slate-200 text-sm tracking-wide uppercase flex items-center space-x-2">

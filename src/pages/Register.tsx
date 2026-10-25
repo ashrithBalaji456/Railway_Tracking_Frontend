@@ -62,8 +62,8 @@ export default function Register() {
   };
 
   return (
-    <div className="max-w-md w-full mx-auto my-12 bg-slate-900 border border-slate-800 p-8 rounded-lg shadow-xl shadow-slate-950/50">
-      <h2 className="text-2xl font-bold text-center text-slate-100 mb-6 tracking-wide">
+    <div className="max-w-md w-full mx-auto my-6 sm:my-12 bg-slate-900 border border-slate-800 p-4 sm:p-8 rounded-xl shadow-xl shadow-slate-950/50">
+      <h2 className="text-xl sm:text-2xl font-bold text-center text-slate-100 mb-6 tracking-wide">
         Create a <span className="text-indigo-400">RailTrack</span> Account
       </h2>
 

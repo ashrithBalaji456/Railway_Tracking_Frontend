@@ -576,11 +576,11 @@ export default function TrainDetails() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-4">
+    <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4">
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center space-x-2 text-slate-400 hover:text-slate-200 transition-colors text-sm font-semibold cursor-pointer bg-slate-900/40 border border-slate-800/80 px-3.5 py-1.5 rounded-lg hover:bg-slate-900"
+          className="flex items-center space-x-2 text-slate-400 hover:text-slate-200 transition-colors text-xs sm:text-sm font-semibold cursor-pointer bg-slate-900/40 border border-slate-800/80 px-3 py-1.5 rounded-lg hover:bg-slate-900"
         >
           <ArrowLeft className="h-4 w-4 text-indigo-400" />
           <span>Back to Previous Page</span>
@@ -588,20 +588,20 @@ export default function TrainDetails() {
       </div>
 
       {/* Train Metadata Header */}
-      <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-lg space-y-4">
+      <div className="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-xl shadow-lg space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">{translateName(train.trainName, language)}</h1>
-              <span className="bg-indigo-900/60 border border-indigo-750 text-indigo-400 px-2.5 py-0.5 rounded text-sm font-bold uppercase">{train.trainNumber}</span>
+              <h1 className="text-xl sm:text-3xl font-extrabold text-slate-100 tracking-tight">{translateName(train.trainName, language)}</h1>
+              <span className="bg-indigo-900/60 border border-indigo-750 text-indigo-400 px-2 py-0.5 rounded text-xs sm:text-sm font-bold uppercase">{train.trainNumber}</span>
               {isSpecialTrain && (
-                <span className="bg-amber-950/70 border border-amber-800/60 text-amber-300 text-xs px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 shadow-sm">
+                <span className="bg-amber-950/70 border border-amber-800/60 text-amber-300 text-[11px] sm:text-xs px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 shadow-sm">
                   ⭐ Special Train (Low Operational Priority)
                 </span>
               )}
             </div>
             
-            <div className="flex items-center space-x-2.5 text-xs text-slate-400">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
               <span className="bg-slate-950 px-2 py-0.5 rounded border border-slate-800">{train.trainType}</span>
               <span>•</span>
               <span>Category: {train.category}</span>
@@ -611,11 +611,11 @@ export default function TrainDetails() {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <button
               onClick={handleToggleLive}
               disabled={syncState === 'CONNECTING'}
-              className={`flex items-center space-x-1.5 px-4 py-2 rounded-lg text-sm font-semibold tracking-wide border cursor-pointer transition-all ${
+              className={`flex items-center space-x-1.5 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold tracking-wide border cursor-pointer transition-all ${
                 syncState !== 'IDLE' 
                   ? 'bg-amber-600/20 border-amber-500/30 text-amber-400 hover:bg-slate-950' 
                   : 'bg-indigo-600 border-indigo-700 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/10'
@@ -1005,8 +1005,9 @@ export default function TrainDetails() {
               </div>
 
               {/* Seat Layout grid container */}
-              <div className="bg-slate-950 border border-slate-850 rounded-xl p-6 shadow-inner max-w-xl mx-auto">
-                <div className="text-center mb-6">
+              <div className="bg-slate-950 border border-slate-850 rounded-xl p-3 sm:p-6 shadow-inner max-w-xl mx-auto overflow-x-auto">
+                <div className="min-w-[300px]">
+                <div className="text-center mb-4 sm:mb-6">
                   <h4 className="text-slate-200 font-bold text-sm">
                     Interactive Layout: Coach {selectedCoach}
                   </h4>
@@ -1017,11 +1018,11 @@ export default function TrainDetails() {
 
                 {/* 3+3 layout (2S/CC) */}
                 {(getCoachType(selectedCoach) === '2S' || getCoachType(selectedCoach) === 'CC') && (
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {generateSecondSittingSeats().map((row, rowIdx) => (
                       <div key={rowIdx} className="flex justify-between items-center">
                         {/* Left column (3 seats) */}
-                        <div className="flex space-x-2">
+                        <div className="flex space-x-1 sm:space-x-2">
                           {row.left.map((seatNum) => {
                             const isSelected = selectedSeat === seatNum;
                             const pos = getSeatPosition(seatNum, getCoachType(selectedCoach));
@@ -1029,14 +1030,14 @@ export default function TrainDetails() {
                               <button
                                 key={seatNum}
                                 onClick={() => setSelectedSeat(seatNum)}
-                                className={`w-12 h-12 sm:w-14 sm:h-14 rounded-lg border flex flex-col items-center justify-center p-1 cursor-pointer transition-all ${
+                                className={`w-9 h-9 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg border flex flex-col items-center justify-center p-0.5 sm:p-1 cursor-pointer transition-all ${
                                   isSelected
                                     ? 'bg-indigo-600 border-indigo-400 text-white shadow-lg shadow-indigo-500/20'
                                     : 'bg-slate-900 border-slate-850 hover:border-slate-700 text-slate-350'
                                 }`}
                               >
-                                <span className="text-sm font-black">{seatNum}</span>
-                                <span className={`text-[7px] font-bold tracking-tighter uppercase mt-0.5 ${isSelected ? 'text-indigo-200' : 'text-slate-500'}`}>
+                                <span className="text-xs sm:text-sm font-black">{seatNum}</span>
+                                <span className={`text-[6px] sm:text-[7px] font-bold tracking-tighter uppercase mt-0.5 ${isSelected ? 'text-indigo-200' : 'text-slate-500'}`}>
                                   {pos}
                                 </span>
                               </button>
@@ -1050,7 +1051,7 @@ export default function TrainDetails() {
                         </div>
 
                         {/* Right column (3 seats) */}
-                        <div className="flex space-x-2">
+                        <div className="flex space-x-1 sm:space-x-2">
                           {row.right.map((seatNum) => {
                             const isSelected = selectedSeat === seatNum;
                             const pos = getSeatPosition(seatNum, getCoachType(selectedCoach));
@@ -1058,14 +1059,14 @@ export default function TrainDetails() {
                               <button
                                 key={seatNum}
                                 onClick={() => setSelectedSeat(seatNum)}
-                                className={`w-12 h-12 sm:w-14 sm:h-14 rounded-lg border flex flex-col items-center justify-center p-1 cursor-pointer transition-all ${
+                                className={`w-9 h-9 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg border flex flex-col items-center justify-center p-0.5 sm:p-1 cursor-pointer transition-all ${
                                   isSelected
                                     ? 'bg-indigo-600 border-indigo-400 text-white shadow-lg shadow-indigo-500/20'
                                     : 'bg-slate-900 border-slate-850 hover:border-slate-700 text-slate-350'
                                 }`}
                               >
-                                <span className="text-sm font-black">{seatNum}</span>
-                                <span className={`text-[7px] font-bold tracking-tighter uppercase mt-0.5 ${isSelected ? 'text-indigo-200' : 'text-slate-500'}`}>
+                                <span className="text-xs sm:text-sm font-black">{seatNum}</span>
+                                <span className={`text-[6px] sm:text-[7px] font-bold tracking-tighter uppercase mt-0.5 ${isSelected ? 'text-indigo-200' : 'text-slate-500'}`}>
                                   {pos}
                                 </span>
                               </button>
@@ -1196,6 +1197,7 @@ export default function TrainDetails() {
                     </p>
                   </div>
                 )}
+                </div>
               </div>
 
               {/* Selected seat details card */}
@@ -1216,12 +1218,12 @@ export default function TrainDetails() {
       )}
 
       {/* Complete Station Route Timeline */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg p-6 space-y-6">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg p-3 sm:p-6 space-y-4 sm:space-y-6">
         <div className="border-b border-slate-800 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h3 className="font-bold text-slate-200 text-lg">{t('routeTimetable')}</h3>
-          <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-400">
+          <h3 className="font-bold text-slate-200 text-base sm:text-lg">{t('routeTimetable')}</h3>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs font-semibold text-slate-400">
             {/* Date selector input */}
-            <div className="flex items-center space-x-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg">
+            <div className="flex items-center space-x-2 bg-slate-950 border border-slate-800 px-2.5 sm:px-3 py-1.5 rounded-lg">
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Journey Date:</span>
               <input
                 type="date"
@@ -1242,11 +1244,12 @@ export default function TrainDetails() {
         </div>
 
         {route && route.stations && route.stations.length > 0 ? (
-          <div className="relative pl-6 sm:pl-10 py-4 max-w-4xl mx-auto">
-            {/* The vertical timeline blue line */}
-            <div className="absolute left-[88px] sm:left-[118px] top-4 bottom-4 w-1.5 bg-sky-600 rounded-full" />
+          <div className="overflow-x-auto w-full">
+            <div className="min-w-[340px] relative pl-2 sm:pl-10 py-4 max-w-4xl mx-auto">
+              {/* The vertical timeline blue line */}
+              <div className="absolute left-[88px] sm:left-[118px] top-4 bottom-4 w-1.5 bg-sky-600 rounded-full" />
 
-            <div className="space-y-1">
+              <div className="space-y-1">
               {getTimelineItems().map((item) => {
                 if (item.type === 'HALT') {
                   const s = item.station;
@@ -1440,6 +1443,7 @@ export default function TrainDetails() {
                         })}
                       </div>
                     </div>
+                  </div>
                   ) : (
                     <div className="text-center py-16 text-slate-500">
                       <p>{routeError || 'No route schedule mapping available.'}</p>

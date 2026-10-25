@@ -124,7 +124,7 @@ export default function JourneyPlanner() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12 space-y-6 relative">
+    <div className="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-12 space-y-4 sm:space-y-6 relative">
       {/* Background Glow Accents */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none animate-glow-pulse" />
       <div className="absolute bottom-10 right-1/4 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-[100px] pointer-events-none" />
@@ -133,7 +133,7 @@ export default function JourneyPlanner() {
       <div className="flex items-center justify-between relative z-10">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center space-x-2 text-slate-400 hover:text-slate-200 transition-colors text-sm font-semibold cursor-pointer bg-slate-900/40 border border-slate-800/80 px-3.5 py-1.5 rounded-lg hover:bg-slate-900"
+          className="flex items-center space-x-2 text-slate-400 hover:text-slate-200 transition-colors text-xs sm:text-sm font-semibold cursor-pointer bg-slate-900/40 border border-slate-800/80 px-3 py-1.5 rounded-lg hover:bg-slate-900"
         >
           <ArrowLeft className="h-4 w-4 text-indigo-400" />
           <span>Back to Previous Page</span>
@@ -141,21 +141,21 @@ export default function JourneyPlanner() {
       </div>
 
       {/* Page Header */}
-      <div className="flex items-center space-x-4 border-b border-white/10 pb-6 relative z-10">
-        <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-md rounded-2xl text-indigo-400 shadow-lg shadow-indigo-950/20 transition-all duration-300 hover:scale-105 hover:border-indigo-500/30">
-          <Calendar className="h-7 w-7" />
+      <div className="flex items-center space-x-3 sm:space-x-4 border-b border-white/10 pb-4 sm:pb-6 relative z-10">
+        <div className="p-2.5 sm:p-4 bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-md rounded-xl sm:rounded-2xl text-indigo-400 shadow-lg shadow-indigo-950/20 transition-all duration-300 hover:scale-105 shrink-0">
+          <Calendar className="h-5 w-5 sm:h-7 sm:w-7" />
         </div>
         <div>
-          <h1 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-100 via-slate-100 to-indigo-300 tracking-tight leading-none">{t('journeyPlannerTitle')}</h1>
-          <p className="text-xs text-slate-400 mt-2 font-medium tracking-wide">{t('journeyPlannerDesc')}</p>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-100 via-slate-100 to-indigo-300 tracking-tight leading-none">{t('journeyPlannerTitle')}</h1>
+          <p className="text-xs text-slate-400 mt-1 sm:mt-2 font-medium tracking-wide">{t('journeyPlannerDesc')}</p>
         </div>
       </div>
 
       {/* Query Form Box */}
-      <div className="glass-panel shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-3xl p-8 space-y-8 relative overflow-hidden transition-all duration-300 hover:border-white/10 group">
+      <div className="glass-panel shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-2xl sm:rounded-3xl p-4 sm:p-8 space-y-5 sm:space-y-8 relative overflow-hidden transition-all duration-300 hover:border-white/10 group">
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8 items-end relative z-10">
           
           {/* Subgrid for Origin & Destination to keep absolute Swap button centered */}
           <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6 items-center relative">
@@ -239,6 +239,18 @@ export default function JourneyPlanner() {
                   setSourceList([]);
                 }}
               />
+            </div>
+
+            {/* Mobile Swap Button */}
+            <div className="flex md:hidden justify-center my-1">
+              <button
+                type="button"
+                onClick={swapStations}
+                className="px-3.5 py-1.5 bg-slate-900 border border-slate-700/60 rounded-full text-indigo-400 hover:text-indigo-300 text-xs font-semibold flex items-center space-x-1.5 shadow-md active:scale-95 cursor-pointer"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span>Swap Origin & Destination</span>
+              </button>
             </div>
 
             {/* Swap Button (Desktop floating) */}

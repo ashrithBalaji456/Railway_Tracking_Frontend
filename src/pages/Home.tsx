@@ -159,40 +159,41 @@ export default function Home() {
   return (
     <div className="space-y-12 pb-12">
       {/* Hero Section */}
-      <header className="relative bg-gradient-to-br from-indigo-950/40 via-slate-950 to-slate-950 py-16 px-4 text-center rounded-2xl border border-indigo-900/10 overflow-hidden shadow-2xl">
+      {/* Hero Section */}
+      <header className="relative bg-gradient-to-br from-indigo-950/40 via-slate-950 to-slate-950 py-8 sm:py-16 md:py-20 px-3 sm:px-4 text-center rounded-2xl border border-indigo-900/10 overflow-hidden shadow-2xl">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/15 via-transparent to-transparent -z-10" />
-        <div className="max-w-4xl mx-auto space-y-4">
-          <div className="inline-flex items-center space-x-1.5 bg-indigo-900/40 border border-indigo-750 px-3 py-1 rounded-full text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-2">
+        <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4">
+          <div className="inline-flex items-center space-x-1.5 bg-indigo-900/40 border border-indigo-750 px-3 py-1 rounded-full text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-1 sm:mb-2">
             <Sparkles className="h-3.5 w-3.5" />
             <span>Real-time Tracking Enabled</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-slate-100 tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-slate-100 tracking-tight leading-tight">
             {t('heroTitle')}
           </h1>
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto">
+          <p className="text-sm sm:text-lg text-slate-400 max-w-2xl mx-auto">
             {t('heroSubtitle')}
           </p>
         </div>
       </header>
 
       {/* Main Search Panel */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto px-4">
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 max-w-6xl mx-auto px-3 sm:px-4">
         {/* Train Search */}
-        <div ref={trainSearchBoxRef} className="bg-slate-900/70 border border-slate-800 p-6 rounded-xl shadow-lg relative">
+        <div ref={trainSearchBoxRef} className="bg-slate-900/70 border border-slate-800 p-4 sm:p-6 rounded-xl shadow-lg relative">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="p-2.5 bg-indigo-950/80 border border-indigo-800/40 rounded-lg text-indigo-400">
-              <Train className="h-6 w-6" />
+            <div className="p-2 sm:p-2.5 bg-indigo-950/80 border border-indigo-800/40 rounded-lg text-indigo-400 shrink-0">
+              <Train className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <div>
-              <h3 className="font-bold text-lg text-slate-150">Search Trains</h3>
+              <h3 className="font-bold text-base sm:text-lg text-slate-150">Search Trains</h3>
               <p className="text-xs text-slate-450">Enter train number or name (e.g. 12760, Charminar)</p>
             </div>
           </div>
           <div className="relative">
             <div className="flex space-x-2">
-              <div className="relative flex-grow">
+              <div className="relative flex-grow min-w-0">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
-                  <Search className="h-5 w-5" />
+                  <Search className="h-4 w-4 sm:h-5 sm:w-5" />
                 </span>
                 <input
                   type="text"
@@ -202,13 +203,13 @@ export default function Home() {
                     setShowTrainDrop(true);
                   }}
                   onFocus={() => setShowTrainDrop(true)}
-                  className="bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg w-full pl-10 pr-3 py-3 text-slate-200 outline-none transition-all placeholder:text-slate-650 text-sm"
+                  className="bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-slate-200 outline-none transition-all placeholder:text-slate-650 text-xs sm:text-sm"
                   placeholder="e.g. 12760 or Charminar"
                 />
               </div>
               <button
                 onClick={handleSearchTrainSubmit}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-3 rounded-lg text-sm transition-all cursor-pointer shadow-md shadow-indigo-650/15 shrink-0"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm transition-all cursor-pointer shadow-md shadow-indigo-650/15 shrink-0"
               >
                 Search
               </button>
@@ -257,21 +258,21 @@ export default function Home() {
         </div>
 
         {/* Station Search */}
-        <div ref={stationSearchBoxRef} className="bg-slate-900/70 border border-slate-800 p-6 rounded-xl shadow-lg relative">
+        <div ref={stationSearchBoxRef} className="bg-slate-900/70 border border-slate-800 p-4 sm:p-6 rounded-xl shadow-lg relative">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="p-2.5 bg-indigo-950/80 border border-indigo-800/40 rounded-lg text-indigo-400">
-              <Building2 className="h-6 w-6" />
+            <div className="p-2 sm:p-2.5 bg-indigo-950/80 border border-indigo-800/40 rounded-lg text-indigo-400 shrink-0">
+              <Building2 className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <div>
-              <h3 className="font-bold text-lg text-slate-150">Explore Stations</h3>
+              <h3 className="font-bold text-base sm:text-lg text-slate-150">Explore Stations</h3>
               <p className="text-xs text-slate-450">Enter station code or city (e.g. BZA, Vijayawada)</p>
             </div>
           </div>
           <div className="relative">
             <div className="flex space-x-2">
-              <div className="relative flex-grow">
+              <div className="relative flex-grow min-w-0">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
-                  <Search className="h-5 w-5" />
+                  <Search className="h-4 w-4 sm:h-5 sm:w-5" />
                 </span>
                 <input
                   type="text"
@@ -281,13 +282,13 @@ export default function Home() {
                     setShowStationDrop(true);
                   }}
                   onFocus={() => setShowStationDrop(true)}
-                  className="bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg w-full pl-10 pr-3 py-3 text-slate-200 outline-none transition-all placeholder:text-slate-650 text-sm"
+                  className="bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-slate-200 outline-none transition-all placeholder:text-slate-650 text-xs sm:text-sm"
                   placeholder="e.g. BZA or Vijayawada"
                 />
               </div>
               <button
                 onClick={handleSearchStationSubmit}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-3 rounded-lg text-sm transition-all cursor-pointer shadow-md shadow-indigo-650/15 shrink-0"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm transition-all cursor-pointer shadow-md shadow-indigo-650/15 shrink-0"
               >
                 Search
               </button>
@@ -341,50 +342,50 @@ export default function Home() {
       </section>
 
       {/* Quick Action Navigation Grid */}
-      <section className="max-w-6xl mx-auto px-4">
-        <h3 className="text-xl font-bold text-slate-200 mb-6 text-center md:text-left">Quick Actions</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <section className="max-w-6xl mx-auto px-3 sm:px-4">
+        <h3 className="text-lg sm:text-xl font-bold text-slate-200 mb-4 sm:mb-6 text-center md:text-left">Quick Actions</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <div
             onClick={() => navigate('/stations')}
-            className="bg-slate-900 border border-slate-800 hover:border-indigo-550/40 p-6 rounded-xl hover:shadow-lg transition-all group cursor-pointer"
+            className="bg-slate-900 border border-slate-800 hover:border-indigo-550/40 p-4 sm:p-6 rounded-xl hover:shadow-lg transition-all group cursor-pointer"
           >
-            <div className="p-3 bg-indigo-950/60 w-fit rounded-lg text-indigo-400 mb-4 group-hover:scale-105 transition-transform">
-              <Building2 className="h-6 w-6" />
+            <div className="p-2.5 sm:p-3 bg-indigo-950/60 w-fit rounded-lg text-indigo-400 mb-3 sm:mb-4 group-hover:scale-105 transition-transform">
+              <Building2 className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <h4 className="font-bold text-slate-200 mb-1">Station Explorer</h4>
+            <h4 className="font-bold text-slate-200 text-sm sm:text-base mb-1">Station Explorer</h4>
             <p className="text-xs text-slate-450">Filter scheduled halts and intermediate pass-through trains.</p>
           </div>
 
           <div
             onClick={() => navigate('/map')}
-            className="bg-slate-900 border border-slate-800 hover:border-indigo-550/40 p-6 rounded-xl hover:shadow-lg transition-all group cursor-pointer"
+            className="bg-slate-900 border border-slate-800 hover:border-indigo-550/40 p-4 sm:p-6 rounded-xl hover:shadow-lg transition-all group cursor-pointer"
           >
-            <div className="p-3 bg-indigo-950/60 w-fit rounded-lg text-indigo-400 mb-4 group-hover:scale-105 transition-transform">
-              <Map className="h-6 w-6" />
+            <div className="p-2.5 sm:p-3 bg-indigo-950/60 w-fit rounded-lg text-indigo-400 mb-3 sm:mb-4 group-hover:scale-105 transition-transform">
+              <Map className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <h4 className="font-bold text-slate-200 mb-1">Live Map Tracker</h4>
+            <h4 className="font-bold text-slate-200 text-sm sm:text-base mb-1">Live Map Tracker</h4>
             <p className="text-xs text-slate-450">Interactive geospatial map mapping exact routes, positions, and markers.</p>
           </div>
 
           <div
             onClick={() => navigate('/login')}
-            className="bg-slate-900 border border-slate-800 hover:border-indigo-550/40 p-6 rounded-xl hover:shadow-lg transition-all group cursor-pointer"
+            className="bg-slate-900 border border-slate-800 hover:border-indigo-550/40 p-4 sm:p-6 rounded-xl hover:shadow-lg transition-all group cursor-pointer"
           >
-            <div className="p-3 bg-indigo-950/60 w-fit rounded-lg text-indigo-400 mb-4 group-hover:scale-105 transition-transform">
-              <ShieldAlert className="h-6 w-6" />
+            <div className="p-2.5 sm:p-3 bg-indigo-950/60 w-fit rounded-lg text-indigo-400 mb-3 sm:mb-4 group-hover:scale-105 transition-transform">
+              <ShieldAlert className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <h4 className="font-bold text-slate-200 mb-1">Alerts & Favorites</h4>
+            <h4 className="font-bold text-slate-200 text-sm sm:text-base mb-1">Alerts & Favorites</h4>
             <p className="text-xs text-slate-450">Save frequent trains and trigger automated custom delay thresholds.</p>
           </div>
 
           <div
             onClick={() => navigate('/history')}
-            className="bg-slate-900 border border-slate-800 hover:border-indigo-550/40 p-6 rounded-xl hover:shadow-lg transition-all group cursor-pointer"
+            className="bg-slate-900 border border-slate-800 hover:border-indigo-550/40 p-4 sm:p-6 rounded-xl hover:shadow-lg transition-all group cursor-pointer"
           >
-            <div className="p-3 bg-indigo-950/60 w-fit rounded-lg text-indigo-400 mb-4 group-hover:scale-105 transition-transform">
-              <History className="h-6 w-6" />
+            <div className="p-2.5 sm:p-3 bg-indigo-950/60 w-fit rounded-lg text-indigo-400 mb-3 sm:mb-4 group-hover:scale-105 transition-transform">
+              <History className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <h4 className="font-bold text-slate-200 mb-1">Search History</h4>
+            <h4 className="font-bold text-slate-200 text-sm sm:text-base mb-1">Search History</h4>
             <p className="text-xs text-slate-450">Filter past 10, 20, or all searched trains & stations with 1-click tracking.</p>
           </div>
         </div>

@@ -275,12 +275,12 @@ export default function StationExplorer() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
       {/* Back to previous page button */}
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center space-x-2 text-slate-400 hover:text-slate-200 transition-colors text-sm font-semibold cursor-pointer bg-slate-900/40 border border-slate-800/80 px-3.5 py-1.5 rounded-lg hover:bg-slate-900"
+          className="flex items-center space-x-2 text-slate-400 hover:text-slate-200 transition-colors text-xs sm:text-sm font-semibold cursor-pointer bg-slate-900/40 border border-slate-800/80 px-3 py-1.5 rounded-lg hover:bg-slate-900"
         >
           <ArrowLeft className="h-4 w-4 text-indigo-400" />
           <span>Back to Previous Page</span>
@@ -288,7 +288,7 @@ export default function StationExplorer() {
       </div>
 
       {/* Search Header */}
-      <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-lg">
+      <div className="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-xl shadow-lg">
         <h2 className="text-xl font-bold text-slate-100 mb-4 flex items-center space-x-2">
           <Building2 className="h-5 w-5 text-indigo-400" />
           <span>Select Station to Explore</span>
@@ -720,7 +720,7 @@ export default function StationExplorer() {
                       const expectedTimeFormatted = formatTimeOnly(expectedTimeStr);
 
                       return (
-                        <div key={`${t.trainNumber}-${idx}`} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-850/40 transition-colors animate-fade-in">
+                        <div key={`${t.trainNumber}-${idx}`} className="p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 hover:bg-slate-850/40 transition-colors animate-fade-in">
                           {/* Left Column: Time & Train Info */}
                           <div className="flex items-start space-x-4">
                             <div className="text-left shrink-0 pt-0.5">

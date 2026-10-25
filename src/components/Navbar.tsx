@@ -27,13 +27,13 @@ export default function Navbar() {
 
   return (
     <nav className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-2 text-indigo-400 hover:text-indigo-300 transition-colors">
-              <Train className="h-8 w-8" />
-              <span className="font-bold text-xl tracking-wider text-slate-100">RailTrack <span className="text-indigo-400 font-medium">India</span></span>
+          <div className="flex items-center min-w-0">
+            <Link to="/" className="flex items-center space-x-2 text-indigo-400 hover:text-indigo-300 transition-colors min-w-0">
+              <Train className="h-6 w-6 sm:h-8 sm:w-8 shrink-0" />
+              <span className="font-bold text-base sm:text-xl tracking-wide sm:tracking-wider text-slate-100 truncate">RailTrack <span className="text-indigo-400 font-medium">India</span></span>
             </Link>
           </div>
 

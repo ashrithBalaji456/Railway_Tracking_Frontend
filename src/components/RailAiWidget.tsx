@@ -189,7 +189,7 @@ export default function RailAiWidget() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end">
       {/* Floating Chat Bubble Button */}
       {!isOpen && (
         <button
@@ -210,7 +210,7 @@ export default function RailAiWidget() {
 
       {/* Slide-out Chat Panel */}
       {isOpen && (
-        <div className="bg-slate-900/95 border border-slate-800/80 w-80 md:w-[420px] h-[560px] rounded-2xl shadow-2xl flex flex-col overflow-hidden backdrop-blur-md animate-in slide-in-from-bottom-5 fade-in duration-200">
+        <div className="bg-slate-900/95 border border-slate-800/80 w-[calc(100vw-2rem)] sm:w-80 md:w-[420px] max-w-[420px] h-[520px] max-h-[82vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden backdrop-blur-md animate-in slide-in-from-bottom-5 fade-in duration-200">
           {/* Header */}
           <div className="bg-gradient-to-r from-slate-950/80 to-indigo-950/30 px-4 py-3.5 border-b border-slate-800 flex items-center justify-between">
             <div className="flex items-center space-x-2.5">
