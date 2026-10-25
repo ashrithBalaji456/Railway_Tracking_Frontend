@@ -43,6 +43,14 @@ export default function TrainDetails() {
 
   const { language, t } = useLanguage();
   const [syncState, setSyncState] = useState<'IDLE' | 'CONNECTING' | 'CONNECTED' | 'POLLING'>('IDLE');
+
+  const isSpecialTrain = Boolean(
+    trainNumber?.startsWith('0') ||
+    train?.trainNumber?.startsWith('0') ||
+    train?.trainName?.toUpperCase().includes('SPECIAL') ||
+    train?.trainName?.toUpperCase().includes('SPL') ||
+    train?.trainType?.toUpperCase().includes('SPECIAL')
+  );
   const sseRef = useRef<EventSource | null>(null);
   const intervalRef = useRef<number | null>(null);
 
@@ -583,9 +591,14 @@ export default function TrainDetails() {
       <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-lg space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">{translateName(train.trainName, language)}</h1>
               <span className="bg-indigo-900/60 border border-indigo-750 text-indigo-400 px-2.5 py-0.5 rounded text-sm font-bold uppercase">{train.trainNumber}</span>
+              {isSpecialTrain && (
+                <span className="bg-amber-950/70 border border-amber-800/60 text-amber-300 text-xs px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 shadow-sm">
+                  ⭐ Special Train (Low Operational Priority)
+                </span>
+              )}
             </div>
             
             <div className="flex items-center space-x-2.5 text-xs text-slate-400">
@@ -900,6 +913,16 @@ export default function TrainDetails() {
               <p className="font-bold text-slate-200 mt-0.5">{(liveStatus.speed != null ? liveStatus.speed : 0)} km/h • {(liveStatus.bearing != null ? liveStatus.bearing : 0)}°</p>
             </div>
           </div>
+
+          {isSpecialTrain && liveStatus.delayMinutes > 0 && (
+            <div className="bg-amber-950/40 border border-amber-800/50 text-amber-200/90 text-xs p-3.5 rounded-lg flex items-start space-x-2.5">
+              <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-amber-300">Special Train Notice: </span>
+                As this is a Special train (numbered starting with 0), its operational track priority in Indian Railways is lower than regular scheduled express/superfast trains. Section controllers frequently hold special trains in loop lines to let scheduled trains overtake, which causes delays to accumulate gradually along the route.
+              </div>
+            </div>
+          )}
         </div>
       )}
 
