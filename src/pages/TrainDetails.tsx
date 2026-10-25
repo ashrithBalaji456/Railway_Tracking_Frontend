@@ -576,7 +576,7 @@ export default function TrainDetails() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4">
+    <div className="max-w-5xl mx-auto px-0.5 sm:px-4 py-2 sm:py-8 space-y-4 pb-20 sm:pb-8">
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate(-1)}
@@ -1218,13 +1218,15 @@ export default function TrainDetails() {
       )}
 
       {/* Complete Station Route Timeline */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg p-3 sm:p-6 space-y-4 sm:space-y-6">
-        <div className="border-b border-slate-800 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h3 className="font-bold text-slate-200 text-base sm:text-lg">{t('routeTimetable')}</h3>
+      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg p-2.5 sm:p-5 space-y-3 sm:space-y-6">
+        <div className="border-b border-slate-800 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <h3 className="font-bold text-slate-200 text-sm sm:text-lg flex items-center space-x-2">
+            <span>{t('routeTimetable')}</span>
+          </h3>
           <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs font-semibold text-slate-400">
             {/* Date selector input */}
-            <div className="flex items-center space-x-2 bg-slate-950 border border-slate-800 px-2.5 sm:px-3 py-1.5 rounded-lg">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Journey Date:</span>
+            <div className="flex items-center space-x-2 bg-slate-950 border border-slate-800 px-2 py-1 rounded-lg">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Date:</span>
               <input
                 type="date"
                 value={selectedJourneyDate}
@@ -1232,223 +1234,235 @@ export default function TrainDetails() {
                 className="bg-transparent text-slate-200 border-none outline-none font-bold text-xs [color-scheme:dark] cursor-pointer"
               />
             </div>
-            <span className="flex items-center space-x-1.5">
-              <span className="h-3 w-3 bg-sky-600 rounded-full inline-block border border-slate-900" />
+            <span className="flex items-center space-x-1.5 text-[11px] sm:text-xs">
+              <span className="h-2.5 w-2.5 bg-sky-500 rounded-full inline-block border border-slate-900" />
               <span>Halt Station</span>
             </span>
-            <span className="flex items-center space-x-1.5">
-              <span className="h-2 w-2 bg-slate-700 rounded-full inline-block" />
+            <span className="flex items-center space-x-1.5 text-[11px] sm:text-xs">
+              <span className="h-2 w-2 bg-slate-600 rounded-full inline-block" />
               <span>Non-Stopping</span>
             </span>
           </div>
         </div>
 
         {route && route.stations && route.stations.length > 0 ? (
-          <div className="overflow-x-auto w-full">
-            <div className="min-w-[340px] relative pl-2 sm:pl-10 py-4 max-w-4xl mx-auto">
-              {/* The vertical timeline blue line */}
-              <div className="absolute left-[88px] sm:left-[118px] top-4 bottom-4 w-1.5 bg-sky-600 rounded-full" />
+          <div className="w-full">
+            <div className="w-full py-1 max-w-4xl mx-auto space-y-0.5">
+              {(() => {
+                const timelineItems = getTimelineItems();
+                return timelineItems.map((item, itemIdx) => {
+                  if (item.type === 'HALT') {
+                    const s = item.station;
+                    const liveStop = liveStatus?.stations?.find(
+                      (ls: any) => ls.stationCode?.toUpperCase() === s.stationCode?.toUpperCase()
+                    );
+                    const isTrainHere = showLive && bubbleStationCode === s.stationCode?.toUpperCase();
 
-              <div className="space-y-1">
-              {getTimelineItems().map((item) => {
-                if (item.type === 'HALT') {
-                  const s = item.station;
-                  const liveStop = liveStatus?.stations?.find(
-                    (ls: any) => ls.stationCode?.toUpperCase() === s.stationCode?.toUpperCase()
-                  );
-                  const isTrainHere = showLive && bubbleStationCode === s.stationCode?.toUpperCase();
-
-                  return (
-                    <div key={s.sequenceNumber} className="grid grid-cols-12 gap-4 items-center py-6 relative">
-                      {/* 1. Arrival Timing (Left) */}
-                      <div className="col-span-3 text-right pr-2">
-                        <div className="text-xs sm:text-sm font-bold text-slate-200">
-                          {s.arrivalTime ? format12Hour(s.arrivalTime) : '---'}
-                        </div>
-                        {showLive && liveStop && liveStop.delayMinutes > 0 && s.arrivalTime && (
-                          <div className="text-[10px] sm:text-xs text-red-500 font-bold mt-0.5 leading-none">
-                            {formatDelayedTime(s.arrivalTime, liveStop.delayMinutes)}
+                    return (
+                      <div
+                        key={s.sequenceNumber}
+                        className="flex items-center py-2 sm:py-3.5 relative hover:bg-slate-850/40 rounded-lg transition-colors group"
+                      >
+                        {/* 1. Arrival Timing (Left) */}
+                        <div className="w-14 sm:w-20 text-right pr-1 sm:pr-2 shrink-0">
+                          <div className="text-[11px] sm:text-xs font-bold text-slate-200 leading-tight">
+                            {s.arrivalTime ? format12Hour(s.arrivalTime) : '---'}
                           </div>
-                        )}
-                      </div>
+                          {showLive && liveStop && liveStop.delayMinutes > 0 && s.arrivalTime && (
+                            <div className="text-[9px] sm:text-[10px] text-red-500 font-bold leading-none mt-0.5">
+                              {formatDelayedTime(s.arrivalTime, liveStop.delayMinutes)}
+                            </div>
+                          )}
+                        </div>
 
-                      {/* 2. Timeline indicator dot */}
-                      <div className="col-span-1 flex justify-center relative">
-                        <div className="h-5 w-5 rounded-full bg-slate-900 border-4 border-sky-600 z-10 flex items-center justify-center relative">
-                          <div className="h-2.5 w-2.5 bg-sky-400 rounded-full" />
-                          
-                          {/* Pulsing glow if this is active stop */}
+                        {/* 2. Timeline Track: Centered Continuous Line + Dot */}
+                        <div className="w-7 sm:w-10 relative flex items-center justify-center shrink-0 self-stretch min-h-[38px]">
+                          {/* Top line segment */}
+                          {itemIdx > 0 && (
+                            <div className="absolute top-0 bottom-1/2 w-1 sm:w-1.5 bg-sky-600 left-1/2 -translate-x-1/2" />
+                          )}
+                          {/* Bottom line segment */}
+                          {itemIdx < timelineItems.length - 1 && (
+                            <div className="absolute top-1/2 bottom-0 w-1 sm:w-1.5 bg-sky-600 left-1/2 -translate-x-1/2" />
+                          )}
+
+                          {/* Centered Station Dot */}
+                          <div className="h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-slate-900 border-2 sm:border-4 border-sky-600 z-10 flex items-center justify-center relative shadow-sm">
+                            <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 bg-sky-400 rounded-full" />
+                            {isTrainHere && (
+                              <div className="absolute -inset-2 bg-sky-500/30 rounded-full animate-ping" />
+                            )}
+                          </div>
+
+                          {/* Train Icon bubble sliding above/on the dot */}
                           {isTrainHere && (
-                            <div className="absolute -inset-2 bg-sky-500/30 rounded-full animate-ping" />
+                            <div className="absolute -top-11 sm:-top-12 z-20 bg-gradient-to-br from-sky-400 to-sky-600 text-white w-8 h-8 sm:w-10 sm:h-10 rounded-full shadow-lg shadow-sky-500/35 border-2 border-slate-900 animate-bounce flex items-center justify-center">
+                              <Train className="h-4 w-4 sm:h-5 sm:w-5" />
+                              <span className="absolute -bottom-1.5 bg-sky-950 text-[6px] sm:text-[7px] font-black px-1 rounded uppercase tracking-wider border border-sky-400 select-none">Live</span>
+                            </div>
                           )}
                         </div>
 
-                        {/* Train Icon bubble sliding above/on the dot */}
-                        {isTrainHere && (
-                          <div className="absolute -top-14 z-20 bg-gradient-to-br from-sky-400 to-sky-600 text-white w-11 h-11 rounded-full shadow-xl shadow-sky-500/35 border-2 border-slate-900 animate-bounce flex items-center justify-center">
-                            <Train className="h-5.5 w-5.5" />
-                            <span className="absolute -bottom-1.5 bg-sky-950 text-[7px] font-black px-1 rounded uppercase tracking-wider border border-sky-400 select-none">Live</span>
+                        {/* 3. Station name, platform (Center) */}
+                        <div className="flex-1 min-w-0 px-1 sm:px-2 text-left">
+                          <h4 className="font-bold text-xs sm:text-sm text-slate-100 leading-tight truncate sm:whitespace-normal">
+                            {translateName(s.stationName, language)}
+                          </h4>
+                          <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-0.5 text-[9px] sm:text-xs text-slate-400">
+                            <span className="font-semibold text-slate-400">
+                              {s.distance !== undefined && s.distance !== null ? `${s.distance} km` : `${s.sequenceNumber * 80} km`}
+                            </span>
+                            {s.platform && (
+                              <span className="bg-slate-950 text-slate-350 px-1 py-0.2 rounded border border-slate-800 text-[9px] font-bold">
+                                PF {s.platform}
+                              </span>
+                            )}
+                            {s.haltMinutes > 0 && (
+                              <span className="text-indigo-400 font-semibold">{s.haltMinutes}m halt</span>
+                            )}
+                            {s.speedToNextStationKmph !== undefined && s.speedToNextStationKmph !== null && s.speedToNextStationKmph > 0 && (
+                              <span className="bg-amber-950/40 text-amber-400 px-1 py-0.2 rounded border border-amber-900/30 text-[8px] sm:text-[9px] font-bold inline-flex items-center space-x-0.5">
+                                <span>⚡</span>
+                                <span>{s.speedToNextStationKmph} km/h</span>
+                              </span>
+                            )}
+                            {showLive && liveStop && (
+                              <span className={`px-1 py-0.2 rounded text-[8px] sm:text-[9px] font-bold uppercase border transition-all ${
+                                liveStop.status?.toLowerCase() === 'departed'
+                                  ? 'bg-indigo-950/40 border-indigo-900/30 text-indigo-400'
+                                  : liveStop.status?.toLowerCase() === 'arrived'
+                                  ? 'bg-emerald-950/40 border-emerald-900/30 text-emerald-400'
+                                  : 'bg-slate-950 border-slate-800 text-slate-400'
+                              }`}>
+                                {liveStop.status || 'Scheduled'}
+                              </span>
+                            )}
                           </div>
-                        )}
-                      </div>
+                        </div>
 
-                      {/* 3. Station name, platform (6 cols) */}
-                      <div className="col-span-5 pl-2">
-                        <h4 className="font-bold text-sm sm:text-base text-slate-100">{translateName(s.stationName, language)}</h4>
-                        <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] sm:text-xs text-slate-400">
-                          <span className="font-semibold text-slate-400">
-                            {s.distance !== undefined && s.distance !== null ? `${s.distance} km` : `${s.sequenceNumber * 80} km`}
-                          </span>
-                          {s.platform && (
-                            <span className="bg-slate-950 text-slate-400 px-1.5 py-0.5 rounded border border-slate-800 text-[10px] font-bold">
-                              Platform {s.platform}
-                            </span>
-                          )}
-                          {s.haltMinutes > 0 && (
-                            <span className="text-indigo-400 font-semibold">{s.haltMinutes} mins halt</span>
-                          )}
-                          {s.speedToNextStationKmph !== undefined && s.speedToNextStationKmph !== null && s.speedToNextStationKmph > 0 && (
-                            <span className="bg-amber-950/40 text-amber-400 px-1.5 py-0.5 rounded border border-amber-900/30 text-[9px] font-bold flex items-center space-x-1">
-                              <span>⚡</span>
-                              <span>{s.speedToNextStationKmph} km/h</span>
-                            </span>
-                          )}
-                          {showLive && liveStop && (
-                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase border transition-all ${
-                              liveStop.status?.toLowerCase() === 'departed'
-                                ? 'bg-indigo-950/40 border-indigo-900/30 text-indigo-400'
-                                : liveStop.status?.toLowerCase() === 'arrived'
-                                ? 'bg-emerald-950/40 border-emerald-900/30 text-emerald-400'
-                                : 'bg-slate-950 border-slate-800 text-slate-400'
-                            }`}>
-                              {liveStop.status || 'Scheduled'}
-                            </span>
+                        {/* 4. Departure Timing (Right) */}
+                        <div className="w-16 sm:w-24 text-right pl-1 shrink-0">
+                          <div className="text-[11px] sm:text-xs font-bold text-slate-200 leading-tight">
+                            {s.departureTime ? format12Hour(s.departureTime) : '---'}
+                          </div>
+                          {showLive && liveStop && liveStop.delayMinutes > 0 && s.departureTime && (
+                            <div className="text-[9px] sm:text-[10px] text-red-500 font-bold leading-none mt-0.5">
+                              {formatDelayedTime(s.departureTime, liveStop.delayMinutes)}
+                            </div>
                           )}
                         </div>
                       </div>
+                    );
+                  } else {
+                    const isExpanded = !!expandedBlocks[item.id];
+                    const isTrainInBlock = showLive && item.stations?.some(
+                      (ps: any) => ps.stationCode?.toUpperCase() === bubbleStationCode
+                    );
 
-                      {/* 4. Departure Timing (Right) */}
-                      <div className="col-span-3 text-right">
-                        <div className="text-xs sm:text-sm font-bold text-slate-200">
-                          {s.departureTime ? format12Hour(s.departureTime) : '---'}
-                        </div>
-                        {showLive && liveStop && liveStop.delayMinutes > 0 && s.departureTime && (
-                          <div className="text-[10px] sm:text-xs text-red-500 font-bold mt-0.5 leading-none">
-                                      {formatDelayedTime(s.departureTime, liveStop.delayMinutes)}
-                                    </div>
-                                  )}
-                                </div>
+                    return (
+                      <div key={item.id} className="relative">
+                        {/* Collapse/Expand Toggle Row */}
+                        <div className="flex items-center py-1.5 relative hover:bg-slate-850/20 rounded-lg transition-colors">
+                          <div className="w-14 sm:w-20 text-right pr-1 sm:pr-2 shrink-0">
+                            <span className="text-[9px] sm:text-[10px] text-slate-500 font-bold font-mono">
+                              +{item.stations.length}
+                            </span>
+                          </div>
+
+                          <div className="w-7 sm:w-10 relative flex items-center justify-center shrink-0 self-stretch min-h-[32px]">
+                            <div className="absolute top-0 bottom-0 w-0.5 border-r-2 border-dashed border-sky-600/70 left-1/2 -translate-x-1/2" />
+
+                            {!isExpanded && isTrainInBlock && (
+                              <div className="absolute top-1/2 -translate-y-1/2 z-20 bg-gradient-to-br from-sky-400 to-sky-600 text-white w-7 h-7 sm:w-8 sm:h-8 rounded-full shadow-lg shadow-sky-500/35 border-2 border-slate-900 animate-bounce flex items-center justify-center">
+                                <Train className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                <span className="absolute -bottom-1 bg-sky-950 text-[6px] font-black px-1 rounded uppercase tracking-wider border border-sky-400 select-none">Live</span>
                               </div>
-                            );
-                          } else {
-                            const isExpanded = !!expandedBlocks[item.id];
-                            const isTrainInBlock = showLive && item.stations?.some(
-                              (ps: any) => ps.stationCode?.toUpperCase() === bubbleStationCode
-                            );
+                            )}
+                          </div>
 
-                            return (
-                              <div key={item.id} className="my-1">
-                                {/* Collapse/Expand Toggle Row */}
-                                <div className="grid grid-cols-12 gap-4 items-center py-2 relative">
-                                  <div className="col-span-3" />
+                          <div className="flex-1 min-w-0 px-1 sm:px-2 text-left">
+                            <button
+                              onClick={() => toggleBlock(item.id)}
+                              className="text-[10px] sm:text-xs font-bold text-sky-400 hover:text-sky-300 flex items-center space-x-1 py-1 px-2 rounded-md bg-sky-950/40 border border-sky-900/30 cursor-pointer transition-all hover:bg-sky-900/20 active:scale-95"
+                            >
+                              <span>{isExpanded ? 'Hide' : 'Show'} {item.stations.length} non-stopping stations</span>
+                              <ChevronDown className={`h-3 w-3 transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                              {!isExpanded && isTrainInBlock && (
+                                <span className="ml-1 bg-sky-500/20 text-sky-400 px-1 py-0.2 rounded text-[7px] font-bold uppercase tracking-wider animate-pulse border border-sky-500/30">
+                                  Train here
+                                </span>
+                              )}
+                            </button>
+                          </div>
 
-                                  <div className="col-span-1 flex justify-center relative">
-                                    <div className="h-6 w-1 border-r border-dashed border-sky-600/60" />
+                          <div className="w-16 sm:w-24 shrink-0" />
+                        </div>
 
-                                    {/* Pulsing indicator if train is in this collapsed block */}
-                                    {!isExpanded && isTrainInBlock && (
-                                      <div className="absolute top-1/2 -translate-y-1/2 z-20 bg-gradient-to-br from-sky-400 to-sky-600 text-white w-9 h-9 rounded-full shadow-lg shadow-sky-500/35 border-2 border-slate-900 animate-bounce flex items-center justify-center">
-                                        <Train className="h-4.5 w-4.5" />
-                                        <span className="absolute -bottom-1 bg-sky-950 text-[6px] font-black px-1 rounded uppercase tracking-wider border border-sky-400 select-none">Live</span>
+                        {/* Render pass-through stations list */}
+                        {isExpanded && (
+                          <div className="bg-slate-950/50 border border-slate-800/80 rounded-lg p-1.5 my-1 space-y-0.5">
+                            {item.stations.map((passStation: any) => {
+                              const isTrainAtPassStation = showLive && bubbleStationCode === passStation.stationCode?.toUpperCase();
+                              return (
+                                <div key={passStation.sequenceNumber} className="flex items-center py-1 relative hover:bg-slate-900/50 rounded transition-colors">
+                                  {/* Arrival timing */}
+                                  <div className="w-14 sm:w-20 text-right pr-1 sm:pr-2 shrink-0">
+                                    <span className="text-[10px] sm:text-xs text-slate-450 font-mono">
+                                      {passStation.arrivalTime ? format12Hour(passStation.arrivalTime) : '---'}
+                                    </span>
+                                  </div>
+
+                                  {/* Dot / Live train bubble */}
+                                  <div className="w-7 sm:w-10 relative flex items-center justify-center shrink-0 self-stretch min-h-[26px]">
+                                    <div className="absolute top-0 bottom-0 w-0.5 border-r border-dashed border-sky-600/50 left-1/2 -translate-x-1/2" />
+                                    {isTrainAtPassStation ? (
+                                      <div className="h-4 w-4 rounded-full bg-slate-900 border-2 border-sky-500 z-10 flex items-center justify-center relative">
+                                        <div className="h-1.5 w-1.5 bg-sky-400 rounded-full" />
+                                        <div className="absolute -inset-1.5 bg-sky-500/30 rounded-full animate-ping" />
                                       </div>
+                                    ) : (
+                                      <div className="h-1.5 w-1.5 bg-slate-600 rounded-full z-10" />
                                     )}
                                   </div>
 
-                                  <div className="col-span-8 text-left pl-2">
-                                    <button
-                                      onClick={() => toggleBlock(item.id)}
-                                      className="text-[10px] font-bold text-sky-400 hover:text-sky-300 flex items-center space-x-1.5 py-1.5 px-3 rounded-lg bg-sky-950/40 border border-sky-900/30 cursor-pointer transition-all hover:bg-sky-900/20"
-                                    >
-                                      <span>{isExpanded ? 'Hide' : 'Show'} {item.stations.length} non-stopping stations</span>
-                                      <ChevronDown className={`h-3.5 w-3.5 transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                                      {!isExpanded && isTrainInBlock && (
-                                        <span className="ml-2 bg-sky-500/20 text-sky-400 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider animate-pulse border border-sky-500/30">
-                                          Train is here
-                                        </span>
-                                      )}
-                                    </button>
+                                  {/* Station details */}
+                                  <div className="flex-1 min-w-0 px-1 sm:px-2 text-left">
+                                    <span className="font-medium text-[11px] sm:text-xs text-slate-300 truncate block">
+                                      {translateName(passStation.stationName, language)}
+                                    </span>
+                                    <span className="text-[9px] text-slate-500">
+                                      {passStation.distance !== undefined && passStation.distance !== null ? `${passStation.distance} km` : `${passStation.sequenceNumber * 80} km`}
+                                    </span>
+                                    {passStation.speedToNextStationKmph !== undefined && passStation.speedToNextStationKmph !== null && passStation.speedToNextStationKmph > 0 && (
+                                      <span className="text-[8px] text-amber-400 font-bold ml-1.5">
+                                        ⚡ {passStation.speedToNextStationKmph} km/h
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Departure timing */}
+                                  <div className="w-16 sm:w-24 text-right pl-1 shrink-0">
+                                    <span className="text-[10px] sm:text-xs text-slate-450 font-mono">
+                                      {passStation.departureTime ? format12Hour(passStation.departureTime) : '---'}
+                                    </span>
                                   </div>
                                 </div>
-
-                                {/* Render pass-through stations list */}
-                                {isExpanded && (
-                                  <div className="bg-slate-950/40 border border-slate-800 p-2.5 rounded-xl space-y-1.5 my-2">
-                                    {item.stations.map((passStation: any) => {
-                                      const isTrainAtPassStation = showLive && bubbleStationCode === passStation.stationCode?.toUpperCase();
-                                      return (
-                                        <div key={passStation.sequenceNumber} className="grid grid-cols-12 gap-4 items-center py-2 relative">
-                                          {/* Arrival timing */}
-                                          <div className="col-span-3 text-right pr-2">
-                                            <span className="text-[10px] sm:text-xs text-slate-400">
-                                              {passStation.arrivalTime ? format12Hour(passStation.arrivalTime) : '---'}
-                                            </span>
-                                          </div>
-
-                                          {/* Dot / Live train bubble */}
-                                          <div className="col-span-1 flex justify-center relative">
-                                            {isTrainAtPassStation ? (
-                                              <div className="h-5 w-5 rounded-full bg-slate-900 border-4 border-sky-600 z-10 flex items-center justify-center relative">
-                                                <div className="h-2.5 w-2.5 bg-sky-400 rounded-full" />
-                                                <div className="absolute -inset-2 bg-sky-500/30 rounded-full animate-ping" />
-
-                                                <div className="absolute -top-14 z-20 bg-gradient-to-br from-sky-400 to-sky-600 text-white w-11 h-11 rounded-full shadow-xl shadow-sky-500/35 border-2 border-slate-900 animate-bounce flex items-center justify-center">
-                                                  <Train className="h-5.5 w-5.5" />
-                                                  <span className="absolute -bottom-1.5 bg-sky-950 text-[7px] font-black px-1 rounded uppercase tracking-wider border border-sky-400 select-none">Live</span>
-                                                </div>
-                                              </div>
-                                            ) : (
-                                              <div className="h-2.5 w-2.5 bg-slate-700 rounded-full border border-slate-900 z-10" />
-                                            )}
-                                          </div>
-
-                                          {/* Station details */}
-                                          <div className="col-span-5 pl-2 text-left">
-                                            <span className="font-semibold text-xs sm:text-sm text-slate-300">
-                                              {translateName(passStation.stationName, language)}
-                                            </span>
-                                            <span className="text-[9px] text-slate-500 ml-2">
-                                              {passStation.distance !== undefined && passStation.distance !== null ? `${passStation.distance} km` : `${passStation.sequenceNumber * 80} km`}
-                                            </span>
-                                            {passStation.speedToNextStationKmph !== undefined && passStation.speedToNextStationKmph !== null && passStation.speedToNextStationKmph > 0 && (
-                                              <span className="text-[9px] text-amber-500 font-bold ml-2">
-                                                ⚡ {passStation.speedToNextStationKmph} km/h
-                                              </span>
-                                            )}
-                                          </div>
-
-                                          {/* Departure timing */}
-                                          <div className="col-span-3 text-right">
-                                            <span className="text-[10px] sm:text-xs text-slate-400">
-                                              {passStation.departureTime ? format12Hour(passStation.departureTime) : '---'}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          }
-                        })}
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </div>
-                  ) : (
-                    <div className="text-center py-16 text-slate-500">
-                      <p>{routeError || 'No route schedule mapping available.'}</p>
-                    </div>
-                  )}
+                    );
+                  }
+                });
+              })()}
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-16 text-slate-500">
+            <p>{routeError || 'No route schedule mapping available.'}</p>
+          </div>
+        )}
       </div>
       {/* Alert settings modal */}
       {showAlertModal && (

@@ -189,7 +189,7 @@ export default function RailAiWidget() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end">
+    <div className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] right-3 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end">
       {/* Floating Chat Bubble Button */}
       {!isOpen && (
         <button
