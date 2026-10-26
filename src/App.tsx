@@ -13,11 +13,13 @@ import RailAiWidget from './components/RailAiWidget';
 import JourneyPlanner from './pages/JourneyPlanner';
 import SearchHistoryPage from './pages/SearchHistoryPage';
 import { LanguageProvider } from './context/LanguageContext';
+import AndroidBackButtonHandler from './components/AndroidBackButtonHandler';
 
 export default function App() {
   return (
     <LanguageProvider>
       <Router>
+        <AndroidBackButtonHandler />
         <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 selection:bg-indigo-650 selection:text-white">
           <Navbar />
           
