@@ -214,17 +214,30 @@ flowchart TB
 ### 7️⃣ User Journey *(conceptual)*
 
 ```mermaid
-journey
-    title Passenger checking a train
-    section Find
-      Open the app: 5: User
-      Search for a train: 4: User
-    section Track
-      See live status: 5: User, App
-      View position on map: 5: User, App
-    section Assist
-      Ask RailAI a question: 4: User, App
-      Read the answer: 5: User
+flowchart LR
+    S([🚆 Start]) --> F
+
+    subgraph F [1 · Find]
+        direction TB
+        F1[📱 Open the app] --> F2[🔍 Search for a train]
+    end
+
+    subgraph T [2 · Track]
+        direction TB
+        T1[📡 See live status] --> T2[🗺 View position on map]
+    end
+
+    subgraph A [3 · Assist]
+        direction TB
+        A1[🤖 Ask RailAI a question] --> A2[💬 Read the answer]
+    end
+
+    F --> T --> A --> E([✅ Journey planned])
+
+    classDef step fill:#1e293b,stroke:#38bdf8,color:#e2e8f0;
+    classDef edge fill:#0b3b5c,stroke:#a78bfa,color:#fff;
+    class F1,F2,T1,T2,A1,A2 step;
+    class S,E edge;
 ```
 
 ---
