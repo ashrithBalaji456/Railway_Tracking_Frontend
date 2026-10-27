@@ -33,11 +33,16 @@ export interface TrainExceptionSummary {
 export interface TrainDelayReport {
   trainNumber: string;
   trainName: string;
-  historicalAverageDelayMinutes: number;
-  onTimePercentage: number;
+  historicalAverageDelayMinutes?: number;
+  avgArrivalDelayMinutes?: number;
+  avgDepartureDelayMinutes?: number;
+  onTimePercentage?: number;
+  ontimePercentage?: number;
   punctualityGrade: string; // 'A', 'B', 'C', 'D'
   totalRunsAnalyzed?: number;
+  totalRunsSampled?: number;
   delayDistribution?: Record<string, number>;
+  remarks?: string;
 }
 
 export interface ClassFare {
@@ -53,7 +58,8 @@ export interface TrainFare {
   sourceStation?: string;
   destinationStation?: string;
   distanceKm?: number;
-  fares: ClassFare[];
+  fares?: ClassFare[];
+  classFares?: ClassFare[];
 }
 
 export interface JourneyLegDelay {
