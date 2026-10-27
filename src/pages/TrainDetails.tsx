@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X, ArrowLeftRight, Info, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X, ArrowLeftRight, Info, Sparkles, Zap } from 'lucide-react';
 import api, { getTrainDelayReport, getTrainFare } from '../services/api';
 import type { TrainDelayReport, TrainFare } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -49,6 +49,7 @@ export default function TrainDetails() {
   const [selectedFareFrom, setSelectedFareFrom] = useState<string>('');
   const [selectedFareTo, setSelectedFareTo] = useState<string>('');
   const [selectedClassCode, setSelectedClassCode] = useState<string | null>('SL');
+  const [selectedQuota, setSelectedQuota] = useState<'GN' | 'TQ'>('GN');
 
   const { language, t } = useLanguage();
   const [syncState, setSyncState] = useState<'IDLE' | 'CONNECTING' | 'CONNECTED' | 'POLLING'>('IDLE');
@@ -207,102 +208,152 @@ export default function TrainDetails() {
     const toDist = toStation?.distance != null ? toStation.distance : ((toStation?.sequenceNumber || route.stations.length) * 35);
     const distanceKm = Math.max(10, Math.abs(toDist - fromDist));
 
-    const isSF = Boolean(
-      train?.trainType?.toLowerCase()?.includes('superfast') ||
-      train?.trainName?.toLowerCase()?.includes('sf') ||
-      train?.trainName?.toLowerCase()?.includes('superfast')
-    );
-    const sfFee = isSF ? 30 : 0;
+    const trainNameLower = (train?.trainName || '').toLowerCase();
+    const trainTypeLower = (train?.trainType || '').toLowerCase();
+    const trainNum = train?.trainNumber || trainNumber || '';
 
-    // Check for API-returned fares override if available
-    const apiFares = (fareData?.classFares || fareData?.fares || []) as any[];
-    const getApiFare = (code: string) => {
-      const match = apiFares.find((f: any) => (f.classCode || f.code)?.toUpperCase() === code.toUpperCase());
-      return match ? (match.totalFare || match.baseFare || match.fare) : null;
+    // Train Type Classification
+    const isVandeBharat = trainNameLower.includes('vande bharat') || trainTypeLower.includes('vande bharat');
+    const isRajdhani = trainNameLower.includes('rajdhani') || trainTypeLower.includes('rajdhani');
+    const isShatabdi = trainNameLower.includes('shatabdi') || trainTypeLower.includes('shatabdi');
+    const isDuronto = trainNameLower.includes('duronto') || trainTypeLower.includes('duronto');
+    const isMemu = trainNameLower.includes('memu') || trainNameLower.includes('passenger') || trainTypeLower.includes('passenger') || trainTypeLower.includes('demu');
+    const isSpecial = trainNum.startsWith('0') || trainNameLower.includes('special') || trainNameLower.includes('spl') || trainTypeLower.includes('special');
+    const isSF = !isMemu && (trainTypeLower.includes('superfast') || trainNameLower.includes('sf') || trainNameLower.includes('superfast') || isRajdhani || isShatabdi || isDuronto || isVandeBharat);
+
+    // Multiplier for Special holiday trains (IRCTC 1.30x surcharge)
+    const specialMultiplier = isSpecial ? 1.30 : 1.0;
+
+    // Optional API-returned fares from RailRadar
+    const apiClassFares = (fareData?.classFares || fareData?.fares || []) as any[];
+
+    // Train category label
+    const categoryLabel = isVandeBharat ? 'Vande Bharat Express'
+      : isRajdhani ? 'Rajdhani Express'
+      : isShatabdi ? 'Shatabdi Express'
+      : isDuronto ? 'Duronto Express'
+      : isMemu ? 'Passenger / MEMU'
+      : isSpecial ? 'Special Fare Express (1.3x)'
+      : isSF ? 'Superfast Express'
+      : 'Mail / Express';
+
+    // Official IRCTC Tatkal & Base Calculation Helper
+    const computeClass = (
+      code: string,
+      name: string,
+      tag: string,
+      ratePerKm: number,
+      minBase: number,
+      resFee: number,
+      sfFee: number,
+      cateringFee: number,
+      isAc: boolean,
+      tatkalPct: number,
+      tatkalMin: number,
+      tatkalMax: number,
+      tatkalAllowed: boolean
+    ) => {
+      // Check if API returned an exact verified total fare
+      const apiMatch = apiClassFares.find((f: any) => (f.classCode || f.code)?.toUpperCase() === code.toUpperCase());
+      const apiTotal = apiMatch ? (apiMatch.totalFare || apiMatch.baseFare || apiMatch.fare) : null;
+
+      const rawBase = Math.max(minBase, Math.round(distanceKm * ratePerKm + minBase * 0.4)) * specialMultiplier;
+      const baseFare = Math.round(rawBase);
+      const gst = isAc ? Math.round((baseFare + resFee + sfFee + cateringFee) * 0.05) : 0;
+      const totalFare = (apiTotal && selectedFareFrom === route.originStationCode && selectedFareTo === route.destinationStationCode)
+        ? apiTotal
+        : Math.ceil((baseFare + resFee + sfFee + cateringFee + gst) / 5) * 5;
+
+      let tatkalCharge = 0;
+      if (tatkalAllowed) {
+        const rawTatkal = baseFare * tatkalPct;
+        tatkalCharge = Math.max(tatkalMin, Math.min(tatkalMax, Math.round(rawTatkal)));
+      }
+      const tatkalGst = isAc && tatkalAllowed ? Math.round(tatkalCharge * 0.05) : 0;
+      const tatkalTotal = tatkalAllowed ? Math.ceil((totalFare + tatkalCharge + tatkalGst) / 5) * 5 : totalFare;
+
+      return {
+        code,
+        name,
+        tag,
+        base: baseFare,
+        resFee,
+        surcharge: sfFee,
+        cateringFee,
+        gst,
+        total: totalFare,
+        tatkalCharge,
+        tatkalTotal,
+        tatkalAllowed,
+        ac: isAc,
+      };
     };
 
-    // Standard official IRCTC distance slab formula
-    const base2S = Math.max(35, Math.round(distanceKm * 0.22 + 25));
-    const total2S = getApiFare('2S') || Math.ceil((base2S + (isSF ? 15 : 0)) / 5) * 5;
+    let classes: any[] = [];
 
-    const baseSL = Math.max(120, Math.round(distanceKm * 0.44 + 55));
-    const totalSL = getApiFare('SL') || Math.ceil((baseSL + sfFee) / 5) * 5;
+    if (isVandeBharat) {
+      // Vande Bharat: CC and EC with premium speed and catering
+      classes = [
+        computeClass('CC', 'AC Chair Car', 'Executive', 1.65, 380, 40, 45, 195, true, 0.30, 300, 400, true),
+        computeClass('EC', 'Exec. Chair Car', 'Luxury', 3.10, 850, 60, 75, 280, true, 0.30, 400, 500, true),
+      ];
+    } else if (isShatabdi) {
+      // Shatabdi: CC and EC
+      classes = [
+        computeClass('CC', 'AC Chair Car', 'Day Express', 1.45, 320, 40, 45, 160, true, 0.30, 300, 400, true),
+        computeClass('EC', 'Exec. Chair Car', 'Executive', 2.85, 750, 60, 75, 240, true, 0.30, 400, 500, true),
+      ];
+    } else if (isRajdhani || (isDuronto && !trainNameLower.includes('non-ac'))) {
+      // Rajdhani / AC Duronto: 3A, 2A, 1A
+      classes = [
+        computeClass('3A', 'AC 3 Tier', 'Comfort', 1.38, 480, 40, 45, 320, true, 0.30, 300, 400, true),
+        computeClass('2A', 'AC 2 Tier', 'Premium', 1.95, 720, 50, 45, 340, true, 0.30, 400, 500, true),
+        computeClass('1A', 'AC First Class', 'Royal', 3.35, 1250, 60, 75, 420, true, 0, 0, 0, false),
+      ];
+    } else if (isMemu) {
+      // MEMU / Passenger: Unreserved / 2S ordinary (no Tatkal, no SF)
+      const ordinaryBase = Math.max(10, Math.min(120, Math.round(distanceKm * 0.18 + 5)));
+      classes = [
+        {
+          code: '2S',
+          name: 'General Sitting',
+          tag: 'Ordinary',
+          base: ordinaryBase,
+          resFee: 0,
+          surcharge: 0,
+          cateringFee: 0,
+          gst: 0,
+          total: Math.ceil(ordinaryBase / 5) * 5,
+          tatkalCharge: 0,
+          tatkalTotal: Math.ceil(ordinaryBase / 5) * 5,
+          tatkalAllowed: false,
+          ac: false,
+        }
+      ];
+    } else {
+      // Standard Mail / Express / Superfast / Special
+      const sfFee2S = isSF ? 15 : 0;
+      const sfFeeSL = isSF ? 30 : 0;
+      const sfFee3A = isSF ? 45 : 0;
+      const sfFee2A = isSF ? 45 : 0;
+      const sfFee1A = isSF ? 75 : 0;
 
-    const base3A = Math.max(450, Math.round(distanceKm * 1.28 + 150));
-    const gst3A = Math.round(base3A * 0.05);
-    const total3A = getApiFare('3A') || Math.ceil((base3A + gst3A + (isSF ? 45 : 0)) / 5) * 5;
-
-    const base2A = Math.max(680, Math.round(distanceKm * 1.82 + 220));
-    const gst2A = Math.round(base2A * 0.05);
-    const total2A = getApiFare('2A') || Math.ceil((base2A + gst2A + (isSF ? 45 : 0)) / 5) * 5;
-
-    const base1A = Math.max(1180, Math.round(distanceKm * 3.10 + 380));
-    const gst1A = Math.round(base1A * 0.05);
-    const total1A = getApiFare('1A') || Math.ceil((base1A + gst1A + (isSF ? 75 : 0)) / 5) * 5;
-
-    const classes = [
-      {
-        code: '2S',
-        name: 'Second Sitting',
-        base: base2S,
-        total: total2S,
-        tag: 'Budget',
-        ac: false,
-        tatkal: total2S + 15,
-        surcharge: isSF ? 15 : 0,
-        gst: 0,
-      },
-      {
-        code: 'SL',
-        name: 'Sleeper Class',
-        base: baseSL,
-        total: totalSL,
-        tag: 'Popular',
-        ac: false,
-        tatkal: Math.ceil((totalSL + Math.max(100, totalSL * 0.10)) / 5) * 5,
-        surcharge: sfFee,
-        gst: 0,
-      },
-      {
-        code: '3A',
-        name: 'AC 3 Tier',
-        base: base3A,
-        total: total3A,
-        tag: 'Comfort',
-        ac: true,
-        tatkal: Math.ceil((total3A + Math.max(300, total3A * 0.30)) / 5) * 5,
-        surcharge: isSF ? 45 : 0,
-        gst: gst3A,
-      },
-      {
-        code: '2A',
-        name: 'AC 2 Tier',
-        base: base2A,
-        total: total2A,
-        tag: 'Premium',
-        ac: true,
-        tatkal: Math.ceil((total2A + Math.max(400, total2A * 0.30)) / 5) * 5,
-        surcharge: isSF ? 45 : 0,
-        gst: gst2A,
-      },
-      {
-        code: '1A',
-        name: 'AC First Class',
-        base: base1A,
-        total: total1A,
-        tag: 'Executive',
-        ac: true,
-        tatkal: total1A,
-        surcharge: isSF ? 75 : 0,
-        gst: gst1A,
-      },
-    ];
+      classes = [
+        computeClass('2S', 'Second Sitting', 'Budget', 0.22, 35, 15, sfFee2S, 0, false, 0.10, 10, 15, true),
+        computeClass('SL', 'Sleeper Class', 'Popular', 0.44, 120, 20, sfFeeSL, 0, false, 0.10, 100, 200, true),
+        computeClass('3A', 'AC 3 Tier', 'Comfort', 1.28, 450, 40, sfFee3A, 0, true, 0.30, 300, 400, true),
+        computeClass('2A', 'AC 2 Tier', 'Premium', 1.82, 680, 50, sfFee2A, 0, true, 0.30, 400, 500, true),
+        computeClass('1A', 'AC First Class', 'Executive', 3.10, 1180, 60, sfFee1A, 0, true, 0, 0, 0, false),
+      ];
+    }
 
     return {
       distanceKm,
       fromStation,
       toStation,
       isSF,
+      isSpecial,
+      categoryLabel,
       classes,
     };
   })();
@@ -1102,26 +1153,65 @@ export default function TrainDetails() {
 
         {/* Interactive Ticket Fare Calculator Card */}
         <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl shadow-lg space-y-3.5">
-          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+          {/* Header with Title, Category Badge, and Distance */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 gap-2">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400">
                 <CreditCard className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-slate-100 leading-tight">Ticket Fare Calculator</h2>
-                <p className="text-[10px] text-slate-400">Official distance-based slab rate</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-sm font-bold text-slate-100 leading-tight">Ticket Fare Calculator</h2>
+                  {interactiveFareData && (
+                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-700/60 text-indigo-300">
+                      {interactiveFareData.categoryLabel}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-0.5">IRCTC distance slab & train-type fare engine</p>
               </div>
             </div>
-            {interactiveFareData && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-950/60 border border-indigo-750 text-indigo-300 text-xs font-black">
-                {loadingFare ? (
-                  <Clock className="w-3 h-3 text-indigo-400 animate-spin" />
-                ) : (
-                  <Sparkles className="w-3 h-3 text-indigo-400" />
-                )}
-                <span>{interactiveFareData.distanceKm} km</span>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              {/* Quota Selector (General vs Tatkal) */}
+              <div className="flex items-center p-0.5 bg-slate-950 border border-slate-800 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setSelectedQuota('GN')}
+                  className={`px-2 py-1 rounded text-[10px] font-bold transition cursor-pointer ${
+                    selectedQuota === 'GN'
+                      ? 'bg-indigo-600 text-white shadow'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  General
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedQuota('TQ')}
+                  className={`px-2 py-1 rounded text-[10px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                    selectedQuota === 'TQ'
+                      ? 'bg-amber-500 text-slate-950 font-black shadow'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Zap className="w-3 h-3" />
+                  Tatkal
+                </button>
               </div>
-            )}
+
+              {/* Distance pill */}
+              {interactiveFareData && (
+                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-950/60 border border-indigo-750 text-indigo-300 text-xs font-black">
+                  {loadingFare ? (
+                    <Clock className="w-3 h-3 text-indigo-400 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3 h-3 text-indigo-400" />
+                  )}
+                  <span>{interactiveFareData.distanceKm} km</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Interactive Station Pair Selector */}
@@ -1151,7 +1241,7 @@ export default function TrainDetails() {
                   <button
                     type="button"
                     onClick={swapFareStations}
-                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition shadow-sm"
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition shadow-sm cursor-pointer"
                     title="Swap stations"
                   >
                     <ArrowLeftRight className="w-3.5 h-3.5" />
@@ -1185,6 +1275,10 @@ export default function TrainDetails() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {interactiveFareData.classes.map((c) => {
                   const isSelected = selectedClassCode === c.code;
+                  const isTatkal = selectedQuota === 'TQ';
+                  const isTatkalN_A = isTatkal && !c.tatkalAllowed;
+                  const displayPrice = isTatkal ? (c.tatkalAllowed ? c.tatkalTotal : c.total) : c.total;
+
                   return (
                     <button
                       key={c.code}
@@ -1192,23 +1286,35 @@ export default function TrainDetails() {
                       onClick={() => setSelectedClassCode(c.code)}
                       className={`rounded-xl p-2.5 text-left transition-all relative border cursor-pointer ${
                         isSelected
-                          ? 'bg-indigo-950/60 border-indigo-500 shadow-md shadow-indigo-950/50 ring-1 ring-indigo-500/40'
+                          ? isTatkal
+                            ? 'bg-amber-950/30 border-amber-500 shadow-md shadow-amber-950/40 ring-1 ring-amber-500/40'
+                            : 'bg-indigo-950/60 border-indigo-500 shadow-md shadow-indigo-950/50 ring-1 ring-indigo-500/40'
                           : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-850/40'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-[11px] font-black tracking-wide text-indigo-400 uppercase">
+                        <span className={`text-[11px] font-black tracking-wide uppercase ${
+                          isTatkal && c.tatkalAllowed ? 'text-amber-400' : 'text-indigo-400'
+                        }`}>
                           {c.code}
                         </span>
                         <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.2 rounded-full ${
-                          c.ac ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30' : 'bg-slate-800 text-slate-400'
+                          isTatkalN_A
+                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                            : isTatkal && c.tatkalAllowed
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                            : c.ac
+                            ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                            : 'bg-slate-800 text-slate-400'
                         }`}>
-                          {c.tag}
+                          {isTatkalN_A ? 'GN Only' : isTatkal ? 'Tatkal' : c.tag}
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-400 truncate">{c.name}</div>
-                      <div className="text-base font-extrabold text-white mt-1">
-                        ₹{c.total}
+                      <div className={`text-base font-extrabold mt-1 ${
+                        isTatkal && c.tatkalAllowed ? 'text-amber-400' : isTatkalN_A ? 'text-slate-400' : 'text-white'
+                      }`}>
+                        ₹{displayPrice}
                       </div>
                     </button>
                   );
@@ -1217,33 +1323,66 @@ export default function TrainDetails() {
 
               {/* Selected Class Fare Breakdown Tray */}
               {(() => {
-                const activeClass = interactiveFareData.classes.find(c => c.code === selectedClassCode) || interactiveFareData.classes[1];
+                const activeClass = interactiveFareData.classes.find(c => c.code === selectedClassCode) || interactiveFareData.classes[0];
+                const isTatkal = selectedQuota === 'TQ';
+                const finalPayable = isTatkal && activeClass.tatkalAllowed ? activeClass.tatkalTotal : activeClass.total;
+
                 return (
                   <div className="bg-slate-950/70 border border-slate-800/90 rounded-xl p-3 text-xs space-y-1.5 animate-fadeIn">
-                    <div className="flex items-center justify-between text-slate-300 font-bold border-b border-slate-800 pb-1">
+                    <div className="flex items-center justify-between text-slate-300 font-bold border-b border-slate-800 pb-1.5">
                       <span className="flex items-center gap-1.5 text-indigo-300">
                         <Info className="w-3.5 h-3.5" />
-                        {activeClass.name} ({activeClass.code}) Fare Breakdown
+                        {activeClass.name} ({activeClass.code}) • {isTatkal ? 'Tatkal Quota' : 'General Quota'} Breakdown
                       </span>
-                      <span className="text-white font-extrabold text-sm">₹{activeClass.total}</span>
+                      <span className={`font-extrabold text-sm ${isTatkal && activeClass.tatkalAllowed ? 'text-amber-400' : 'text-white'}`}>
+                        ₹{finalPayable}
+                      </span>
                     </div>
+
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] pt-1">
                       <div>
-                        <span className="text-slate-500 block">Base Fare</span>
+                        <span className="text-slate-500 block">Base Distance Fare</span>
                         <span className="text-slate-200 font-semibold">₹{activeClass.base}</span>
                       </div>
                       <div>
-                        <span className="text-slate-500 block">Superfast/Reservation</span>
+                        <span className="text-slate-500 block">
+                          {interactiveFareData.isSpecial ? 'Special Train (1.3x)' : 'Superfast Surcharge'}
+                        </span>
                         <span className="text-slate-200 font-semibold">₹{activeClass.surcharge}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">
+                          {isTatkal ? 'Tatkal Charge' : activeClass.cateringFee > 0 ? 'Catering' : 'Reservation Fee'}
+                        </span>
+                        <span className={`font-semibold ${isTatkal && activeClass.tatkalAllowed ? 'text-amber-400 font-bold' : 'text-slate-200'}`}>
+                          {isTatkal
+                            ? (activeClass.tatkalAllowed ? `+₹${activeClass.tatkalCharge}` : 'Not Applicable')
+                            : activeClass.cateringFee > 0
+                            ? `₹${activeClass.cateringFee}`
+                            : `₹${activeClass.resFee}`}
+                        </span>
                       </div>
                       <div>
                         <span className="text-slate-500 block">GST (AC Only)</span>
                         <span className="text-slate-200 font-semibold">₹{activeClass.gst}</span>
                       </div>
-                      <div>
-                        <span className="text-slate-500 block">Tatkal Quota Est.</span>
-                        <span className="text-amber-400 font-bold">₹{activeClass.tatkal}</span>
-                      </div>
+                    </div>
+
+                    <div className="pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
+                      <span>
+                        {isTatkal
+                          ? (activeClass.tatkalAllowed ? `Tatkal quota rules applied (10-30% slab rate).` : `Tatkal is not permitted for First AC (1A). General fare applies.`)
+                          : `Calculated from ${interactiveFareData.categoryLabel} distance slab rates.`}
+                      </span>
+                      {activeClass.tatkalAllowed && !isTatkal && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedQuota('TQ')}
+                          className="text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Zap className="w-2.5 h-2.5" /> View Tatkal Fare
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
