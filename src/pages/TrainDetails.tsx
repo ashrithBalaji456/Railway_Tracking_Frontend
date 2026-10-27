@@ -1,11 +1,201 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X, ArrowLeftRight, Info, Sparkles, Zap } from 'lucide-react';
+import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X, ArrowLeftRight, Info, Sparkles, Zap, Search, Check } from 'lucide-react';
 import api, { getTrainDelayReport, getTrainFare } from '../services/api';
 import type { TrainDelayReport, TrainFare } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
 import { searchHistoryService } from '../services/searchHistoryService';
+
+interface StationSelectorDropdownProps {
+  label: string;
+  value: string;
+  onChange: (stationCode: string) => void;
+  stations: any[];
+  badgeColor?: 'indigo' | 'emerald';
+}
+
+function StationSelectorDropdown({
+  label,
+  value,
+  onChange,
+  stations,
+  badgeColor = 'indigo'
+}: StationSelectorDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const selectedStation = stations.find(
+    (s: any) => s.stationCode?.toUpperCase() === value?.toUpperCase()
+  ) || stations[0];
+
+  const filteredStations = stations.filter((st: any) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      st.stationCode?.toLowerCase().includes(q) ||
+      st.stationName?.toLowerCase().includes(q)
+    );
+  });
+
+  const isEmerald = badgeColor === 'emerald';
+
+  return (
+    <div ref={dropdownRef} className="relative flex-1 min-w-0">
+      <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center justify-between">
+        <span>{label}</span>
+        {selectedStation?.distance != null && (
+          <span className="text-[9px] text-slate-400 font-mono font-medium">
+            {selectedStation.distance} km
+          </span>
+        )}
+      </label>
+
+      {/* Dropdown Toggle Trigger with Curved Edges */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full bg-slate-900/90 hover:bg-slate-850/90 border rounded-xl px-2.5 py-2 text-xs font-semibold flex items-center justify-between gap-1.5 transition-all shadow-sm cursor-pointer ${
+          isOpen
+            ? isEmerald
+              ? 'border-emerald-500/80 ring-2 ring-emerald-500/20 shadow-emerald-500/10'
+              : 'border-indigo-500/80 ring-2 ring-indigo-500/20 shadow-indigo-500/10'
+            : 'border-slate-700/80 hover:border-slate-600'
+        }`}
+      >
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span
+            className={`px-1.5 py-0.5 rounded-md font-mono text-[10px] font-extrabold uppercase border shrink-0 ${
+              isEmerald
+                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60'
+                : 'bg-indigo-950/80 text-indigo-300 border-indigo-800/60'
+            }`}
+          >
+            {selectedStation?.stationCode || '---'}
+          </span>
+          <span className="truncate text-slate-100 font-medium text-[11px] sm:text-xs">
+            {selectedStation?.stationName || 'Select station'}
+          </span>
+        </div>
+
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${
+            isOpen ? 'rotate-180 text-indigo-400' : ''
+          }`}
+        />
+      </button>
+
+      {/* Floating Menu with Curved Edges & Glassmorphism */}
+      {isOpen && (
+        <div className="absolute z-50 left-0 right-0 mt-1.5 bg-slate-900/95 backdrop-blur-xl border border-slate-750/90 rounded-2xl shadow-2xl shadow-black/80 p-2 space-y-1.5 animate-fadeIn min-w-[210px] sm:min-w-[260px]">
+          {/* Quick Filter Search Bar */}
+          {stations.length > 5 && (
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                autoFocus
+                placeholder="Search station or code..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-slate-950/90 border border-slate-800 rounded-xl pl-8 pr-7 py-1.5 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-0.5 cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Station List with Curved Option Items */}
+          <div className="max-h-56 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-slate-700/60 scrollbar-track-transparent pr-1">
+            {filteredStations.length === 0 ? (
+              <div className="text-center py-4 text-xs text-slate-400">
+                No matching stations found
+              </div>
+            ) : (
+              filteredStations.map((st: any) => {
+                const isItemActive =
+                  st.stationCode?.toUpperCase() === selectedStation?.stationCode?.toUpperCase();
+
+                return (
+                  <button
+                    key={`${label}-${st.stationCode}-${st.sequenceNumber}`}
+                    type="button"
+                    onClick={() => {
+                      onChange(st.stationCode);
+                      setIsOpen(false);
+                      setSearch('');
+                    }}
+                    className={`w-full px-2.5 py-1.5 rounded-xl text-left text-xs flex items-center justify-between gap-1.5 transition-all cursor-pointer ${
+                      isItemActive
+                        ? isEmerald
+                          ? 'bg-emerald-950/70 border border-emerald-500/40 text-emerald-200 font-bold shadow-sm'
+                          : 'bg-indigo-950/70 border border-indigo-500/40 text-indigo-200 font-bold shadow-sm'
+                        : 'hover:bg-slate-800/80 text-slate-300 hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className={`px-1.5 py-0.5 rounded-md font-mono text-[9px] font-extrabold uppercase shrink-0 ${
+                          isItemActive
+                            ? isEmerald
+                              ? 'bg-emerald-900/90 text-emerald-200'
+                              : 'bg-indigo-900/90 text-indigo-200'
+                            : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {st.stationCode}
+                      </span>
+                      <span className="truncate text-[11px] sm:text-xs">
+                        {st.stationName}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {st.distance != null && (
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {st.distance} km
+                        </span>
+                      )}
+                      {isItemActive && (
+                        <Check
+                          className={`w-3.5 h-3.5 ${
+                            isEmerald ? 'text-emerald-400' : 'text-indigo-400'
+                          }`}
+                        />
+                      )}
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function TrainDetails() {
   const { trainNumber } = useParams<{ trainNumber: string }>();
@@ -1304,57 +1494,39 @@ export default function TrainDetails() {
             </div>
           </div>
 
-          {/* Interactive Station Pair Selector */}
+          {/* Interactive Station Pair Selector with Custom Curved Dropdowns */}
           {route?.stations && route.stations.length > 1 && (
-            <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-2.5 space-y-2">
-              <div className="flex items-center justify-between gap-1.5 text-xs">
-                {/* Boarding Station Dropdown */}
-                <div className="flex-1 min-w-0">
-                  <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
-                    Boarding From:
-                  </label>
-                  <select
-                    value={selectedFareFrom || (route.stations[0]?.stationCode || '')}
-                    onChange={(e) => setSelectedFareFrom(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-2 py-1.5 text-xs text-slate-100 font-semibold focus:outline-none focus:border-indigo-500 cursor-pointer"
-                  >
-                    {route.stations.map((st: any) => (
-                      <option key={`from-${st.stationCode}-${st.sequenceNumber}`} value={st.stationCode}>
-                        {st.stationCode} - {st.stationName} ({st.distance != null ? `${st.distance} km` : ''})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-2.5 sm:p-3 space-y-2">
+              <div className="flex items-center justify-between gap-1.5 sm:gap-2 text-xs">
+                {/* Boarding Station Custom Dropdown */}
+                <StationSelectorDropdown
+                  label="Boarding From:"
+                  value={selectedFareFrom || (route.stations[0]?.stationCode || '')}
+                  onChange={(code) => setSelectedFareFrom(code)}
+                  stations={route.stations}
+                  badgeColor="emerald"
+                />
 
                 {/* Swap Button */}
-                <div className="pt-3">
+                <div className="pt-4 shrink-0">
                   <button
                     type="button"
                     onClick={swapFareStations}
-                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition shadow-sm cursor-pointer"
-                    title="Swap stations"
+                    className="p-2 rounded-xl bg-slate-850 hover:bg-slate-800 active:scale-95 border border-slate-700/80 text-slate-300 hover:text-white transition-all shadow-md cursor-pointer hover:border-indigo-500/50 hover:shadow-indigo-500/10"
+                    title="Swap Boarding and Destination stations"
                   >
-                    <ArrowLeftRight className="w-3.5 h-3.5" />
+                    <ArrowLeftRight className="w-3.5 h-3.5 text-indigo-400" />
                   </button>
                 </div>
 
-                {/* Destination Station Dropdown */}
-                <div className="flex-1 min-w-0">
-                  <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
-                    Destination To:
-                  </label>
-                  <select
-                    value={selectedFareTo || (route.stations[route.stations.length - 1]?.stationCode || '')}
-                    onChange={(e) => setSelectedFareTo(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-2 py-1.5 text-xs text-slate-100 font-semibold focus:outline-none focus:border-indigo-500 cursor-pointer"
-                  >
-                    {route.stations.map((st: any) => (
-                      <option key={`to-${st.stationCode}-${st.sequenceNumber}`} value={st.stationCode}>
-                        {st.stationCode} - {st.stationName} ({st.distance != null ? `${st.distance} km` : ''})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* Destination Station Custom Dropdown */}
+                <StationSelectorDropdown
+                  label="Destination To:"
+                  value={selectedFareTo || (route.stations[route.stations.length - 1]?.stationCode || '')}
+                  onChange={(code) => setSelectedFareTo(code)}
+                  stations={route.stations}
+                  badgeColor="indigo"
+                />
               </div>
             </div>
           )}
