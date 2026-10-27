@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MapPin, ArrowRight, RefreshCw, AlertTriangle, Clock, Calendar, HelpCircle, Train, Navigation, ArrowLeft } from 'lucide-react';
-import api from '../services/api';
+import { MapPin, ArrowRight, RefreshCw, AlertTriangle, Clock, Calendar, HelpCircle, Train, Navigation, ArrowLeft, TrendingUp } from 'lucide-react';
+import api, { getJourneyOverlay } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
 import { searchHistoryService } from '../services/searchHistoryService';
@@ -24,6 +24,10 @@ export default function JourneyPlanner() {
   const [error, setError] = useState('');
   const [searched, setSearched] = useState(false);
   const [travelDate, setTravelDate] = useState('');
+
+  const [showOverlay, setShowOverlay] = useState(false);
+  const [overlayData, setOverlayData] = useState<Record<string, number>>({});
+  const [loadingOverlay, setLoadingOverlay] = useState(false);
 
   // Debounced Autocomplete for Source Station
   useEffect(() => {
@@ -121,6 +125,39 @@ export default function JourneyPlanner() {
 
     setSelectedDest(tempSource);
     setDestQuery(tempQuery);
+  };
+
+  const toggleDelayOverlay = async () => {
+    if (showOverlay) {
+      setShowOverlay(false);
+      return;
+    }
+    setShowOverlay(true);
+    if (Object.keys(overlayData).length > 0) return;
+
+    setLoadingOverlay(true);
+    try {
+      const trainNumbers: string[] = [];
+      journeys.forEach((j) => {
+        if (j.firstTrainNumber) trainNumbers.push(j.firstTrainNumber);
+        if (j.secondTrainNumber) trainNumbers.push(j.secondTrainNumber);
+      });
+      const unique = Array.from(new Set(trainNumbers));
+      const res: any = await getJourneyOverlay({ trains: unique, date: travelDate });
+      const delaysMap: Record<string, number> = {};
+      if (res?.data?.delays) {
+        res.data.delays.forEach((d: any) => {
+          if (d.train) {
+            delaysMap[d.train] = d.arrivalDelayMinutes != null ? d.arrivalDelayMinutes : (d.departureDelayMinutes || 0);
+          }
+        });
+      }
+      setOverlayData(delaysMap);
+    } catch (e) {
+      console.warn('Could not fetch journey delay overlay:', e);
+    } finally {
+      setLoadingOverlay(false);
+    }
   };
 
   return (
@@ -397,10 +434,27 @@ export default function JourneyPlanner() {
       {/* Results Dashboard */}
       {!loading && searched && (
         <div className="space-y-6 relative z-10 animate-fade-in">
-          <h2 className="text-xl font-bold text-slate-200 border-b border-white/5 pb-3 flex items-center space-x-2.5">
-            <Clock className="h-5.5 w-5.5 text-indigo-400" />
-            <span>{t('availableJourneys')} ({journeys.length})</span>
-          </h2>
+          <div className="border-b border-white/5 pb-3 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-xl font-bold text-slate-200 flex items-center space-x-2.5">
+              <Clock className="h-5.5 w-5.5 text-indigo-400" />
+              <span>{t('availableJourneys')} ({journeys.length})</span>
+            </h2>
+
+            {journeys.length > 0 && (
+              <button
+                onClick={toggleDelayOverlay}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
+                  showOverlay
+                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                    : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
+                }`}
+              >
+                <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />
+                <span>{showOverlay ? 'Hide Delay Overlay' : 'Overlay Delay Stats'}</span>
+                {loadingOverlay && <RefreshCw className="w-3 h-3 animate-spin" />}
+              </button>
+            )}
+          </div>
 
           {journeys.length > 0 ? (
             <div className="space-y-4">
@@ -429,7 +483,18 @@ export default function JourneyPlanner() {
                             <Train className="h-3.5 w-3.5" />
                           </div>
                           <div>
-                            <span className="font-extrabold text-indigo-400 text-xs tracking-wider block">{j.firstTrainNumber}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-extrabold text-indigo-400 text-xs tracking-wider block">{j.firstTrainNumber}</span>
+                              {showOverlay && overlayData[j.firstTrainNumber] !== undefined && (
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                                  overlayData[j.firstTrainNumber] > 15
+                                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                }`}>
+                                  ~{overlayData[j.firstTrainNumber]}m delay
+                                </span>
+                              )}
+                            </div>
                             <h4 className="font-bold text-slate-200 text-[11px] leading-tight mt-0.5">{translateName(j.firstTrainName, language)}</h4>
                           </div>
                         </div>
@@ -499,7 +564,18 @@ export default function JourneyPlanner() {
                               <Train className="h-3.5 w-3.5" />
                             </div>
                             <div>
-                              <span className="font-extrabold text-indigo-400 text-xs tracking-wider block">{j.secondTrainNumber}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-extrabold text-indigo-400 text-xs tracking-wider block">{j.secondTrainNumber}</span>
+                                {showOverlay && overlayData[j.secondTrainNumber] !== undefined && (
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                                    overlayData[j.secondTrainNumber] > 15
+                                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                  }`}>
+                                    ~{overlayData[j.secondTrainNumber]}m delay
+                                  </span>
+                                )}
+                              </div>
                               <h4 className="font-bold text-slate-200 text-[11px] leading-tight mt-0.5">{translateName(j.secondTrainName, language)}</h4>
                             </div>
                           </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, Train, LogOut, User as UserIcon, Heart, Globe, History } from 'lucide-react';
+import { Menu, X, Train, LogOut, User as UserIcon, Heart, Globe, History, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function Navbar() {
@@ -43,6 +43,10 @@ export default function Navbar() {
             <Link to="/stations" className={isActive('/stations')}>{t('navStations')}</Link>
             <Link to="/map" className={isActive('/map')}>{t('navLiveMap')}</Link>
             <Link to="/journey" className={isActive('/journey')}>{t('navPlanner')}</Link>
+            <Link to="/disruptions" className={`${isActive('/disruptions')} flex items-center space-x-1`}>
+              <AlertTriangle className="h-4 w-4 text-rose-400" />
+              <span>Disruptions</span>
+            </Link>
             <Link to="/history" className={`${isActive('/history')} flex items-center space-x-1`}>
               <History className="h-4 w-4" />
               <span>{t('navHistory')}</span>
@@ -143,6 +147,14 @@ export default function Navbar() {
             className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-indigo-400 hover:bg-slate-800 transition-all"
           >
             {t('navPlanner')}
+          </Link>
+          <Link
+            to="/disruptions"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-indigo-400 hover:bg-slate-800 transition-all"
+          >
+            <AlertTriangle className="h-5 w-5 text-rose-400" />
+            <span>Disruptions</span>
           </Link>
           <Link
             to="/history"

@@ -40,4 +40,30 @@ api.interceptors.response.use(
   }
 );
 
+export const getDisruptions = async (type?: string): Promise<any> => {
+  const url = type && type !== 'ALL' ? `/api/v1/disruptions/exceptions?type=${type}` : '/api/v1/disruptions/exceptions';
+  return api.get(url);
+};
+
+export const getDisruptionsSummary = async (): Promise<any> => {
+  return api.get('/api/v1/disruptions/summary');
+};
+
+export const getTrainDelayReport = async (trainNumber: string): Promise<any> => {
+  return api.get(`/api/v1/trains/${trainNumber}/delay`);
+};
+
+export const getTrainFare = async (trainNumber: string, source: string, destination: string): Promise<any> => {
+  return api.get(`/api/v1/trains/${trainNumber}/fare?source=${encodeURIComponent(source)}&destination=${encodeURIComponent(destination)}`);
+};
+
+export const getTrainsBetween = async (from: string, to: string, date?: string): Promise<any> => {
+  const dateQuery = date ? `&date=${encodeURIComponent(date)}` : '';
+  return api.get(`/api/v1/trains/between?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}${dateQuery}`);
+};
+
+export const getJourneyOverlay = async (requestBody: any): Promise<any> => {
+  return api.post('/api/v1/journey/overlay', requestBody);
+};
+
 export default api;

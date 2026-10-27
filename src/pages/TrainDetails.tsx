@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown } from 'lucide-react';
-import api from '../services/api';
+import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock } from 'lucide-react';
+import api, { getTrainDelayReport, getTrainFare } from '../services/api';
+import type { TrainDelayReport, TrainFare } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
 import { searchHistoryService } from '../services/searchHistoryService';
@@ -40,6 +41,11 @@ export default function TrainDetails() {
   const [alertId, setAlertId] = useState<number | null>(null);
   const [alertMinutes, setAlertMinutes] = useState(15);
   const [showAlertModal, setShowAlertModal] = useState(false);
+
+  const [delayReport, setDelayReport] = useState<TrainDelayReport | null>(null);
+  const [fareData, setFareData] = useState<TrainFare | null>(null);
+  const [loadingDelay, setLoadingDelay] = useState(false);
+  const [loadingFare, setLoadingFare] = useState(false);
 
   const { language, t } = useLanguage();
   const [syncState, setSyncState] = useState<'IDLE' | 'CONNECTING' | 'CONNECTED' | 'POLLING'>('IDLE');
@@ -286,6 +292,32 @@ export default function TrainDetails() {
 
     fetchTrainData();
   }, [trainNumber, selectedJourneyDate]);
+
+  useEffect(() => {
+    if (!trainNumber) return;
+    setLoadingDelay(true);
+    getTrainDelayReport(trainNumber)
+      .then((res: any) => {
+        if (res && res.data) setDelayReport(res.data);
+      })
+      .catch((e: any) => console.warn('Delay report not available:', e))
+      .finally(() => setLoadingDelay(false));
+  }, [trainNumber]);
+
+  useEffect(() => {
+    if (!trainNumber) return;
+    const src = train?.sourceStation || (route?.stations?.[0]?.stationCode);
+    const dest = train?.destinationStation || (route?.stations?.[route?.stations?.length - 1]?.stationCode);
+    if (!src || !dest) return;
+
+    setLoadingFare(true);
+    getTrainFare(trainNumber, src, dest)
+      .then((res: any) => {
+        if (res && res.data) setFareData(res.data);
+      })
+      .catch((e: any) => console.warn('Fare details not available:', e))
+      .finally(() => setLoadingFare(false));
+  }, [trainNumber, train?.sourceStation, train?.destinationStation, route?.stations]);
 
   const startPolling = () => {
     const poll = async () => {
@@ -587,6 +619,46 @@ export default function TrainDetails() {
         </button>
       </div>
 
+      {/* Disruption Alert Banner */}
+      {(liveStatus?.isCancelled || liveStatus?.isDiverted || liveStatus?.isRescheduled || liveStatus?.disruptionMessage) && (
+        <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg ${
+          liveStatus?.isCancelled
+            ? 'bg-rose-950/40 border-rose-800/60 text-rose-200'
+            : liveStatus?.isDiverted
+            ? 'bg-amber-950/40 border-amber-800/60 text-amber-200'
+            : 'bg-sky-950/40 border-sky-800/60 text-sky-200'
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg ${
+              liveStatus?.isCancelled ? 'bg-rose-500/20 text-rose-400' : liveStatus?.isDiverted ? 'bg-amber-500/20 text-amber-400' : 'bg-sky-500/20 text-sky-400'
+            }`}>
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-sm tracking-wide uppercase flex items-center gap-2">
+                {liveStatus?.isCancelled ? 'Train Service Cancelled' : liveStatus?.isDiverted ? 'Route Diverted' : 'Schedule Disrupted'}
+              </div>
+              <p className="text-xs opacity-90 mt-0.5">
+                {liveStatus?.disruptionMessage || (liveStatus?.isCancelled ? 'This train service has reported operational cancellation.' : 'Route diversions or schedule modifications apply.')}
+              </p>
+              {liveStatus?.skippedStations && liveStatus.skippedStations.length > 0 && (
+                <p className="text-[11px] text-amber-300/80 mt-1">
+                  Skipped Stops: {liveStatus.skippedStations.join(', ')}
+                </p>
+              )}
+            </div>
+          </div>
+          {(liveStatus?.isCancelled || liveStatus?.isDiverted) && (
+            <button
+              onClick={() => navigate('/disruptions')}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white whitespace-nowrap transition"
+            >
+              View Disruption Details
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Train Metadata Header */}
       <div className="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-xl shadow-lg space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -740,6 +812,97 @@ export default function TrainDetails() {
               <p className="font-bold text-slate-300">{train.duration != null ? `${(train.duration / 60).toFixed(1)} hrs` : "--"}</p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Punctuality Analysis & Fare Estimation Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* On-Time Punctuality Card */}
+        <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl shadow-lg space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
+              <h2 className="text-sm font-bold text-slate-100">Historical Punctuality</h2>
+            </div>
+            {delayReport?.punctualityGrade && (
+              <span className={`px-2 py-0.5 rounded text-xs font-black uppercase ${
+                delayReport.punctualityGrade === 'A' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                delayReport.punctualityGrade === 'B' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30' :
+                delayReport.punctualityGrade === 'C' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+              }`}>
+                Grade {delayReport.punctualityGrade}
+              </span>
+            )}
+          </div>
+
+          {loadingDelay ? (
+            <div className="py-4 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+              <Clock className="w-3.5 h-3.5 animate-spin text-slate-500" /> Loading punctuality metrics...
+            </div>
+          ) : delayReport ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400">On-Time Performance</span>
+                <span className="font-bold text-slate-200">
+                  {delayReport.onTimePercentage != null ? `${delayReport.onTimePercentage}%` : 'N/A'}
+                </span>
+              </div>
+              <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                <div
+                  className={`h-2 rounded-full ${
+                    (delayReport.onTimePercentage || 0) >= 85 ? 'bg-emerald-500' :
+                    (delayReport.onTimePercentage || 0) >= 70 ? 'bg-sky-500' :
+                    (delayReport.onTimePercentage || 0) >= 50 ? 'bg-amber-500' : 'bg-rose-500'
+                  }`}
+                  style={{ width: `${Math.min(100, Math.max(5, delayReport.onTimePercentage || 0))}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-800/60">
+                <span className="text-slate-400">Average Delay:</span>
+                <span className="font-semibold text-slate-200">
+                  {delayReport.historicalAverageDelayMinutes != null
+                    ? `${delayReport.historicalAverageDelayMinutes} min`
+                    : 'On Time'}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500 py-2">Historical delay data is calculating for this train route.</p>
+          )}
+        </div>
+
+        {/* Fare Breakdown Card */}
+        <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl shadow-lg space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-indigo-400" />
+              <h2 className="text-sm font-bold text-slate-100">Ticket Fare Estimate</h2>
+            </div>
+            {fareData?.distanceKm && (
+              <span className="text-xs text-slate-400">
+                {fareData.distanceKm} km
+              </span>
+            )}
+          </div>
+
+          {loadingFare ? (
+            <div className="py-4 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+              <Clock className="w-3.5 h-3.5 animate-spin text-slate-500" /> Calculating fares...
+            </div>
+          ) : fareData && fareData.fares && fareData.fares.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {fareData.fares.map((f, idx) => (
+                <div key={idx} className="bg-slate-950/70 border border-slate-800/80 rounded-lg p-2 text-center">
+                  <div className="text-[11px] font-bold text-indigo-400 uppercase">{f.classCode}</div>
+                  <div className="text-xs text-slate-400 truncate">{f.className}</div>
+                  <div className="text-sm font-extrabold text-white mt-1">₹{f.totalFare}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500 py-2">Fare enquiry is available across direct passenger stops.</p>
+          )}
         </div>
       </div>
 

@@ -785,3 +785,33 @@ sequenceDiagram
 This document covers every single component, hook, styling token, configuration, and gesture flow of the **RailTrack India Frontend**.
 
 </div>
+
+
+---
+
+## 15. Disruption Management, Punctuality & Fares UI Integration
+
+This section documents the frontend views and components integrated for rail disruptions, punctuality analysis, ticket fare calculation, and delay statistics.
+
+### 15.1. `src/pages/DisruptionsPage.tsx`
+* **Route:** `/disruptions`
+* **Overview:** A dedicated Disruptions & Alerts Hub providing real-time visibility into railway network exceptions.
+* **Key Features:**
+  * **Summary KPI Cards:** Real-time metrics banner for Total Disruptions, Cancelled Trains, Diverted Routes, and Rescheduled Trains.
+  * **Category Filter Tabs:** Instant switching between All, Cancelled, Diverted, and Rescheduled exception types.
+  * **Live Client-Side Filtering:** Search bar allowing passengers to filter disruptions by train name, number, or affected station.
+  * **Disruption Badges:** High-contrast color-coded badges (rose for cancellations, amber for diversions, sky blue for rescheduling).
+  * **Alternative Trains Finder Modal:** 1-click CTA on disrupted train cards querying `/api/v1/trains/between` to immediately show passengers active alternative trains between affected stations.
+
+### 15.2. `src/pages/TrainDetails.tsx` Extensions
+* **Disruption Alert Banner:** Mounted conditionally at the top of the details view if `liveStatus.isCancelled`, `isDiverted`, `isRescheduled`, or `disruptionMessage` are detected, showing affected/skipped stops and direct navigation to the Disruptions Hub.
+* **Historical Punctuality Card:** Fetches delay statistics via `getTrainDelayReport(trainNumber)`, rendering On-Time performance percentage bar, historical average delay in minutes, and a Punctuality Grade badge (A, B, C, D).
+* **Ticket Fare Breakdown Card:** Fetches class fare breakdown via `getTrainFare(trainNumber, source, destination)` showing base and total fares across travel classes (1A, 2A, 3A, SL, 2S, CC).
+
+### 15.3. `src/pages/JourneyPlanner.tsx` Delay Overlay
+* **Real-Time Delay Overlay Toggle:** Button in the search results header allowing users to activate multi-leg delay intelligence via `POST /api/v1/journey/overlay`.
+* **Leg Delay Badges:** Displays average historical arrival/departure delay badges on direct and connecting train legs (`~Xm avg delay`).
+
+### 15.4. Navigation & Types
+* **`src/components/Navbar.tsx`:** Added responsive desktop and mobile navigation links with `AlertTriangle` icon linking to `/disruptions`.
+* **`src/types/index.ts`:** Created centralized TypeScript contracts for `TrainException`, `TrainExceptionSummary`, `TrainDelayReport`, `TrainFare`, `JourneyOverlay`, and `TrainBetweenStations`.

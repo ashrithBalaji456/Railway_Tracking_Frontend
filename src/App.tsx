@@ -12,6 +12,7 @@ import Favorites from './pages/Favorites';
 import RailAiWidget from './components/RailAiWidget';
 import JourneyPlanner from './pages/JourneyPlanner';
 import SearchHistoryPage from './pages/SearchHistoryPage';
+import DisruptionsPage from './pages/DisruptionsPage';
 import { LanguageProvider } from './context/LanguageContext';
 import AndroidBackButtonHandler from './components/AndroidBackButtonHandler';
 
@@ -33,6 +34,7 @@ export default function App() {
               <Route path="/map" element={<MapTracker />} />
               <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
               <Route path="/journey" element={<JourneyPlanner />} />
+              <Route path="/disruptions" element={<DisruptionsPage />} />
               <Route path="/history" element={<SearchHistoryPage />} />
             </Routes>
           </main>

@@ -1,0 +1,75 @@
+export interface TrainException {
+  trainNumber: string;
+  trainName: string;
+  type: string; // CANCELLED, DIVERTED, RESCHEDULED, PARTIALLY_CANCELLED
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+  stationsAffected?: string[];
+  originalRoute?: string;
+  alternativeRoute?: string;
+}
+
+export interface TrainExceptionSummary {
+  total: number;
+  cancelled: number;
+  diverted: number;
+  rescheduled: number;
+  partiallyCancelled: number;
+}
+
+export interface TrainDelayReport {
+  trainNumber: string;
+  trainName: string;
+  historicalAverageDelayMinutes: number;
+  onTimePercentage: number;
+  punctualityGrade: string; // 'A', 'B', 'C', 'D'
+  totalRunsAnalyzed?: number;
+  delayDistribution?: Record<string, number>;
+}
+
+export interface ClassFare {
+  classCode: string;
+  className: string;
+  baseFare?: number;
+  totalFare: number;
+}
+
+export interface TrainFare {
+  trainNumber: string;
+  trainName?: string;
+  sourceStation?: string;
+  destinationStation?: string;
+  distanceKm?: number;
+  fares: ClassFare[];
+}
+
+export interface JourneyLegDelay {
+  train: string;
+  station: string;
+  dayOfWeek?: number;
+  arrivalDelayMinutes?: number;
+  departureDelayMinutes?: number;
+  samples?: number;
+  maxDelayMinutes?: number;
+  ontimeCount?: number;
+}
+
+export interface JourneyOverlay {
+  delays: JourneyLegDelay[];
+}
+
+export interface TrainBetweenStations {
+  trainNumber: string;
+  trainName: string;
+  trainType: string;
+  fromStationCode: string;
+  toStationCode: string;
+  departureTime: string;
+  arrivalTime: string;
+  durationMinutes: number;
+  runningDays: string;
+  fromSequence?: number;
+  toSequence?: number;
+}
+
