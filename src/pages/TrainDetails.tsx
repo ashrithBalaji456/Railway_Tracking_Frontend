@@ -411,9 +411,10 @@ export default function TrainDetails() {
     const isShatabdi = trainNameLower.includes('shatabdi') || trainTypeLower.includes('shatabdi');
     const isDuronto = trainNameLower.includes('duronto') || trainTypeLower.includes('duronto');
     const isGaribRath = trainNameLower.includes('garib rath') || trainTypeLower.includes('garib rath');
+    const isAntyodaya = trainNameLower.includes('antyodaya') || trainNameLower.includes('jan sadharan') || trainNameLower.includes('jansadharan');
     const isMemu = trainNameLower.includes('memu') || trainNameLower.includes('passenger') || trainTypeLower.includes('passenger') || trainTypeLower.includes('demu');
     const isSpecial = trainNum.startsWith('0') || trainNameLower.includes('special') || trainNameLower.includes('spl') || trainTypeLower.includes('special');
-    const isSF = !isMemu && (trainTypeLower.includes('superfast') || trainNameLower.includes('sf') || trainNameLower.includes('superfast') || isRajdhani || isShatabdi || isDuronto || isVandeBharat);
+    const isSF = !isMemu && (trainTypeLower.includes('superfast') || trainNameLower.includes('sf') || trainNameLower.includes('superfast') || isRajdhani || isShatabdi || isDuronto || isVandeBharat || isAntyodaya);
 
     // Coach presence detection
     const isVistadome = trainNameLower.includes('vistadome') || trainTypeLower.includes('vistadome') || coachesList.some((c: string) => c.startsWith('EV') || c.startsWith('V'));
@@ -440,6 +441,30 @@ export default function TrainDetails() {
     // Official Indian Railways Telescopic Distance Slab Base Fare
     const getTelescopicBaseFare = (code: string, dist: number): number => {
       const d = Math.max(10, dist);
+
+      if (code === 'GN' || code === 'UR') {
+        if (isMemu) {
+          // Ordinary Passenger / MEMU / DEMU UTS distance slab (Matches official UTS Ordinary app)
+          if (d <= 20) return 10;
+          if (d <= 45) return 15;
+          if (d <= 75) return 20;
+          if (d <= 100) return 25;
+          if (d <= 135) return 30;
+          if (d <= 175) return 35;
+          if (d <= 210) return 45;
+          if (d <= 250) return 55;
+          if (d <= 300) return 60;
+          if (d <= 350) return 70;
+          if (d <= 400) return 75;
+          return Math.round((75 + (d - 400) * 0.15) / 5) * 5;
+        }
+        // Mail / Express & Superfast Unreserved UTS slab (Matches official UTS Mail/Exp & SF app)
+        if (d <= 50) return 30;
+        if (d <= 150) return Math.round((30 + (d - 50) * 0.35) / 5) * 5;
+        if (d <= 300) return Math.round((65 + (d - 150) * 0.35) / 5) * 5;
+        if (d <= 600) return Math.round((118 + (d - 300) * 0.28) / 5) * 5;
+        return Math.round((202 + (d - 600) * 0.22) / 5) * 5;
+      }
 
       if (isGaribRath) {
         if (code === '3E') return Math.max(195, Math.round(d * 0.82));
@@ -615,25 +640,15 @@ export default function TrainDetails() {
         computeClass('2A', 'AC 2 Tier', 'Premium', 50, 45, 310, true, 0.30, 400, 500, true),
         computeClass('1A', 'AC First Class', 'Royal', 60, 75, 380, true, 0, 0, 0, false)
       );
-    } else if (isMemu) {
-      // MEMU / Passenger: Unreserved / 2S ordinary (no Tatkal, no SF)
-      const ordinaryBase = Math.max(10, Math.min(120, Math.round(distanceKm * 0.18 + 5)));
+    } else if (isAntyodaya) {
+      // Antyodaya / Jan Sadharan: 100% General Unreserved Superfast
       classes = [
-        {
-          code: '2S',
-          name: 'General Sitting',
-          tag: 'Ordinary',
-          base: ordinaryBase,
-          resFee: 0,
-          surcharge: 0,
-          cateringFee: 0,
-          gst: 0,
-          total: Math.round(ordinaryBase / 5) * 5,
-          tatkalCharge: 0,
-          tatkalTotal: Math.round(ordinaryBase / 5) * 5,
-          tatkalAllowed: false,
-          ac: false,
-        }
+        computeClass('GN', 'General Unreserved', 'Superfast UTS', 0, 15, 0, false, 0, 0, 0, false)
+      ];
+    } else if (isMemu) {
+      // MEMU / Passenger / DEMU: Ordinary Unreserved (Matches official UTS Ordinary app: BPQ -> KZJ ₹55)
+      classes = [
+        computeClass('GN', 'General (Unreserved)', 'Ordinary / UTS', 0, 0, 0, false, 0, 0, 0, false)
       ];
     } else {
       // Standard Mail / Express / Superfast / Special / Intercity
@@ -645,6 +660,7 @@ export default function TrainDetails() {
 
       // Base candidate classes
       const candidateClasses = [
+        computeClass('GN', 'General Unreserved', 'UTS Counter', 0, isSF ? 15 : 0, 0, false, 0, 0, 0, false),
         computeClass('2S', 'Second Sitting', 'Budget', 15, sfFee2S, 0, false, 0.10, 10, 15, true),
         computeClass('SL', 'Sleeper Class', 'Popular', 20, sfFeeSL, 0, false, 0.10, 100, 200, true),
       ];
@@ -676,6 +692,7 @@ export default function TrainDetails() {
       if (coachesList.length > 3) {
         const hasCoachMatch = (code: string) => {
           switch (code) {
+            case 'GN': return coachesList.some((c: string) => c.startsWith('GS') || c.startsWith('GEN') || c.startsWith('UR') || c.startsWith('SLR') || c.startsWith('DL') || c === 'GN') || !coachesList.some((c: string) => c.startsWith('A') || c.startsWith('B') || c.startsWith('H'));
             case '2S': return coachesList.some((c: string) => c.startsWith('D') || c.startsWith('CZ') || c === '2S');
             case 'SL': return coachesList.some((c: string) => c.startsWith('S') && !c.startsWith('SLR') && !c.startsWith('SLRD'));
             case '3E': return coachesList.some((c: string) => c.startsWith('M') || c.startsWith('G') || c === '3E');
