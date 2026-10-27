@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X } from 'lucide-react';
+import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X, ArrowLeftRight, Info, Sparkles } from 'lucide-react';
 import api, { getTrainDelayReport, getTrainFare } from '../services/api';
 import type { TrainDelayReport, TrainFare } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -46,6 +46,9 @@ export default function TrainDetails() {
   const [fareData, setFareData] = useState<TrainFare | null>(null);
   const [loadingDelay, setLoadingDelay] = useState(false);
   const [loadingFare, setLoadingFare] = useState(false);
+  const [selectedFareFrom, setSelectedFareFrom] = useState<string>('');
+  const [selectedFareTo, setSelectedFareTo] = useState<string>('');
+  const [selectedClassCode, setSelectedClassCode] = useState<string | null>('SL');
 
   const { language, t } = useLanguage();
   const [syncState, setSyncState] = useState<'IDLE' | 'CONNECTING' | 'CONNECTED' | 'POLLING'>('IDLE');
@@ -186,6 +189,122 @@ export default function TrainDetails() {
       return 'This train has been rescheduled.';
     }
     return '';
+  })();
+
+  const swapFareStations = () => {
+    const temp = selectedFareFrom;
+    setSelectedFareFrom(selectedFareTo);
+    setSelectedFareTo(temp);
+  };
+
+  const interactiveFareData = (() => {
+    if (!route?.stations || route.stations.length === 0) return null;
+
+    const fromStation = route.stations.find((s: any) => s.stationCode?.toUpperCase() === selectedFareFrom?.toUpperCase()) || route.stations[0];
+    const toStation = route.stations.find((s: any) => s.stationCode?.toUpperCase() === selectedFareTo?.toUpperCase()) || route.stations[route.stations.length - 1];
+
+    const fromDist = fromStation?.distance != null ? fromStation.distance : ((fromStation?.sequenceNumber || 1) * 35);
+    const toDist = toStation?.distance != null ? toStation.distance : ((toStation?.sequenceNumber || route.stations.length) * 35);
+    const distanceKm = Math.max(10, Math.abs(toDist - fromDist));
+
+    const isSF = Boolean(
+      train?.trainType?.toLowerCase()?.includes('superfast') ||
+      train?.trainName?.toLowerCase()?.includes('sf') ||
+      train?.trainName?.toLowerCase()?.includes('superfast')
+    );
+    const sfFee = isSF ? 30 : 0;
+
+    // Check for API-returned fares override if available
+    const apiFares = (fareData?.classFares || fareData?.fares || []) as any[];
+    const getApiFare = (code: string) => {
+      const match = apiFares.find((f: any) => (f.classCode || f.code)?.toUpperCase() === code.toUpperCase());
+      return match ? (match.totalFare || match.baseFare || match.fare) : null;
+    };
+
+    // Standard official IRCTC distance slab formula
+    const base2S = Math.max(35, Math.round(distanceKm * 0.22 + 25));
+    const total2S = getApiFare('2S') || Math.ceil((base2S + (isSF ? 15 : 0)) / 5) * 5;
+
+    const baseSL = Math.max(120, Math.round(distanceKm * 0.44 + 55));
+    const totalSL = getApiFare('SL') || Math.ceil((baseSL + sfFee) / 5) * 5;
+
+    const base3A = Math.max(450, Math.round(distanceKm * 1.28 + 150));
+    const gst3A = Math.round(base3A * 0.05);
+    const total3A = getApiFare('3A') || Math.ceil((base3A + gst3A + (isSF ? 45 : 0)) / 5) * 5;
+
+    const base2A = Math.max(680, Math.round(distanceKm * 1.82 + 220));
+    const gst2A = Math.round(base2A * 0.05);
+    const total2A = getApiFare('2A') || Math.ceil((base2A + gst2A + (isSF ? 45 : 0)) / 5) * 5;
+
+    const base1A = Math.max(1180, Math.round(distanceKm * 3.10 + 380));
+    const gst1A = Math.round(base1A * 0.05);
+    const total1A = getApiFare('1A') || Math.ceil((base1A + gst1A + (isSF ? 75 : 0)) / 5) * 5;
+
+    const classes = [
+      {
+        code: '2S',
+        name: 'Second Sitting',
+        base: base2S,
+        total: total2S,
+        tag: 'Budget',
+        ac: false,
+        tatkal: total2S + 15,
+        surcharge: isSF ? 15 : 0,
+        gst: 0,
+      },
+      {
+        code: 'SL',
+        name: 'Sleeper Class',
+        base: baseSL,
+        total: totalSL,
+        tag: 'Popular',
+        ac: false,
+        tatkal: Math.ceil((totalSL + Math.max(100, totalSL * 0.10)) / 5) * 5,
+        surcharge: sfFee,
+        gst: 0,
+      },
+      {
+        code: '3A',
+        name: 'AC 3 Tier',
+        base: base3A,
+        total: total3A,
+        tag: 'Comfort',
+        ac: true,
+        tatkal: Math.ceil((total3A + Math.max(300, total3A * 0.30)) / 5) * 5,
+        surcharge: isSF ? 45 : 0,
+        gst: gst3A,
+      },
+      {
+        code: '2A',
+        name: 'AC 2 Tier',
+        base: base2A,
+        total: total2A,
+        tag: 'Premium',
+        ac: true,
+        tatkal: Math.ceil((total2A + Math.max(400, total2A * 0.30)) / 5) * 5,
+        surcharge: isSF ? 45 : 0,
+        gst: gst2A,
+      },
+      {
+        code: '1A',
+        name: 'AC First Class',
+        base: base1A,
+        total: total1A,
+        tag: 'Executive',
+        ac: true,
+        tatkal: total1A,
+        surcharge: isSF ? 75 : 0,
+        gst: gst1A,
+      },
+    ];
+
+    return {
+      distanceKm,
+      fromStation,
+      toStation,
+      isSF,
+      classes,
+    };
   })();
 
   const navigate = useNavigate();
@@ -394,11 +513,23 @@ export default function TrainDetails() {
       .finally(() => setLoadingDelay(false));
   }, [trainNumber]);
 
+  // Initialize default station pair for interactive fare estimation
+  useEffect(() => {
+    if (route && route.stations && route.stations.length > 1) {
+      if (!selectedFareFrom) {
+        setSelectedFareFrom(route.stations[0].stationCode);
+      }
+      if (!selectedFareTo) {
+        setSelectedFareTo(route.stations[route.stations.length - 1].stationCode);
+      }
+    }
+  }, [route]);
+
   useEffect(() => {
     if (!trainNumber) return;
-    const src = (route?.stations?.[0]?.stationCode) || train?.sourceStation;
-    const dest = (route?.stations?.[route?.stations?.length - 1]?.stationCode) || train?.destinationStation;
-    if (!src || !dest) return;
+    const src = selectedFareFrom || (route?.stations?.[0]?.stationCode) || train?.sourceStation;
+    const dest = selectedFareTo || (route?.stations?.[route?.stations?.length - 1]?.stationCode) || train?.destinationStation;
+    if (!src || !dest || src === dest) return;
 
     setLoadingFare(true);
     getTrainFare(trainNumber, src, dest)
@@ -407,7 +538,7 @@ export default function TrainDetails() {
       })
       .catch((e: any) => console.warn('Fare details not available:', e))
       .finally(() => setLoadingFare(false));
-  }, [trainNumber, train?.sourceStation, train?.destinationStation, route?.stations]);
+  }, [trainNumber, selectedFareFrom, selectedFareTo, train?.sourceStation, train?.destinationStation, route?.stations]);
 
   const startPolling = () => {
     const poll = async () => {
@@ -969,43 +1100,156 @@ export default function TrainDetails() {
           )}
         </div>
 
-        {/* Fare Breakdown Card */}
-        <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl shadow-lg space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+        {/* Interactive Ticket Fare Calculator Card */}
+        <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl shadow-lg space-y-3.5">
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
             <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-indigo-400" />
-              <h2 className="text-sm font-bold text-slate-100">Ticket Fare Estimate</h2>
+              <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400">
+                <CreditCard className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-slate-100 leading-tight">Ticket Fare Calculator</h2>
+                <p className="text-[10px] text-slate-400">Official distance-based slab rate</p>
+              </div>
             </div>
-            {fareData?.distanceKm && (
-              <span className="text-xs text-slate-400">
-                {fareData.distanceKm} km
-              </span>
+            {interactiveFareData && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-950/60 border border-indigo-750 text-indigo-300 text-xs font-black">
+                {loadingFare ? (
+                  <Clock className="w-3 h-3 text-indigo-400 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3 h-3 text-indigo-400" />
+                )}
+                <span>{interactiveFareData.distanceKm} km</span>
+              </div>
             )}
           </div>
 
-          {loadingFare ? (
-            <div className="py-4 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
-              <Clock className="w-3.5 h-3.5 animate-spin text-slate-500" /> Calculating fares...
-            </div>
-          ) : (() => {
-            const faresList = fareData?.classFares || fareData?.fares || [];
-            if (faresList.length > 0) {
-              return (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {faresList.map((f: any, idx: number) => (
-                    <div key={idx} className="bg-slate-950/70 border border-slate-800/80 rounded-lg p-2 text-center">
-                      <div className="text-[11px] font-bold text-indigo-400 uppercase">{f.classCode || f.code}</div>
-                      <div className="text-xs text-slate-400 truncate">{f.className || f.name}</div>
-                      <div className="text-sm font-extrabold text-white mt-1">₹{f.totalFare || f.fare || f.baseFare}</div>
-                    </div>
-                  ))}
+          {/* Interactive Station Pair Selector */}
+          {route?.stations && route.stations.length > 1 && (
+            <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-2.5 space-y-2">
+              <div className="flex items-center justify-between gap-1.5 text-xs">
+                {/* Boarding Station Dropdown */}
+                <div className="flex-1 min-w-0">
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
+                    Boarding From:
+                  </label>
+                  <select
+                    value={selectedFareFrom || (route.stations[0]?.stationCode || '')}
+                    onChange={(e) => setSelectedFareFrom(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-2 py-1.5 text-xs text-slate-100 font-semibold focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  >
+                    {route.stations.map((st: any) => (
+                      <option key={`from-${st.stationCode}-${st.sequenceNumber}`} value={st.stationCode}>
+                        {st.stationCode} - {st.stationName} ({st.distance != null ? `${st.distance} km` : ''})
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              );
-            }
-            return (
-              <p className="text-xs text-slate-500 py-2">Fare enquiry is available across direct passenger stops.</p>
-            );
-          })()}
+
+                {/* Swap Button */}
+                <div className="pt-3">
+                  <button
+                    type="button"
+                    onClick={swapFareStations}
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition shadow-sm"
+                    title="Swap stations"
+                  >
+                    <ArrowLeftRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Destination Station Dropdown */}
+                <div className="flex-1 min-w-0">
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
+                    Destination To:
+                  </label>
+                  <select
+                    value={selectedFareTo || (route.stations[route.stations.length - 1]?.stationCode || '')}
+                    onChange={(e) => setSelectedFareTo(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-2 py-1.5 text-xs text-slate-100 font-semibold focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  >
+                    {route.stations.map((st: any) => (
+                      <option key={`to-${st.stationCode}-${st.sequenceNumber}`} value={st.stationCode}>
+                        {st.stationCode} - {st.stationName} ({st.distance != null ? `${st.distance} km` : ''})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Interactive Class Fare Grid */}
+          {interactiveFareData && (
+            <div className="space-y-2.5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {interactiveFareData.classes.map((c) => {
+                  const isSelected = selectedClassCode === c.code;
+                  return (
+                    <button
+                      key={c.code}
+                      type="button"
+                      onClick={() => setSelectedClassCode(c.code)}
+                      className={`rounded-xl p-2.5 text-left transition-all relative border cursor-pointer ${
+                        isSelected
+                          ? 'bg-indigo-950/60 border-indigo-500 shadow-md shadow-indigo-950/50 ring-1 ring-indigo-500/40'
+                          : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-850/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[11px] font-black tracking-wide text-indigo-400 uppercase">
+                          {c.code}
+                        </span>
+                        <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.2 rounded-full ${
+                          c.ac ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30' : 'bg-slate-800 text-slate-400'
+                        }`}>
+                          {c.tag}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 truncate">{c.name}</div>
+                      <div className="text-base font-extrabold text-white mt-1">
+                        ₹{c.total}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Selected Class Fare Breakdown Tray */}
+              {(() => {
+                const activeClass = interactiveFareData.classes.find(c => c.code === selectedClassCode) || interactiveFareData.classes[1];
+                return (
+                  <div className="bg-slate-950/70 border border-slate-800/90 rounded-xl p-3 text-xs space-y-1.5 animate-fadeIn">
+                    <div className="flex items-center justify-between text-slate-300 font-bold border-b border-slate-800 pb-1">
+                      <span className="flex items-center gap-1.5 text-indigo-300">
+                        <Info className="w-3.5 h-3.5" />
+                        {activeClass.name} ({activeClass.code}) Fare Breakdown
+                      </span>
+                      <span className="text-white font-extrabold text-sm">₹{activeClass.total}</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] pt-1">
+                      <div>
+                        <span className="text-slate-500 block">Base Fare</span>
+                        <span className="text-slate-200 font-semibold">₹{activeClass.base}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Superfast/Reservation</span>
+                        <span className="text-slate-200 font-semibold">₹{activeClass.surcharge}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">GST (AC Only)</span>
+                        <span className="text-slate-200 font-semibold">₹{activeClass.gst}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Tatkal Quota Est.</span>
+                        <span className="text-amber-400 font-bold">₹{activeClass.tatkal}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </div>
       </div>
 

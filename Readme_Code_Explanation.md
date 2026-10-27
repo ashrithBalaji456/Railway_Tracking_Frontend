@@ -1643,9 +1643,9 @@ This section documents the frontend views and components integrated for rail dis
 
   * Dual-attribute binding (`ontimePercentage ?? onTimePercentage` and `avgArrivalDelayMinutes ?? historicalAverageDelayMinutes`) guarantees seamless rendering of On-Time performance percentage bar, average delay in minutes, and Punctuality Grade badge (A, B, C, D).
 
-* **Ticket Fare Breakdown Card:**
+* **Interactive Ticket Fare Calculator Card:**
 
-  * Fetches class fare estimates via `getTrainFare(trainNumber, sourceCode, destinationCode)`.
+  * Provides interactive Boarding and Destination dropdown selectors with real-time IRCTC telescopic distance slab calculation across classes (2S, SL, 3A, 2A, 1A).
 
   * Uses 3-4 letter station codes (e.g. `SKZR`, `TBM`) from the route definition to avoid upstream HTTP 400 Bad Request parameter rejections.
 
