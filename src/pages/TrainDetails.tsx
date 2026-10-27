@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X, ArrowLeftRight, Info, Sparkles, Zap, Search, Check } from 'lucide-react';
-import api, { getTrainDelayReport, getTrainFare } from '../services/api';
-import type { TrainDelayReport, TrainFare } from '../types';
+import api, { getTrainDelayReport } from '../services/api';
+import type { TrainDelayReport } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
 import { searchHistoryService } from '../services/searchHistoryService';
@@ -233,9 +233,7 @@ export default function TrainDetails() {
   const [showAlertModal, setShowAlertModal] = useState(false);
 
   const [delayReport, setDelayReport] = useState<TrainDelayReport | null>(null);
-  const [fareData, setFareData] = useState<TrainFare | null>(null);
   const [loadingDelay, setLoadingDelay] = useState(false);
-  const [loadingFare, setLoadingFare] = useState(false);
   const [selectedFareFrom, setSelectedFareFrom] = useState<string>('');
   const [selectedFareTo, setSelectedFareTo] = useState<string>('');
   const [selectedClassCode, setSelectedClassCode] = useState<string | null>('SL');
@@ -427,9 +425,6 @@ export default function TrainDetails() {
     // Multiplier for Special holiday trains (IRCTC 1.30x surcharge)
     const specialMultiplier = isSpecial ? 1.30 : 1.0;
 
-    // Optional API-returned fares from RailRadar
-    const apiClassFares = (fareData?.classFares || fareData?.fares || []) as any[];
-
     // Train category label
     const categoryLabel = isVandeBharat ? 'Vande Bharat Express'
       : isRajdhani ? 'Rajdhani Express'
@@ -548,25 +543,12 @@ export default function TrainDetails() {
       tatkalMax: number,
       tatkalAllowed: boolean
     ) => {
-      // Check if API returned an exact verified total fare for the selected station pair
-      const apiMatch = apiClassFares.find((f: any) => (f.classCode || f.code)?.toUpperCase() === code.toUpperCase());
-      const apiTotal = apiMatch ? (apiMatch.totalFare || apiMatch.baseFare || apiMatch.fare) : null;
-      const rawFare: any = fareData;
-      const fareSrc = rawFare?.sourceStation || rawFare?.source || rawFare?.fromStation;
-      const fareDest = rawFare?.destinationStation || rawFare?.destination || rawFare?.toStation;
-      const isApiPairMatching = Boolean(
-        rawFare &&
-        (!fareSrc || fareSrc.toUpperCase() === fromStation?.stationCode?.toUpperCase()) &&
-        (!fareDest || fareDest.toUpperCase() === toStation?.stationCode?.toUpperCase())
-      );
-
       const rawBase = getTelescopicBaseFare(code, distanceKm) * specialMultiplier;
       const baseFare = Math.round(rawBase);
       const taxableSubtotal = baseFare + resFee + sfFee + cateringFee;
       const gst = isAc ? Math.round(taxableSubtotal * 0.05) : 0;
-      const totalFare = (apiTotal && isApiPairMatching)
-        ? apiTotal
-        : Math.round((taxableSubtotal + gst) / 5) * 5;
+      // Total fare must always equal the sum of its itemized breakdown components
+      const totalFare = Math.round((taxableSubtotal + gst) / 5) * 5;
 
       let tatkalCharge = 0;
       if (tatkalAllowed) {
@@ -943,21 +925,6 @@ export default function TrainDetails() {
       }
     }
   }, [route]);
-
-  useEffect(() => {
-    if (!trainNumber) return;
-    const src = selectedFareFrom || (route?.stations?.[0]?.stationCode) || train?.sourceStation;
-    const dest = selectedFareTo || (route?.stations?.[route?.stations?.length - 1]?.stationCode) || train?.destinationStation;
-    if (!src || !dest || src === dest) return;
-
-    setLoadingFare(true);
-    getTrainFare(trainNumber, src, dest)
-      .then((res: any) => {
-        if (res && res.data) setFareData(res.data);
-      })
-      .catch((e: any) => console.warn('Fare details not available:', e))
-      .finally(() => setLoadingFare(false));
-  }, [trainNumber, selectedFareFrom, selectedFareTo, train?.sourceStation, train?.destinationStation, route?.stations]);
 
   const startPolling = () => {
     const poll = async () => {
@@ -1582,11 +1549,7 @@ export default function TrainDetails() {
               {/* Distance pill */}
               {interactiveFareData && (
                 <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-950/60 border border-indigo-750 text-indigo-300 text-xs font-black">
-                  {loadingFare ? (
-                    <Clock className="w-3 h-3 text-indigo-400 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-3 h-3 text-indigo-400" />
-                  )}
+                  <Sparkles className="w-3 h-3 text-indigo-400" />
                   <span>{interactiveFareData.distanceKm} km</span>
                 </div>
               )}
