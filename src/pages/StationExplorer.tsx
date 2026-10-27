@@ -574,7 +574,15 @@ export default function StationExplorer() {
                               <Clock className="h-4 w-4 text-slate-500" />
                               <span>
                                 {t.isHalt ? (
-                                  <>Arr: <span className="font-semibold text-slate-200">{t.scheduledArrival?.substring(0,5)}</span> | Dep: <span className="font-semibold text-slate-200">{t.scheduledDeparture?.substring(0,5)}</span></>
+                                  <>
+                                    {t.scheduledArrival && t.scheduledDeparture ? (
+                                      <>Arr: <span className="font-semibold text-slate-200">{t.scheduledArrival?.substring(0,5)}</span> | Dep: <span className="font-semibold text-slate-200">{t.scheduledDeparture?.substring(0,5)}</span></>
+                                    ) : t.scheduledDeparture ? (
+                                      <>Dep: <span className="font-semibold text-slate-200">{t.scheduledDeparture?.substring(0,5)}</span> <span className="text-emerald-400 text-xs font-semibold">(Originates)</span></>
+                                    ) : (
+                                      <>Arr: <span className="font-semibold text-slate-200">{t.scheduledArrival?.substring(0,5)}</span> <span className="text-emerald-400 text-xs font-semibold">(Terminates)</span></>
+                                    )}
+                                  </>
                                 ) : (
                                   <>Scheduled Passage: <span className="font-semibold text-slate-200">{t.scheduledArrival?.substring(0,5) || t.scheduledDeparture?.substring(0,5)}</span></>
                                 )}
@@ -782,22 +790,26 @@ export default function StationExplorer() {
                             <div className="space-y-1 text-left sm:text-right">
                               {isStopping ? (
                                 <div className="text-xs text-slate-350 space-y-1">
-                                  <div>
-                                    <p>Arrival: <span className="font-semibold text-slate-200">{t.scheduledArrival}</span></p>
-                                    {delayVal > 0 && (
-                                      <p className="text-[10px] text-red-500 font-bold mt-0.5 leading-none">
-                                        Expected Arrival: {addDelayToTime(t.scheduledArrival, delayVal)}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <p>Departure: <span className="font-semibold text-slate-200">{t.scheduledDeparture}</span></p>
-                                    {delayVal > 0 && (
-                                      <p className="text-[10px] text-red-500 font-bold mt-0.5 leading-none">
-                                        Expected Departure: {addDelayToTime(t.scheduledDeparture, delayVal)}
-                                      </p>
-                                    )}
-                                  </div>
+                                  {t.scheduledArrival && (
+                                    <div>
+                                      <p>Arrival: <span className="font-semibold text-slate-200">{t.scheduledArrival}</span></p>
+                                      {delayVal > 0 && (
+                                        <p className="text-[10px] text-red-500 font-bold mt-0.5 leading-none">
+                                          Expected Arrival: {addDelayToTime(t.scheduledArrival, delayVal)}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+                                  {t.scheduledDeparture && (
+                                    <div>
+                                      <p>Departure: <span className="font-semibold text-slate-200">{t.scheduledDeparture}</span></p>
+                                      {delayVal > 0 && (
+                                        <p className="text-[10px] text-red-500 font-bold mt-0.5 leading-none">
+                                          Expected Departure: {addDelayToTime(t.scheduledDeparture, delayVal)}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               ) : (
                                 <div className="text-xs text-slate-350 space-y-1">
