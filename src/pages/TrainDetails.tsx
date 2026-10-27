@@ -412,9 +412,10 @@ export default function TrainDetails() {
     const isDuronto = trainNameLower.includes('duronto') || trainTypeLower.includes('duronto');
     const isGaribRath = trainNameLower.includes('garib rath') || trainTypeLower.includes('garib rath');
     const isAntyodaya = trainNameLower.includes('antyodaya') || trainNameLower.includes('jan sadharan') || trainNameLower.includes('jansadharan');
+    const isAmritBharat = trainNameLower.includes('amrit bharat') || trainNameLower.includes('amritbharat') || trainTypeLower.includes('amrit bharat');
     const isMemu = trainNameLower.includes('memu') || trainNameLower.includes('passenger') || trainTypeLower.includes('passenger') || trainTypeLower.includes('demu');
     const isSpecial = trainNum.startsWith('0') || trainNameLower.includes('special') || trainNameLower.includes('spl') || trainTypeLower.includes('special');
-    const isSF = !isMemu && (trainTypeLower.includes('superfast') || trainNameLower.includes('sf') || trainNameLower.includes('superfast') || isRajdhani || isShatabdi || isDuronto || isVandeBharat || isAntyodaya);
+    const isSF = !isMemu && (trainTypeLower.includes('superfast') || trainNameLower.includes('sf') || trainNameLower.includes('superfast') || isRajdhani || isShatabdi || isDuronto || isVandeBharat || isAntyodaya || isAmritBharat);
 
     // Coach presence detection
     const isVistadome = trainNameLower.includes('vistadome') || trainTypeLower.includes('vistadome') || coachesList.some((c: string) => c.startsWith('EV') || c.startsWith('V'));
@@ -432,6 +433,7 @@ export default function TrainDetails() {
       : isShatabdi ? 'Shatabdi Express'
       : isDuronto ? 'Duronto Express'
       : isGaribRath ? 'Garib Rath Express'
+      : isAmritBharat ? 'Amrit Bharat Express'
       : isVistadome ? 'Vistadome Scenic Express'
       : isMemu ? 'Passenger / MEMU'
       : isSpecial ? 'Special Fare Express (1.3x)'
@@ -457,6 +459,16 @@ export default function TrainDetails() {
           if (d <= 350) return 70;
           if (d <= 400) return 75;
           return Math.round((75 + (d - 400) * 0.15) / 5) * 5;
+        }
+        if (isAmritBharat) {
+          // Amrit Bharat Express 1.15x base tariff for GN
+          let gnBase = 30;
+          if (d <= 50) gnBase = 30;
+          else if (d <= 150) gnBase = Math.round((30 + (d - 50) * 0.35) / 5) * 5;
+          else if (d <= 300) gnBase = Math.round((65 + (d - 150) * 0.35) / 5) * 5;
+          else if (d <= 600) gnBase = Math.round((118 + (d - 300) * 0.28) / 5) * 5;
+          else gnBase = Math.round((202 + (d - 600) * 0.22) / 5) * 5;
+          return Math.round(gnBase * 1.15);
         }
         // Mail / Express & Superfast Unreserved UTS slab (Matches official UTS Mail/Exp & SF app)
         if (d <= 50) return 30;
@@ -498,11 +510,14 @@ export default function TrainDetails() {
           if (d <= 600) return Math.round(120 + (d - 300) * 0.28);
           return Math.round(204 + (d - 600) * 0.22);
 
-        case 'SL':
-          if (d <= 100) return 125;
-          if (d <= 300) return Math.round(125 + (d - 100) * 0.18);
-          if (d <= 600) return Math.round(161 + (d - 300) * 0.35);
-          return Math.round(266 + (d - 600) * 0.30);
+        case 'SL': {
+          let slBase = 140;
+          if (d <= 100) slBase = 140;
+          else if (d <= 300) slBase = Math.round(140 + (d - 100) * 0.375);
+          else if (d <= 600) slBase = Math.round(215 + (d - 300) * 0.42);
+          else slBase = Math.round(341 + (d - 600) * 0.40);
+          return Math.round(slBase * (isAmritBharat ? 1.15 : 1.0));
+        }
 
         case 'CC':
           if (d <= 100) return 215;
@@ -644,6 +659,12 @@ export default function TrainDetails() {
       // Antyodaya / Jan Sadharan: 100% General Unreserved Superfast
       classes = [
         computeClass('GN', 'General Unreserved', 'Superfast UTS', 0, 15, 0, false, 0, 0, 0, false)
+      ];
+    } else if (isAmritBharat) {
+      // Amrit Bharat Express: Non-AC Superfast (GN & SL only with 1.15x base tariff)
+      classes = [
+        computeClass('GN', 'General Unreserved', 'Amrit Bharat', 0, 15, 0, false, 0, 0, 0, false),
+        computeClass('SL', 'Sleeper Class', 'Popular', 20, 30, 0, false, 0.10, 100, 200, true),
       ];
     } else if (isMemu) {
       // MEMU / Passenger / DEMU: Ordinary Unreserved (Matches official UTS Ordinary app: BPQ -> KZJ ₹55)
