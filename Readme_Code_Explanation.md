@@ -1643,13 +1643,19 @@ This section documents the frontend views and components integrated for rail dis
 
   * Dual-attribute binding (`ontimePercentage ?? onTimePercentage` and `avgArrivalDelayMinutes ?? historicalAverageDelayMinutes`) guarantees seamless rendering of On-Time performance percentage bar, average delay in minutes, and Punctuality Grade badge (A, B, C, D).
 
-* **Interactive Ticket Fare Calculator Card:**
+* **Interactive Ticket Fare Calculator Card with Coach & Train Awareness:**
 
-  * Provides interactive Boarding and Destination dropdown selectors with real-time IRCTC telescopic distance slab calculation across classes (2S, SL, 3A, 2A, 1A).
-
-  * Uses 3-4 letter station codes (e.g. `SKZR`, `TBM`) from the route definition to avoid upstream HTTP 400 Bad Request parameter rejections.
-
-  * Dual-contract mapping (`classFares || fares`) with distance-based slab estimation renders class cards (1A, 2A, 3A, SL, 2S, CC) with base and total fares.
+  * **Train-Type & Coach Composition Detection:** Dynamically detects the exact train type and parses route.coachPosition to display only the classes and coach types actually running on that train:
+    * **Garib Rath Express:** Subsidized AC tariff featuring **3E** (AC 3 Tier Economy at Rs 0.82/km) and **CC** (AC Chair Car at Rs 0.92/km).
+    * **Vistadome Scenic Coaches (EV):** Detects EV1, EV2, V1 coaches or Vistadome scenic express trains, calculating premium panoramic tariff (Rs 3.25/km, 360-degree rotating seats).
+    * **AC 3-Tier Economy (3E / M coaches):** Modern LHB Economy 3A coaches priced ~8% lower than standard 3A.
+    * **Anubhuti Luxury (EA):** Ultra-premium executive chair cars attached to Shatabdi/Jan Shatabdi.
+    * **Vande Bharat / Shatabdi / Rajdhani / Duronto:** Day and overnight premium express tariffs with integrated catering allowances and speed surcharges.
+    * **Passenger / MEMU:** Unreserved base fare without reservation or superfast surcharges.
+    * **Special Trains (0xxxx):** Official IRCTC 1.30x (+30%) holiday surcharge applied to base fares.
+  * **Interactive Tatkal Quota (Tatkal TQ):** Real-time toggle applying official IRCTC Tatkal percentages and caps (10% for 2S/SL, 30% for 3A/3E/2A/CC/EC/EV with min/max caps; strictly excluded for 1A).
+  * **Station Pair Distance Calculation:** Allows selecting any arbitrary boarding and destination stop along the route with instant timetable distance differential calculation and reverse swap.
+  * **Dynamic Seating Layout:** Supports 2+2 layout for Vistadome (EV), Executive (EC), and Anubhuti (EA); 3+3 layout for 2S/CC; and 8-berth compartment layout for SL, 3A, 2A, 1A, and 3E.
 
 
 

@@ -212,14 +212,27 @@ export default function TrainDetails() {
     const trainTypeLower = (train?.trainType || '').toLowerCase();
     const trainNum = train?.trainNumber || trainNumber || '';
 
-    // Train Type Classification
+    // Parse coaches from train composition if available
+    const coachesList = (route?.coachPosition ? route.coachPosition.split('-') : [])
+      .map((c: string) => c.trim().toUpperCase())
+      .filter(Boolean);
+
+    // Train Type & Coach Composition Classification
     const isVandeBharat = trainNameLower.includes('vande bharat') || trainTypeLower.includes('vande bharat');
     const isRajdhani = trainNameLower.includes('rajdhani') || trainTypeLower.includes('rajdhani');
     const isShatabdi = trainNameLower.includes('shatabdi') || trainTypeLower.includes('shatabdi');
     const isDuronto = trainNameLower.includes('duronto') || trainTypeLower.includes('duronto');
+    const isGaribRath = trainNameLower.includes('garib rath') || trainTypeLower.includes('garib rath');
     const isMemu = trainNameLower.includes('memu') || trainNameLower.includes('passenger') || trainTypeLower.includes('passenger') || trainTypeLower.includes('demu');
     const isSpecial = trainNum.startsWith('0') || trainNameLower.includes('special') || trainNameLower.includes('spl') || trainTypeLower.includes('special');
     const isSF = !isMemu && (trainTypeLower.includes('superfast') || trainNameLower.includes('sf') || trainNameLower.includes('superfast') || isRajdhani || isShatabdi || isDuronto || isVandeBharat);
+
+    // Coach presence detection
+    const isVistadome = trainNameLower.includes('vistadome') || trainTypeLower.includes('vistadome') || coachesList.some((c: string) => c.startsWith('EV') || c.startsWith('V'));
+    const has3ECoach = isGaribRath || coachesList.some((c: string) => c.startsWith('M') || c.startsWith('G') || c === '3E');
+    const hasEACoach = coachesList.some((c: string) => c.startsWith('EA'));
+    const hasECCoach = isShatabdi || isVandeBharat || coachesList.some((c: string) => c.startsWith('EC') || (c.startsWith('E') && !c.startsWith('EOG') && !c.startsWith('ENG') && !c.startsWith('EV')));
+    const hasCCCoach = isShatabdi || isVandeBharat || isGaribRath || coachesList.some((c: string) => c.startsWith('C') || c === 'CC');
 
     // Multiplier for Special holiday trains (IRCTC 1.30x surcharge)
     const specialMultiplier = isSpecial ? 1.30 : 1.0;
@@ -232,6 +245,8 @@ export default function TrainDetails() {
       : isRajdhani ? 'Rajdhani Express'
       : isShatabdi ? 'Shatabdi Express'
       : isDuronto ? 'Duronto Express'
+      : isGaribRath ? 'Garib Rath Express'
+      : isVistadome ? 'Vistadome Scenic Express'
       : isMemu ? 'Passenger / MEMU'
       : isSpecial ? 'Special Fare Express (1.3x)'
       : isSF ? 'Superfast Express'
@@ -291,25 +306,44 @@ export default function TrainDetails() {
 
     let classes: any[] = [];
 
-    if (isVandeBharat) {
+    if (isGaribRath) {
+      // Garib Rath: Economy AC 3-Tier (3E) and AC Chair Car (CC) with subsidized tariff
+      classes = [
+        computeClass('3E', 'AC 3 Tier Economy', 'Garib Rath', 0.82, 195, 40, 0, 0, true, 0.30, 200, 300, true),
+        computeClass('CC', 'AC Chair Car', 'Budget AC', 0.92, 215, 40, 0, 0, true, 0.30, 220, 320, true),
+      ];
+    } else if (isVandeBharat) {
       // Vande Bharat: CC and EC with premium speed and catering
       classes = [
         computeClass('CC', 'AC Chair Car', 'Executive', 1.65, 380, 40, 45, 195, true, 0.30, 300, 400, true),
         computeClass('EC', 'Exec. Chair Car', 'Luxury', 3.10, 850, 60, 75, 280, true, 0.30, 400, 500, true),
       ];
+      if (isVistadome) {
+        classes.push(computeClass('EV', 'Vistadome AC', 'Scenic 360°', 3.35, 950, 60, 75, 290, true, 0.30, 400, 500, true));
+      }
     } else if (isShatabdi) {
       // Shatabdi: CC and EC
       classes = [
         computeClass('CC', 'AC Chair Car', 'Day Express', 1.45, 320, 40, 45, 160, true, 0.30, 300, 400, true),
         computeClass('EC', 'Exec. Chair Car', 'Executive', 2.85, 750, 60, 75, 240, true, 0.30, 400, 500, true),
       ];
+      if (hasEACoach) {
+        classes.push(computeClass('EA', 'Anubhuti Luxury', 'Ultra Premium', 3.20, 890, 60, 75, 260, true, 0.30, 400, 500, true));
+      }
+      if (isVistadome) {
+        classes.push(computeClass('EV', 'Vistadome AC', 'Scenic 360°', 3.30, 920, 60, 75, 240, true, 0.30, 400, 500, true));
+      }
     } else if (isRajdhani || (isDuronto && !trainNameLower.includes('non-ac'))) {
-      // Rajdhani / AC Duronto: 3A, 2A, 1A
-      classes = [
+      // Rajdhani / AC Duronto: 3A, 2A, 1A (and 3E if present)
+      classes = [];
+      if (has3ECoach) {
+        classes.push(computeClass('3E', 'AC 3 Economy', 'Modern 3E', 1.25, 420, 40, 45, 290, true, 0.30, 300, 400, true));
+      }
+      classes.push(
         computeClass('3A', 'AC 3 Tier', 'Comfort', 1.38, 480, 40, 45, 320, true, 0.30, 300, 400, true),
         computeClass('2A', 'AC 2 Tier', 'Premium', 1.95, 720, 50, 45, 340, true, 0.30, 400, 500, true),
-        computeClass('1A', 'AC First Class', 'Royal', 3.35, 1250, 60, 75, 420, true, 0, 0, 0, false),
-      ];
+        computeClass('1A', 'AC First Class', 'Royal', 3.35, 1250, 60, 75, 420, true, 0, 0, 0, false)
+      );
     } else if (isMemu) {
       // MEMU / Passenger: Unreserved / 2S ordinary (no Tatkal, no SF)
       const ordinaryBase = Math.max(10, Math.min(120, Math.round(distanceKm * 0.18 + 5)));
@@ -331,20 +365,65 @@ export default function TrainDetails() {
         }
       ];
     } else {
-      // Standard Mail / Express / Superfast / Special
+      // Standard Mail / Express / Superfast / Special / Intercity
       const sfFee2S = isSF ? 15 : 0;
       const sfFeeSL = isSF ? 30 : 0;
       const sfFee3A = isSF ? 45 : 0;
       const sfFee2A = isSF ? 45 : 0;
       const sfFee1A = isSF ? 75 : 0;
 
-      classes = [
+      // Base candidate classes
+      const candidateClasses = [
         computeClass('2S', 'Second Sitting', 'Budget', 0.22, 35, 15, sfFee2S, 0, false, 0.10, 10, 15, true),
         computeClass('SL', 'Sleeper Class', 'Popular', 0.44, 120, 20, sfFeeSL, 0, false, 0.10, 100, 200, true),
+      ];
+
+      if (has3ECoach) {
+        candidateClasses.push(computeClass('3E', 'AC 3 Economy', 'Modern 3E', 1.18, 410, 40, sfFee3A, 0, true, 0.30, 300, 400, true));
+      }
+
+      candidateClasses.push(
         computeClass('3A', 'AC 3 Tier', 'Comfort', 1.28, 450, 40, sfFee3A, 0, true, 0.30, 300, 400, true),
         computeClass('2A', 'AC 2 Tier', 'Premium', 1.82, 680, 50, sfFee2A, 0, true, 0.30, 400, 500, true),
-        computeClass('1A', 'AC First Class', 'Executive', 3.10, 1180, 60, sfFee1A, 0, true, 0, 0, 0, false),
-      ];
+        computeClass('1A', 'AC First Class', 'Executive', 3.10, 1180, 60, sfFee1A, 0, true, 0, 0, 0, false)
+      );
+
+      if (hasCCCoach) {
+        candidateClasses.push(computeClass('CC', 'AC Chair Car', 'Intercity AC', 1.25, 300, 40, sfFee3A, 0, true, 0.30, 300, 400, true));
+      }
+      if (hasECCoach) {
+        candidateClasses.push(computeClass('EC', 'Exec. Chair Car', 'Executive', 2.65, 720, 60, sfFee1A, 0, true, 0.30, 400, 500, true));
+      }
+      if (isVistadome) {
+        candidateClasses.push(computeClass('EV', 'Vistadome AC', 'Scenic 360°', 3.25, 950, 60, sfFee1A, 0, true, 0.30, 400, 500, true));
+      }
+      if (hasEACoach) {
+        candidateClasses.push(computeClass('EA', 'Anubhuti Luxury', 'Ultra Premium', 3.15, 880, 60, sfFee1A, 0, true, 0.30, 400, 500, true));
+      }
+
+      // If specific coach position data is present, filter to coaches that actually exist on this train
+      if (coachesList.length > 3) {
+        const hasCoachMatch = (code: string) => {
+          switch (code) {
+            case '2S': return coachesList.some((c: string) => c.startsWith('D') || c.startsWith('CZ') || c === '2S');
+            case 'SL': return coachesList.some((c: string) => c.startsWith('S') && !c.startsWith('SLR') && !c.startsWith('SLRD'));
+            case '3E': return coachesList.some((c: string) => c.startsWith('M') || c.startsWith('G') || c === '3E');
+            case '3A': return coachesList.some((c: string) => c.startsWith('B') || c === '3A');
+            case '2A': return coachesList.some((c: string) => c.startsWith('A') || c === '2A');
+            case '1A': return coachesList.some((c: string) => c.startsWith('H') || c.startsWith('HA') || c === '1A');
+            case 'CC': return coachesList.some((c: string) => c.startsWith('C') || c === 'CC');
+            case 'EC': return coachesList.some((c: string) => c.startsWith('EC') || (c.startsWith('E') && !c.startsWith('EOG') && !c.startsWith('ENG') && !c.startsWith('EV')));
+            case 'EV': return coachesList.some((c: string) => c.startsWith('EV') || c.startsWith('V'));
+            case 'EA': return coachesList.some((c: string) => c.startsWith('EA'));
+            default: return true;
+          }
+        };
+
+        const filtered = candidateClasses.filter(c => hasCoachMatch(c.code));
+        classes = filtered.length > 0 ? filtered : candidateClasses;
+      } else {
+        classes = candidateClasses;
+      }
     }
 
     return {
@@ -855,6 +934,11 @@ export default function TrainDetails() {
   };
 
   const getSeatPosition = (seatNum: number, coachType: string) => {
+    if (coachType === 'EC' || coachType === 'EV' || coachType === 'EA') {
+      const remainder = (seatNum - 1) % 4;
+      if (remainder === 0 || remainder === 3) return 'WINDOW';
+      return 'AISLE';
+    }
     if (coachType === '2S' || coachType === 'CC') {
       const remainder = (seatNum - 1) % 6;
       if (remainder === 0 || remainder === 5) return 'WINDOW';
@@ -870,12 +954,18 @@ export default function TrainDetails() {
   };
 
   const getCoachType = (coachName: string) => {
-    if (coachName.startsWith('D')) return '2S'; // Second Sitting
-    if (coachName.startsWith('C')) return 'CC'; // Chair Car
-    if (coachName.startsWith('S')) return 'SL'; // Sleeper
-    if (coachName.startsWith('B') || coachName.startsWith('M')) return '3A'; // AC 3 Tier
-    if (coachName.startsWith('A')) return '2A'; // AC 2 Tier
-    if (coachName.startsWith('H')) return '1A'; // AC 1st Class
+    if (!coachName) return coachName;
+    const name = coachName.toUpperCase();
+    if (name.startsWith('EV') || name.startsWith('V')) return 'EV'; // Vistadome AC
+    if (name.startsWith('EA')) return 'EA'; // Anubhuti Luxury
+    if (name.startsWith('EC') || (name.startsWith('E') && !name.startsWith('EOG') && !name.startsWith('ENG'))) return 'EC'; // Executive Chair Car
+    if (name.startsWith('D') || name.startsWith('CZ')) return '2S'; // Second Sitting
+    if (name.startsWith('C')) return 'CC'; // AC Chair Car
+    if (name.startsWith('M') || name.startsWith('G')) return '3E'; // AC 3 Economy / Garib Rath 3A
+    if (name.startsWith('S') && !name.startsWith('SLR') && !name.startsWith('SLRD')) return 'SL'; // Sleeper
+    if (name.startsWith('B')) return '3A'; // AC 3 Tier
+    if (name.startsWith('A')) return '2A'; // AC 2 Tier
+    if (name.startsWith('H') || name.startsWith('HA')) return '1A'; // AC 1st Class
     return coachName;
   };
 
@@ -1744,8 +1834,8 @@ export default function TrainDetails() {
                   </p>
                 </div>
 
-                {/* 3+3 layout (2S/CC) */}
-                {(getCoachType(selectedCoach) === '2S' || getCoachType(selectedCoach) === 'CC') && (
+                {/* 3+3 and 2+2 Chair Car layout (2S/CC/EC/EA/EV) */}
+                {['2S', 'CC', 'EC', 'EA', 'EV'].includes(getCoachType(selectedCoach)) && (
                   <div className="space-y-3 sm:space-y-4">
                     {generateSecondSittingSeats().map((row, rowIdx) => (
                       <div key={rowIdx} className="flex justify-between items-center">
@@ -1806,8 +1896,8 @@ export default function TrainDetails() {
                   </div>
                 )}
 
-                {/* Sleeper Layout (SL/3A/2A/1A) */}
-                {['SL', '3A', '2A', '1A'].includes(getCoachType(selectedCoach)) && (
+                {/* Sleeper Layout (SL/3A/2A/1A/3E) */}
+                {['SL', '3A', '2A', '1A', '3E'].includes(getCoachType(selectedCoach)) && (
                   <div className="space-y-6">
                     {/* Render berths in groups of 8 (compartments) */}
                     {generateSleeperBerths().map((comp, compIdx) => (
@@ -1908,7 +1998,7 @@ export default function TrainDetails() {
                 )}
 
                 {/* General / Pantry / Engine / Guard Car unreserved message */}
-                {!['2S', 'CC', 'SL', '3A', '2A', '1A'].includes(getCoachType(selectedCoach)) && (
+                {!['2S', 'CC', 'EC', 'EA', 'EV', 'SL', '3A', '2A', '1A', '3E'].includes(getCoachType(selectedCoach)) && (
                   <div className="text-center py-10 bg-slate-900/30 border border-slate-900 rounded-xl space-y-3">
                     <span className="text-4xl select-none">💺</span>
                     <h5 className="font-bold text-slate-300 text-sm">
