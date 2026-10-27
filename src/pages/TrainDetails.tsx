@@ -79,30 +79,29 @@ export default function TrainDetails() {
       return train?.destinationStation?.toUpperCase();
     }
 
-    const firstStation = liveStatus.stations?.[0];
-    const hasDepartedFirst = (() => {
-      if (!firstStation) return true;
-      const seq = firstStation.sequenceNumber || firstStation.sequence;
-      if (seq > 1) return true;
-      const statusStr = firstStation.status?.toLowerCase();
-      return statusStr === 'departed' || 
-             statusStr === 'passed' || 
-             statusStr === 'skipped' || 
-             statusStr === 'completed';
-    })();
-
-    const hasSpeed = liveStatus.speed != null && liveStatus.speed > 0;
-    const isUnstarted = !hasSpeed && !hasDepartedFirst && (status === 'not-started' || status === 'scheduled' || !status);
-
-    if (isUnstarted) {
-      if (route && route.stations && route.stations.length > 0) {
-        return route.stations[0].stationCode?.toUpperCase();
-      }
-      return train?.sourceStation?.toUpperCase();
+    // 1. If currentStationCode is set and valid, use it
+    if (liveStatus.currentStationCode && liveStatus.currentStationCode !== '-') {
+      return liveStatus.currentStationCode.toUpperCase();
     }
 
-    if (liveStatus.currentStationCode) {
-      return liveStatus.currentStationCode.toUpperCase();
+    // 2. Match from lastLocationInfo (e.g. "at-station at Chennai Beach")
+    if (liveStatus.lastLocationInfo && route?.stations) {
+      const locLower = liveStatus.lastLocationInfo.toLowerCase();
+      const matched = route.stations.find((s: any) => 
+        s.stationName && locLower.includes(s.stationName.toLowerCase())
+      );
+      if (matched && matched.stationCode) {
+        return matched.stationCode.toUpperCase();
+      }
+    }
+
+    // 3. Find first non-cancelled active station
+    const isSkippedStation = (sc?: string) => 
+      liveStatus.skippedStations && liveStatus.skippedStations.some((x: string) => x?.toUpperCase() === sc?.toUpperCase());
+
+    const firstActiveStation = route?.stations?.find((s: any) => !isSkippedStation(s.stationCode));
+    if (firstActiveStation && firstActiveStation.stationCode) {
+      return firstActiveStation.stationCode.toUpperCase();
     }
 
     return liveStatus.nextStationCode?.toUpperCase();
@@ -987,17 +986,15 @@ export default function TrainDetails() {
               <p className="font-bold text-slate-200 mt-0.5">
                 {(() => {
                   const runStatus = (liveStatus.runStatus || liveStatus.status)?.toLowerCase();
-                  const firstStation = liveStatus.stations?.[0];
-                  const hasDepartedFirst = (() => {
-                    if (!firstStation) return true;
-                    const seq = firstStation.sequenceNumber || firstStation.sequence;
-                    if (seq > 1) return true;
-                    const statusStr = firstStation.status?.toLowerCase();
-                    return statusStr === 'departed' || 
-                           statusStr === 'passed' || 
-                           statusStr === 'skipped' || 
-                           statusStr === 'completed';
-                  })();
+
+                  const isStationCancelled = (stationCode?: string, statusStr?: string) => {
+                    if (!stationCode) return false;
+                    const isSkipped = liveStatus.skippedStations && liveStatus.skippedStations.some(
+                      (sc: string) => sc?.toUpperCase() === stationCode?.toUpperCase()
+                    );
+                    const isStatusCancelled = statusStr ? (statusStr.toLowerCase().includes('cancel') || statusStr.toLowerCase().includes('skip')) : false;
+                    return isSkipped || isStatusCancelled;
+                  };
 
                   const isReached = 
                     runStatus === 'reached' || 
@@ -1019,18 +1016,15 @@ export default function TrainDetails() {
                     return 'Service Cancelled';
                   }
 
-                  const hasSpeed = liveStatus.speed != null && liveStatus.speed > 0;
-                  const isUnstarted = !hasSpeed && !hasDepartedFirst && (runStatus === 'not-started' || runStatus === 'scheduled' || !runStatus);
-
-                  if (isUnstarted) {
-                    const srcName = translateName(liveStatus.stations?.[0]?.stationName || liveStatus.currentStationName || train?.sourceStation || 'Source', language);
-                    const srcCode = liveStatus.stations?.[0]?.stationCode || liveStatus.currentStationCode || train?.sourceStation;
-                    const codeSuffix = srcCode ? ` (${srcCode})` : '';
-                    return `Yet to start from ${srcName}${codeSuffix}`;
+                  // 1. If live location info exists and describes current position (e.g. "at-station at Chennai Beach"), prioritize it!
+                  if (liveStatus.lastLocationInfo && 
+                      !liveStatus.lastLocationInfo.toLowerCase().includes('yet to start') &&
+                      !liveStatus.lastLocationInfo.toLowerCase().includes('not started')) {
+                    return translateName(liveStatus.lastLocationInfo, language);
                   }
-                  
-                  // Map from currentStationCode if available
-                  if (liveStatus.currentStationCode) {
+
+                  // 2. Map from currentStationCode if available
+                  if (liveStatus.currentStationCode && liveStatus.currentStationCode !== '-') {
                     const matchedStation = route?.stations?.find(
                       (s: any) => s.stationCode?.toUpperCase() === liveStatus.currentStationCode?.toUpperCase()
                     );
@@ -1044,7 +1038,27 @@ export default function TrainDetails() {
                     const prefix = currentStationStatus?.status?.toLowerCase() === 'departed' ? 'Departed' : 'At';
                     return `${prefix} ${stationName} (${liveStatus.currentStationCode})`;
                   }
-                  
+
+                  // 3. Check for starting station (handling partial origin cancellation)
+                  const firstStation = liveStatus.stations?.[0] || route?.stations?.[0];
+                  const firstStationIsCancelled = isStationCancelled(firstStation?.stationCode, firstStation?.status);
+
+                  const firstActiveStation = liveStatus.stations?.find((s: any) => !isStationCancelled(s.stationCode, s.status)) ||
+                                            route?.stations?.find((s: any) => !isStationCancelled(s.stationCode));
+
+                  const hasSpeed = liveStatus.speed != null && liveStatus.speed > 0;
+                  const hasDeparted = !firstStationIsCancelled && (firstStation?.status?.toLowerCase() === 'departed' || firstStation?.status?.toLowerCase() === 'passed');
+                  const isUnstarted = !hasSpeed && !hasDeparted && (runStatus === 'not-started' || runStatus === 'scheduled' || !runStatus);
+
+                  if (isUnstarted) {
+                    const activeName = translateName(firstActiveStation?.stationName || 'Active Station', language);
+                    const activeCode = firstActiveStation?.stationCode;
+                    if (firstStationIsCancelled) {
+                      return `Starting from ${activeName}${activeCode ? ` (${activeCode})` : ''} [Origin adjusted: ${firstStation?.stationName || 'Scheduled origin'} cancelled]`;
+                    }
+                    return `Yet to start from ${activeName}${activeCode ? ` (${activeCode})` : ''}`;
+                  }
+
                   const fallbackVal = translateName(liveStatus.lastLocationInfo, language);
                   return fallbackVal || 'Live position reported by RailRadar';
                 })()}
@@ -1055,17 +1069,15 @@ export default function TrainDetails() {
               <p className="font-bold text-slate-200 mt-0.5">
                 {(() => {
                   const runStatus = (liveStatus.runStatus || liveStatus.status)?.toLowerCase();
-                  const firstStation = liveStatus.stations?.[0];
-                  const hasDepartedFirst = (() => {
-                    if (!firstStation) return true;
-                    const seq = firstStation.sequenceNumber || firstStation.sequence;
-                    if (seq > 1) return true;
-                    const statusStr = firstStation.status?.toLowerCase();
-                    return statusStr === 'departed' || 
-                           statusStr === 'passed' || 
-                           statusStr === 'skipped' || 
-                           statusStr === 'completed';
-                  })();
+
+                  const isStationCancelled = (stationCode?: string, statusStr?: string) => {
+                    if (!stationCode) return false;
+                    const isSkipped = liveStatus.skippedStations && liveStatus.skippedStations.some(
+                      (sc: string) => sc?.toUpperCase() === stationCode?.toUpperCase()
+                    );
+                    const isStatusCancelled = statusStr ? (statusStr.toLowerCase().includes('cancel') || statusStr.toLowerCase().includes('skip')) : false;
+                    return isSkipped || isStatusCancelled;
+                  };
 
                   const isReached = 
                     runStatus === 'reached' || 
@@ -1086,40 +1098,55 @@ export default function TrainDetails() {
                     return 'Service Cancelled';
                   }
 
-                  const hasSpeed = liveStatus.speed != null && liveStatus.speed > 0;
-                  const isUnstarted = !hasSpeed && !hasDepartedFirst && (runStatus === 'not-started' || runStatus === 'scheduled' || !runStatus);
-
-                  if (isUnstarted) {
-                    const firstStop = liveStatus.stations?.find((s: any) => (s.isHalt || s.halt) && (s.sequenceNumber > 1 || s.sequence > 1));
-                    if (firstStop) {
-                      return `${translateName(firstStop.stationName, language)} (${firstStop.stationCode})`;
-                    }
+                  // Find current sequence threshold
+                  let currentSeq = 0;
+                  if (liveStatus.currentStationCode) {
+                    const curr = route?.stations?.find((s: any) => s.stationCode?.toUpperCase() === liveStatus.currentStationCode?.toUpperCase()) ||
+                                 liveStatus.stations?.find((s: any) => s.stationCode?.toUpperCase() === liveStatus.currentStationCode?.toUpperCase());
+                    if (curr) currentSeq = curr.sequenceNumber || curr.sequence || 0;
                   }
 
-                  // Find the next upcoming halt station (always sequence number > 1)
+                  // Find the next upcoming halt station that is NOT CANCELLED and NOT SKIPPED!
                   const nextHaltStation = liveStatus.stations?.find((s: any) => {
                     const statusStr = s.status?.toLowerCase();
-                    return (s.isHalt || s.halt) && 
-                           (s.sequenceNumber > 1 || s.sequence > 1) &&
-                           statusStr !== 'departed' && 
-                           statusStr !== 'passed' && 
-                           statusStr !== 'skipped' && 
-                           statusStr !== 'completed';
+                    const seq = s.sequenceNumber || s.sequence || 0;
+                    const isUpcomingSeq = currentSeq > 0 ? seq > currentSeq : seq > 1;
+                    const isHalt = s.isHalt || s.halt;
+                    const notCancelled = !isStationCancelled(s.stationCode, statusStr);
+                    const notPassed = statusStr !== 'departed' && statusStr !== 'passed' && statusStr !== 'completed';
+                    return isHalt && isUpcomingSeq && notCancelled && notPassed;
+                  }) || route?.stations?.find((s: any) => {
+                    const seq = s.sequenceNumber || s.sequence || 0;
+                    const isUpcomingSeq = currentSeq > 0 ? seq > currentSeq : seq > 1;
+                    const notCancelled = !isStationCancelled(s.stationCode);
+                    return s.isHalt && isUpcomingSeq && notCancelled;
                   });
 
                   if (nextHaltStation) {
                     return `${translateName(nextHaltStation.stationName, language)} (${nextHaltStation.stationCode})`;
                   }
 
-                  if (!liveStatus.nextStationName || liveStatus.nextStationName === '-') {
-                    if (route && route.stations && route.stations.length > 1) {
-                      return `${translateName(route.stations[1].stationName, language)} (${route.stations[1].stationCode})`;
+                  // If liveStatus.nextStationName is available AND is NOT cancelled, use it
+                  if (liveStatus.nextStationName && liveStatus.nextStationName !== '-' && liveStatus.nextStationName !== '0') {
+                    if (!isStationCancelled(liveStatus.nextStationCode)) {
+                      return `${translateName(liveStatus.nextStationName, language)}${
+                        liveStatus.nextStationCode && liveStatus.nextStationCode !== '-' ? ` (${liveStatus.nextStationCode})` : ''
+                      }`;
                     }
-                    return '---';
                   }
-                  return `${translateName(liveStatus.nextStationName, language)}${
-                    liveStatus.nextStationCode && liveStatus.nextStationCode !== '-' ? ` (${liveStatus.nextStationCode})` : ''
-                  }`;
+
+                  // If upstream nextStation was cancelled, search route for next non-cancelled halt
+                  if (route?.stations) {
+                    const fallbackHalt = route.stations.find((s: any) => {
+                      const seq = s.sequenceNumber || s.sequence || 0;
+                      return s.isHalt && seq > 1 && !isStationCancelled(s.stationCode);
+                    });
+                    if (fallbackHalt) {
+                      return `${translateName(fallbackHalt.stationName, language)} (${fallbackHalt.stationCode})`;
+                    }
+                  }
+
+                  return 'Final Destination';
                 })()}
               </p>
             </div>
