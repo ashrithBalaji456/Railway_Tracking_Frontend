@@ -620,7 +620,7 @@ export default function TrainDetails() {
       </div>
 
       {/* Disruption Alert Banner */}
-      {(liveStatus?.isCancelled || liveStatus?.isDiverted || liveStatus?.isRescheduled || liveStatus?.disruptionMessage) && (
+      {(liveStatus?.isCancelled || liveStatus?.isDiverted || liveStatus?.isRescheduled || (liveStatus?.skippedStations && liveStatus.skippedStations.length > 0) || liveStatus?.disruptionMessage) && (
         <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg ${
           liveStatus?.isCancelled
             ? 'bg-rose-950/40 border-rose-800/60 text-rose-200'
@@ -636,26 +636,29 @@ export default function TrainDetails() {
             </div>
             <div>
               <div className="font-bold text-sm tracking-wide uppercase flex items-center gap-2">
-                {liveStatus?.isCancelled ? 'Train Service Cancelled' : liveStatus?.isDiverted ? 'Route Diverted' : 'Schedule Disrupted'}
+                {liveStatus?.isCancelled
+                  ? (liveStatus.skippedStations && liveStatus.skippedStations.length > 0 ? 'Train Partially Cancelled / Stations Skipped' : 'Train Service Cancelled')
+                  : liveStatus?.isDiverted ? 'Route Diverted' : 'Schedule Disrupted'}
               </div>
               <p className="text-xs opacity-90 mt-0.5">
-                {liveStatus?.disruptionMessage || (liveStatus?.isCancelled ? 'This train service has reported operational cancellation.' : 'Route diversions or schedule modifications apply.')}
+                {liveStatus?.disruptionMessage || (liveStatus?.isCancelled ? 'This train service has reported operational cancellation between stations.' : 'Route diversions or schedule modifications apply.')}
               </p>
               {liveStatus?.skippedStations && liveStatus.skippedStations.length > 0 && (
-                <p className="text-[11px] text-amber-300/80 mt-1">
-                  Skipped Stops: {liveStatus.skippedStations.join(', ')}
-                </p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                  <span className="font-bold text-amber-300 bg-amber-950/60 border border-amber-700/40 px-2 py-0.5 rounded">
+                    Cancelled / Skipped Stations ({liveStatus.skippedStations.length}):
+                  </span>
+                  <span className="text-rose-300 font-semibold">{liveStatus.skippedStations.join(', ')}</span>
+                </div>
               )}
             </div>
           </div>
-          {(liveStatus?.isCancelled || liveStatus?.isDiverted) && (
-            <button
-              onClick={() => navigate('/disruptions')}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white whitespace-nowrap transition"
-            >
-              View Disruption Details
-            </button>
-          )}
+          <button
+            onClick={() => navigate('/disruptions')}
+            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white whitespace-nowrap transition shadow-sm"
+          >
+            View Disruption Details
+          </button>
         </div>
       )}
 
@@ -958,6 +961,13 @@ export default function TrainDetails() {
                   })();
                   const isUnstarted = runStatus === 'not-started' || runStatus === 'scheduled' || (!runStatus && !hasDepartedFirst);
 
+                  if (liveStatus.isCancelled) {
+                    if (liveStatus.skippedStations && liveStatus.skippedStations.length > 0) {
+                      return `Partially Cancelled: ${liveStatus.skippedStations.length} station(s) cancelled/skipped`;
+                    }
+                    return 'Service Cancelled';
+                  }
+
                   if (isUnstarted) {
                     const srcName = translateName(liveStatus.stations?.[0]?.stationName || liveStatus.currentStationName || train?.sourceStation || 'Source', language);
                     const srcCode = liveStatus.stations?.[0]?.stationCode || liveStatus.currentStationCode || train?.sourceStation;
@@ -1012,6 +1022,13 @@ export default function TrainDetails() {
                     return 'Journey Completed';
                   }
 
+                  if (liveStatus.isCancelled) {
+                    if (liveStatus.skippedStations && liveStatus.skippedStations.length > 0) {
+                      return `Partially Cancelled: ${liveStatus.skippedStations.length} station(s) cancelled/skipped`;
+                    }
+                    return 'Service Cancelled';
+                  }
+
                   if (isUnstarted) {
                     const firstStop = liveStatus.stations?.find((s: any) => (s.isHalt || s.halt) && (s.sequenceNumber > 1 || s.sequence > 1));
                     if (firstStop) {
@@ -1048,7 +1065,7 @@ export default function TrainDetails() {
             </div>
             <div>
               <p className="text-xs text-slate-500">{t('delay')}</p>
-              <p className={`font-bold mt-0.5 ${liveStatus.delayMinutes > 0 && (liveStatus.runStatus || liveStatus.status)?.toLowerCase() !== 'not-started' ? 'text-amber-400' : 'text-emerald-400'}`}>
+              <p className={`font-bold mt-0.5 ${liveStatus.isCancelled ? 'text-rose-400' : liveStatus.delayMinutes > 0 && (liveStatus.runStatus || liveStatus.status)?.toLowerCase() !== 'not-started' ? 'text-amber-400' : 'text-emerald-400'}`}>
                 {(() => {
                   const runStatus = (liveStatus.runStatus || liveStatus.status)?.toLowerCase();
                   const firstStation = liveStatus.stations?.[0];
@@ -1063,6 +1080,10 @@ export default function TrainDetails() {
                            statusStr === 'completed';
                   })();
                   const isUnstarted = runStatus === 'not-started' || runStatus === 'scheduled' || (!runStatus && !hasDepartedFirst);
+
+                  if (liveStatus.isCancelled) {
+                    return 'Service Cancelled';
+                  }
 
                   if (isUnstarted) {
                     return 'Scheduled (No Delay)';
@@ -1420,21 +1441,40 @@ export default function TrainDetails() {
                       (ls: any) => ls.stationCode?.toUpperCase() === s.stationCode?.toUpperCase()
                     );
                     const isTrainHere = showLive && bubbleStationCode === s.stationCode?.toUpperCase();
+                    const isStationCancelled = !!(
+                      liveStatus?.isCancelled ||
+                      liveStop?.status?.toLowerCase()?.includes('cancel') ||
+                      liveStop?.status?.toLowerCase()?.includes('skip') ||
+                      liveStop?.status?.toLowerCase()?.includes('divert') ||
+                      (liveStatus?.skippedStations && liveStatus.skippedStations.some(
+                        (sc: string) => sc?.toUpperCase() === s.stationCode?.toUpperCase()
+                      ))
+                    );
 
                     return (
                       <div
                         key={s.sequenceNumber}
-                        className="flex items-center py-2 sm:py-3.5 relative hover:bg-slate-850/40 rounded-lg transition-colors group"
+                        className={`flex items-center py-2 sm:py-3.5 relative rounded-lg transition-colors group ${
+                          isStationCancelled ? 'bg-rose-950/15 hover:bg-rose-950/25' : 'hover:bg-slate-850/40'
+                        }`}
                       >
                         {/* 1. Arrival Timing (Left) */}
                         <div className="w-14 sm:w-20 text-right pr-1 sm:pr-2 shrink-0">
-                          <div className="text-[11px] sm:text-xs font-bold text-slate-200 leading-tight">
+                          <div className={`text-[11px] sm:text-xs font-bold leading-tight ${
+                            isStationCancelled ? 'line-through text-slate-500' : 'text-slate-200'
+                          }`}>
                             {s.arrivalTime ? format12Hour(s.arrivalTime) : '---'}
                           </div>
-                          {showLive && liveStop && liveStop.delayMinutes > 0 && s.arrivalTime && (
-                            <div className="text-[9px] sm:text-[10px] text-red-500 font-bold leading-none mt-0.5">
-                              {formatDelayedTime(s.arrivalTime, liveStop.delayMinutes)}
+                          {isStationCancelled ? (
+                            <div className="text-[9px] sm:text-[10px] text-rose-400 font-bold leading-none mt-0.5">
+                              Cancelled
                             </div>
+                          ) : (
+                            showLive && liveStop && liveStop.delayMinutes > 0 && s.arrivalTime && (
+                              <div className="text-[9px] sm:text-[10px] text-red-500 font-bold leading-none mt-0.5">
+                                {formatDelayedTime(s.arrivalTime, liveStop.delayMinutes)}
+                              </div>
+                            )
                           )}
                         </div>
 
@@ -1442,16 +1482,26 @@ export default function TrainDetails() {
                         <div className="w-7 sm:w-10 relative flex items-center justify-center shrink-0 self-stretch min-h-[38px]">
                           {/* Top line segment */}
                           {itemIdx > 0 && (
-                            <div className="absolute top-0 bottom-1/2 w-1 sm:w-1.5 bg-sky-600 left-1/2 -translate-x-1/2" />
+                            <div className={`absolute top-0 bottom-1/2 w-1 sm:w-1.5 left-1/2 -translate-x-1/2 ${
+                              isStationCancelled ? 'bg-rose-900/60' : 'bg-sky-600'
+                            }`} />
                           )}
                           {/* Bottom line segment */}
                           {itemIdx < timelineItems.length - 1 && (
-                            <div className="absolute top-1/2 bottom-0 w-1 sm:w-1.5 bg-sky-600 left-1/2 -translate-x-1/2" />
+                            <div className={`absolute top-1/2 bottom-0 w-1 sm:w-1.5 left-1/2 -translate-x-1/2 ${
+                              isStationCancelled ? 'bg-rose-900/60' : 'bg-sky-600'
+                            }`} />
                           )}
 
                           {/* Centered Station Dot */}
-                          <div className="h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-slate-900 border-2 sm:border-4 border-sky-600 z-10 flex items-center justify-center relative shadow-sm">
-                            <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 bg-sky-400 rounded-full" />
+                          <div className={`h-4 w-4 sm:h-5 sm:w-5 rounded-full z-10 flex items-center justify-center relative shadow-sm ${
+                            isStationCancelled
+                              ? 'bg-rose-950 border-2 sm:border-4 border-rose-500 shadow-rose-950/50'
+                              : 'bg-slate-900 border-2 sm:border-4 border-sky-600'
+                          }`}>
+                            <div className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full ${
+                              isStationCancelled ? 'bg-rose-400' : 'bg-sky-400'
+                            }`} />
                             {isTrainHere && (
                               <div className="absolute -inset-2 bg-sky-500/30 rounded-full animate-ping" />
                             )}
@@ -1468,9 +1518,18 @@ export default function TrainDetails() {
 
                         {/* 3. Station name, platform (Center) */}
                         <div className="flex-1 min-w-0 px-1 sm:px-2 text-left">
-                          <h4 className="font-bold text-xs sm:text-sm text-slate-100 leading-tight truncate sm:whitespace-normal">
-                            {translateName(s.stationName, language)}
-                          </h4>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className={`font-bold text-xs sm:text-sm leading-tight truncate sm:whitespace-normal ${
+                              isStationCancelled ? 'text-rose-200 line-through opacity-85' : 'text-slate-100'
+                            }`}>
+                              {translateName(s.stationName, language)}
+                            </h4>
+                            {isStationCancelled && (
+                              <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[9px] font-bold px-1.5 py-0.2 rounded shadow-sm">
+                                Cancelled at this station
+                              </span>
+                            )}
+                          </div>
                           <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-0.5 text-[9px] sm:text-xs text-slate-400">
                             <span className="font-semibold text-slate-400">
                               {s.distance !== undefined && s.distance !== null ? `${s.distance} km` : `${s.sequenceNumber * 80} km`}
@@ -1491,13 +1550,15 @@ export default function TrainDetails() {
                             )}
                             {showLive && liveStop && (
                               <span className={`px-1 py-0.2 rounded text-[8px] sm:text-[9px] font-bold uppercase border transition-all ${
-                                liveStop.status?.toLowerCase() === 'departed'
+                                isStationCancelled || liveStop.status?.toLowerCase()?.includes('cancel')
+                                  ? 'bg-rose-950/60 border-rose-800/50 text-rose-300'
+                                  : liveStop.status?.toLowerCase() === 'departed'
                                   ? 'bg-indigo-950/40 border-indigo-900/30 text-indigo-400'
                                   : liveStop.status?.toLowerCase() === 'arrived'
                                   ? 'bg-emerald-950/40 border-emerald-900/30 text-emerald-400'
                                   : 'bg-slate-950 border-slate-800 text-slate-400'
                               }`}>
-                                {liveStop.status || 'Scheduled'}
+                                {isStationCancelled ? 'Cancelled' : (liveStop.status || 'Scheduled')}
                               </span>
                             )}
                           </div>
@@ -1505,13 +1566,21 @@ export default function TrainDetails() {
 
                         {/* 4. Departure Timing (Right) */}
                         <div className="w-16 sm:w-24 text-right pl-1 shrink-0">
-                          <div className="text-[11px] sm:text-xs font-bold text-slate-200 leading-tight">
+                          <div className={`text-[11px] sm:text-xs font-bold leading-tight ${
+                            isStationCancelled ? 'line-through text-slate-500' : 'text-slate-200'
+                          }`}>
                             {s.departureTime ? format12Hour(s.departureTime) : '---'}
                           </div>
-                          {showLive && liveStop && liveStop.delayMinutes > 0 && s.departureTime && (
-                            <div className="text-[9px] sm:text-[10px] text-red-500 font-bold leading-none mt-0.5">
-                              {formatDelayedTime(s.departureTime, liveStop.delayMinutes)}
+                          {isStationCancelled ? (
+                            <div className="text-[9px] sm:text-[10px] text-rose-400 font-bold leading-none mt-0.5">
+                              Cancelled
                             </div>
+                          ) : (
+                            showLive && liveStop && liveStop.delayMinutes > 0 && s.departureTime && (
+                              <div className="text-[9px] sm:text-[10px] text-red-500 font-bold leading-none mt-0.5">
+                                {formatDelayedTime(s.departureTime, liveStop.delayMinutes)}
+                              </div>
+                            )
                           )}
                         </div>
                       </div>
@@ -1566,33 +1635,56 @@ export default function TrainDetails() {
                           <div className="bg-slate-950/50 border border-slate-800/80 rounded-lg p-1.5 my-1 space-y-0.5">
                             {item.stations.map((passStation: any) => {
                               const isTrainAtPassStation = showLive && bubbleStationCode === passStation.stationCode?.toUpperCase();
+                              const isPassCancelled = !!(
+                                liveStatus?.isCancelled ||
+                                (liveStatus?.skippedStations && liveStatus.skippedStations.some(
+                                  (sc: string) => sc?.toUpperCase() === passStation.stationCode?.toUpperCase()
+                                ))
+                              );
                               return (
-                                <div key={passStation.sequenceNumber} className="flex items-center py-1 relative hover:bg-slate-900/50 rounded transition-colors">
+                                <div key={passStation.sequenceNumber} className={`flex items-center py-1 relative rounded transition-colors ${
+                                  isPassCancelled ? 'bg-rose-950/20 hover:bg-rose-950/30' : 'hover:bg-slate-900/50'
+                                }`}>
                                   {/* Arrival timing */}
                                   <div className="w-14 sm:w-20 text-right pr-1 sm:pr-2 shrink-0">
-                                    <span className="text-[10px] sm:text-xs text-slate-450 font-mono">
+                                    <span className={`text-[10px] sm:text-xs font-mono ${
+                                      isPassCancelled ? 'line-through text-slate-500' : 'text-slate-450'
+                                    }`}>
                                       {passStation.arrivalTime ? format12Hour(passStation.arrivalTime) : '---'}
                                     </span>
                                   </div>
 
                                   {/* Dot / Live train bubble */}
                                   <div className="w-7 sm:w-10 relative flex items-center justify-center shrink-0 self-stretch min-h-[26px]">
-                                    <div className="absolute top-0 bottom-0 w-0.5 border-r border-dashed border-sky-600/50 left-1/2 -translate-x-1/2" />
+                                    <div className={`absolute top-0 bottom-0 w-0.5 border-r border-dashed left-1/2 -translate-x-1/2 ${
+                                      isPassCancelled ? 'border-rose-900/60' : 'border-sky-600/50'
+                                    }`} />
                                     {isTrainAtPassStation ? (
                                       <div className="h-4 w-4 rounded-full bg-slate-900 border-2 border-sky-500 z-10 flex items-center justify-center relative">
                                         <div className="h-1.5 w-1.5 bg-sky-400 rounded-full" />
                                         <div className="absolute -inset-1.5 bg-sky-500/30 rounded-full animate-ping" />
                                       </div>
                                     ) : (
-                                      <div className="h-1.5 w-1.5 bg-slate-600 rounded-full z-10" />
+                                      <div className={`h-1.5 w-1.5 rounded-full z-10 ${
+                                        isPassCancelled ? 'bg-rose-500' : 'bg-slate-600'
+                                      }`} />
                                     )}
                                   </div>
 
                                   {/* Station details */}
                                   <div className="flex-1 min-w-0 px-1 sm:px-2 text-left">
-                                    <span className="font-medium text-[11px] sm:text-xs text-slate-300 truncate block">
-                                      {translateName(passStation.stationName, language)}
-                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className={`font-medium text-[11px] sm:text-xs truncate block ${
+                                        isPassCancelled ? 'text-rose-200 line-through opacity-85' : 'text-slate-300'
+                                      }`}>
+                                        {translateName(passStation.stationName, language)}
+                                      </span>
+                                      {isPassCancelled && (
+                                        <span className="text-[8px] font-bold text-rose-300 bg-rose-500/20 border border-rose-500/30 px-1 rounded">
+                                          Skipped
+                                        </span>
+                                      )}
+                                    </div>
                                     <span className="text-[9px] text-slate-500">
                                       {passStation.distance !== undefined && passStation.distance !== null ? `${passStation.distance} km` : `${passStation.sequenceNumber * 80} km`}
                                     </span>
@@ -1605,7 +1697,9 @@ export default function TrainDetails() {
 
                                   {/* Departure timing */}
                                   <div className="w-16 sm:w-24 text-right pl-1 shrink-0">
-                                    <span className="text-[10px] sm:text-xs text-slate-450 font-mono">
+                                    <span className={`text-[10px] sm:text-xs font-mono ${
+                                      isPassCancelled ? 'line-through text-slate-500' : 'text-slate-450'
+                                    }`}>
                                       {passStation.departureTime ? format12Hour(passStation.departureTime) : '---'}
                                     </span>
                                   </div>

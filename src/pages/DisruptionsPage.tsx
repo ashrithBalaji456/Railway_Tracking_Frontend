@@ -34,11 +34,8 @@ export default function DisruptionsPage() {
 
   useEffect(() => {
     fetchSummary();
+    fetchExceptions();
   }, []);
-
-  useEffect(() => {
-    fetchExceptions(selectedType);
-  }, [selectedType]);
 
   const fetchSummary = async () => {
     try {
@@ -51,11 +48,11 @@ export default function DisruptionsPage() {
     }
   };
 
-  const fetchExceptions = async (type: string) => {
+  const fetchExceptions = async () => {
     setLoading(true);
     setError('');
     try {
-      const res: any = await getDisruptions(type);
+      const res: any = await getDisruptions();
       const list = res?.data || [];
       setExceptions(list);
     } catch (err: any) {
@@ -98,21 +95,39 @@ export default function DisruptionsPage() {
   // Derive counts dynamically so cards are never blank/dashes
   const cancelledCount = summary?.cancelled != null && summary.cancelled > 0 
     ? summary.cancelled 
-    : exceptions.filter(e => ((e.primaryType || e.status || e.type || '').toUpperCase().includes('CANCEL'))).length;
+    : exceptions.filter(e => {
+        const t = `${e.primaryType || ''} ${e.status || ''} ${e.type || ''} ${e.message || ''}`.toUpperCase();
+        return t.includes('CANCEL');
+      }).length;
 
   const divertedCount = summary?.diverted != null && summary.diverted > 0 
     ? summary.diverted 
-    : exceptions.filter(e => ((e.primaryType || e.status || e.type || '').toUpperCase().includes('DIVERT'))).length;
+    : exceptions.filter(e => {
+        const t = `${e.primaryType || ''} ${e.status || ''} ${e.type || ''} ${e.message || ''}`.toUpperCase();
+        return t.includes('DIVERT');
+      }).length;
 
   const rescheduledCount = summary?.rescheduled != null && summary.rescheduled > 0 
     ? summary.rescheduled 
-    : exceptions.filter(e => ((e.primaryType || e.status || e.type || '').toUpperCase().includes('RESCHED'))).length;
+    : exceptions.filter(e => {
+        const t = `${e.primaryType || ''} ${e.status || ''} ${e.type || ''} ${e.message || ''}`.toUpperCase();
+        return t.includes('RESCHED');
+      }).length;
 
   const totalCount = summary?.total != null && summary.total > 0
     ? summary.total
     : (cancelledCount + divertedCount + rescheduledCount || exceptions.length);
 
   const filteredExceptions = exceptions.filter((item) => {
+    // 1. Tab / Category Filter (handled instantaneously in-memory)
+    if (selectedType !== 'ALL') {
+      const t = `${item.primaryType || ''} ${item.status || ''} ${item.type || ''} ${item.message || ''}`.toUpperCase();
+      if (selectedType === 'CANCELLED' && !t.includes('CANCEL')) return false;
+      if (selectedType === 'DIVERTED' && !t.includes('DIVERT')) return false;
+      if (selectedType === 'RESCHEDULED' && !t.includes('RESCHED')) return false;
+    }
+
+    // 2. Search Query Filter
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -127,8 +142,8 @@ export default function DisruptionsPage() {
     );
   });
 
-  const getBadge = (rawType?: string) => {
-    const t = (rawType || 'DISRUPTED').toUpperCase();
+  const getBadge = (rawType?: string, message?: string) => {
+    const t = `${rawType || ''} ${message || ''}`.toUpperCase();
     if (t.includes('CANCEL')) {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm shadow-rose-950/40">
@@ -246,7 +261,7 @@ export default function DisruptionsPage() {
         <button
           onClick={() => {
             fetchSummary();
-            fetchExceptions(selectedType);
+            fetchExceptions();
           }}
           disabled={loading}
           className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 shadow-sm transition"
@@ -334,7 +349,10 @@ export default function DisruptionsPage() {
           <h3 className="font-bold text-lg text-white">Unable to load disruptions</h3>
           <p className="text-xs sm:text-sm text-rose-300/80 mt-1 max-w-md mx-auto">{error}</p>
           <button
-            onClick={() => fetchExceptions(selectedType)}
+            onClick={() => {
+              fetchSummary();
+              fetchExceptions();
+            }}
             className="mt-4 px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition"
           >
             Retry Feed
@@ -392,7 +410,7 @@ export default function DisruptionsPage() {
                           </span>
                         )}
                       </div>
-                      <div>{getBadge(rawType)}</div>
+                      <div>{getBadge(rawType, ex.message)}</div>
                     </div>
 
                     {/* Train Name at bottom of Image Banner */}
