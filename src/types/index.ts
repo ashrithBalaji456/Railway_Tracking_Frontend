@@ -1,13 +1,25 @@
 export interface TrainException {
   trainNumber: string;
   trainName: string;
-  type: string; // CANCELLED, DIVERTED, RESCHEDULED, PARTIALLY_CANCELLED
-  description?: string;
+  trainType?: string;
   startDate?: string;
   endDate?: string;
+  sourceStationCode?: string;
+  sourceStationName?: string;
+  destinationStationCode?: string;
+  destinationStationName?: string;
+  status?: string;
+  primaryType?: string;
+  type?: string; // CANCELLED, DIVERTED, RESCHEDULED, PARTIALLY_CANCELLED
+  message?: string;
+  description?: string;
   stationsAffected?: string[];
   originalRoute?: string;
   alternativeRoute?: string;
+  runningDays?: string;
+  distance?: number;
+  duration?: number;
+  lastUpdatedAt?: string;
 }
 
 export interface TrainExceptionSummary {
