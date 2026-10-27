@@ -5,6 +5,8 @@ const config: CapacitorConfig = {
   appName: 'Railway Tracking',
   webDir: 'dist',
   server: {
+    url: 'https://railway-tracking-frontend.vercel.app',
+    cleartext: true,
     androidScheme: 'https'
   }
 };
