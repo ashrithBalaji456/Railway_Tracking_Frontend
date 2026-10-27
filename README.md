@@ -353,7 +353,40 @@ Railway_Tracking_Frontend/
 └── README.md
 ```
 
-<!-- TODO: expand src/ (pages, components, services, hooks, types) from your real folders -->
+### Source Structure (`src/`)
+
+```text
+src/
+├── components/            # Reusable UI components
+│   ├── AndroidBackButtonHandler.tsx # Android native predictive back & gesture handler
+│   ├── Footer.tsx         # Responsive footer with links
+│   ├── Navbar.tsx         # Header navigation, disruptions indicator & mobile drawer
+│   ├── ProtectedRoute.tsx # Route authentication guard
+│   ├── RailAiWidget.tsx   # Floating interactive Gemini AI Assistant chatbot
+│   ├── RecentSearchesBar.tsx # Quick-tap search query chips
+│   └── RecentSearchesDropdown.tsx # Full recent searches management overlay
+├── context/
+│   └── LanguageContext.tsx # Multi-language transliteration & localization provider
+├── pages/
+│   ├── DisruptionsPage.tsx # Train Disruptions & Alerts Hub with in-memory filters
+│   ├── Favorites.tsx      # User saved train and station bookmarks
+│   ├── Home.tsx           # Hero search, live train lookup, station finder
+│   ├── JourneyPlanner.tsx # Mobile-first stacked multi-leg journey solver
+│   ├── Login.tsx          # User sign-in with JWT token acquisition
+│   ├── MapTracker.tsx     # Fullscreen interactive Leaflet map with live GPS
+│   ├── Register.tsx       # Account creation & registration
+│   ├── SearchHistoryPage.tsx # Synced user search records
+│   ├── StationExplorer.tsx# Station live boards (arrivals/departures)
+│   └── TrainDetails.tsx   # Live timetable, cancellation badges, fares & delay report
+├── services/
+│   ├── api.ts             # Axios client, interceptors & endpoint contracts
+│   ├── searchHistoryService.ts # Hybrid local storage & backend synced history
+│   └── stationService.ts  # Station metadata & suggestions cache
+├── types/
+│   └── index.ts           # Unified TypeScript interfaces and DTO models
+└── utils/
+    └── transliteration.ts# Multi-script Indian language transliteration engine
+```
 
 ---
 

@@ -797,20 +797,30 @@ This section documents the frontend views and components integrated for rail dis
 * **Route:** `/disruptions`
 * **Overview:** A dedicated Disruptions & Alerts Hub providing real-time visibility into railway network exceptions.
 * **Key Features:**
-  * **Summary KPI Cards:** Real-time metrics banner for Total Disruptions, Cancelled Trains, Diverted Routes, and Rescheduled Trains.
-  * **Category Filter Tabs:** Instant switching between All, Cancelled, Diverted, and Rescheduled exception types.
-  * **Live Client-Side Filtering:** Search bar allowing passengers to filter disruptions by train name, number, or affected station.
-  * **Disruption Badges:** High-contrast color-coded badges (rose for cancellations, amber for diversions, sky blue for rescheduling).
+  * **Overhauled Card Design:** Each disrupted train card includes an image banner with contextual train imagery (Vande Bharat, Rajdhani, Express, MEMU), full origin-to-destination route block, and a **7-day running schedule grid** (`Sun | Mon | Tue | Wed | Thu | Fri | Sat`) indicating operating days and schedule frequency ("Runs Daily" or "Runs X days/week").
+  * **Summary KPI Metrics:** Real-time dynamic count cards for Total Disruptions, Cancelled Trains, Diverted Routes, and Rescheduled Trains, dynamically tallied so they never show empty dashes (`—`).
+  * **Instant In-Memory Filtering:** Switching between All, Cancelled, Diverted, and Rescheduled tabs filters the loaded exceptions in-memory without extra network requests or upstream 400 Bad Request errors, protecting the 100 requests/month quota.
+  * **Live Search Filtering:** Real-time search by train name, number, source, destination, or disruption message.
   * **Alternative Trains Finder Modal:** 1-click CTA on disrupted train cards querying `/api/v1/trains/between` to immediately show passengers active alternative trains between affected stations.
 
 ### 15.2. `src/pages/TrainDetails.tsx` Extensions
-* **Disruption Alert Banner:** Mounted conditionally at the top of the details view if `liveStatus.isCancelled`, `isDiverted`, `isRescheduled`, or `disruptionMessage` are detected, showing affected/skipped stops and direct navigation to the Disruptions Hub.
+* **Disruption Alert Banner:** Mounted conditionally at the top of the details view if `liveStatus.isCancelled`, `isDiverted`, `isRescheduled`, or `skippedStations` are detected, displaying the count and list of affected stations with a direct link to find alternatives.
+* **Station-Level Cancellation in Live Timetable:**
+  * If a train is cancelled or skips stops, affected stations in the timetable timeline render a prominent **red dot and border** (`border-rose-500 bg-rose-950/60`).
+  * Arrival and departure times are crossed out with **strikethrough** (`line-through text-slate-500`) with a bold red `Cancelled` label underneath.
+  * Renders a `Cancelled at this station` badge next to the station name.
+  * Non-stopping / passing stations that are skipped similarly render a red dot, struck-through times, and a `Skipped` badge.
 * **Historical Punctuality Card:** Fetches delay statistics via `getTrainDelayReport(trainNumber)`, rendering On-Time performance percentage bar, historical average delay in minutes, and a Punctuality Grade badge (A, B, C, D).
 * **Ticket Fare Breakdown Card:** Fetches class fare breakdown via `getTrainFare(trainNumber, source, destination)` showing base and total fares across travel classes (1A, 2A, 3A, SL, 2S, CC).
 
-### 15.3. `src/pages/JourneyPlanner.tsx` Delay Overlay
-* **Real-Time Delay Overlay Toggle:** Button in the search results header allowing users to activate multi-leg delay intelligence via `POST /api/v1/journey/overlay`.
-* **Leg Delay Badges:** Displays average historical arrival/departure delay badges on direct and connecting train legs (`~Xm avg delay`).
+### 15.3. `src/pages/JourneyPlanner.tsx` Mobile-First Stacked Layout & Delay Overlay
+* **Clean "Down by Down" Form Layout:** Re-engineered the query card from a squished multi-column layout to a mobile-first stacked design:
+  1. **Origin Station:** Green-accented origin field with quick autocomplete and recent search chips.
+  2. **Swap Divider:** Centered, circular `Swap Stations` button with rotating icon and divider line.
+  3. **Destination Station:** Rose-accented destination field with quick autocomplete and recent search chips.
+  4. **Date of Journey:** Date selector with quick one-tap shortcuts for **"Today"** and **"Tomorrow"**.
+  5. **Prominent Search CTA:** Full-width bold "FIND TRAVEL ROUTES" action button with high-contrast gradient.
+* **Real-Time Delay Overlay:** Multi-leg delay intelligence toggle via `POST /api/v1/journey/overlay` displaying average delay badges on direct and connecting legs (`~Xm delay`).
 
 ### 15.4. Navigation & Types
 * **`src/components/Navbar.tsx`:** Added responsive desktop and mobile navigation links with `AlertTriangle` icon linking to `/disruptions`.
