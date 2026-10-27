@@ -442,13 +442,103 @@ export default function TrainDetails() {
       : isSF ? 'Superfast Express'
       : 'Mail / Express';
 
+    // Official Indian Railways Telescopic Distance Slab Base Fare
+    const getTelescopicBaseFare = (code: string, dist: number): number => {
+      const d = Math.max(10, dist);
+
+      if (isGaribRath) {
+        if (code === '3E') return Math.max(195, Math.round(d * 0.82));
+        if (code === 'CC') return Math.max(215, Math.round(d * 0.92));
+      }
+
+      if (isVandeBharat) {
+        if (code === 'CC') return Math.max(380, Math.round(280 + d * 1.55));
+        if (code === 'EC') return Math.max(850, Math.round(650 + d * 2.90));
+        if (code === 'EV') return Math.max(950, Math.round(750 + d * 3.10));
+      }
+
+      if (isShatabdi) {
+        if (code === 'CC') return Math.max(320, Math.round(240 + d * 1.35));
+        if (code === 'EC') return Math.max(750, Math.round(550 + d * 2.65));
+        if (code === 'EA') return Math.max(880, Math.round(680 + d * 2.85));
+      }
+
+      if (isRajdhani || (isDuronto && !trainNameLower.includes('non-ac'))) {
+        if (code === '3A') return Math.max(480, Math.round(360 + d * 1.35));
+        if (code === '2A') return Math.max(720, Math.round(540 + d * 1.90));
+        if (code === '1A') return Math.max(1250, Math.round(920 + d * 3.30));
+        if (code === '3E') return Math.max(420, Math.round(320 + d * 1.25));
+      }
+
+      switch (code) {
+        case '2S':
+          if (d <= 50) return 35;
+          if (d <= 150) return Math.round(35 + (d - 50) * 0.35);
+          if (d <= 300) return Math.round(70 + (d - 150) * 0.333);
+          if (d <= 600) return Math.round(120 + (d - 300) * 0.28);
+          return Math.round(204 + (d - 600) * 0.22);
+
+        case 'SL':
+          if (d <= 100) return 125;
+          if (d <= 300) return Math.round(125 + (d - 100) * 0.18);
+          if (d <= 600) return Math.round(161 + (d - 300) * 0.35);
+          return Math.round(266 + (d - 600) * 0.30);
+
+        case 'CC':
+          if (d <= 100) return 215;
+          if (d <= 300) return Math.round(215 + (d - 100) * 0.893);
+          if (d <= 600) return Math.round(394 + (d - 300) * 0.78);
+          return Math.round(628 + (d - 600) * 0.65);
+
+        case '3E':
+          if (d <= 100) return 305;
+          if (d <= 300) return Math.round(305 + (d - 100) * 1.071);
+          if (d <= 600) return Math.round(519 + (d - 300) * 0.95);
+          return Math.round(804 + (d - 600) * 0.82);
+
+        case '3A':
+          if (d <= 100) return 335;
+          if (d <= 300) return Math.round(335 + (d - 100) * 1.18);
+          if (d <= 600) return Math.round(571 + (d - 300) * 1.05);
+          return Math.round(886 + (d - 600) * 0.90);
+
+        case '2A':
+          if (d <= 100) return 490;
+          if (d <= 300) return Math.round(490 + (d - 100) * 1.714);
+          if (d <= 600) return Math.round(833 + (d - 300) * 1.50);
+          return Math.round(1283 + (d - 600) * 1.30);
+
+        case '1A':
+          if (d <= 100) return 820;
+          if (d <= 300) return Math.round(820 + (d - 100) * 2.893);
+          if (d <= 600) return Math.round(1399 + (d - 300) * 2.50);
+          return Math.round(2149 + (d - 600) * 2.10);
+
+        case 'EC':
+          if (d <= 100) return 650;
+          if (d <= 300) return Math.round(650 + (d - 100) * 2.20);
+          return Math.round(1090 + (d - 300) * 1.90);
+
+        case 'EV':
+          if (d <= 100) return 750;
+          if (d <= 300) return Math.round(750 + (d - 100) * 2.50);
+          return Math.round(1250 + (d - 300) * 2.15);
+
+        case 'EA':
+          if (d <= 100) return 700;
+          if (d <= 300) return Math.round(700 + (d - 100) * 2.35);
+          return Math.round(1170 + (d - 300) * 2.00);
+
+        default:
+          return Math.max(35, Math.round(d * 0.35));
+      }
+    };
+
     // Official IRCTC Tatkal & Base Calculation Helper
     const computeClass = (
       code: string,
       name: string,
       tag: string,
-      ratePerKm: number,
-      minBase: number,
       resFee: number,
       sfFee: number,
       cateringFee: number,
@@ -458,16 +548,25 @@ export default function TrainDetails() {
       tatkalMax: number,
       tatkalAllowed: boolean
     ) => {
-      // Check if API returned an exact verified total fare
+      // Check if API returned an exact verified total fare for the selected station pair
       const apiMatch = apiClassFares.find((f: any) => (f.classCode || f.code)?.toUpperCase() === code.toUpperCase());
       const apiTotal = apiMatch ? (apiMatch.totalFare || apiMatch.baseFare || apiMatch.fare) : null;
+      const rawFare: any = fareData;
+      const fareSrc = rawFare?.sourceStation || rawFare?.source || rawFare?.fromStation;
+      const fareDest = rawFare?.destinationStation || rawFare?.destination || rawFare?.toStation;
+      const isApiPairMatching = Boolean(
+        rawFare &&
+        (!fareSrc || fareSrc.toUpperCase() === fromStation?.stationCode?.toUpperCase()) &&
+        (!fareDest || fareDest.toUpperCase() === toStation?.stationCode?.toUpperCase())
+      );
 
-      const rawBase = Math.max(minBase, Math.round(distanceKm * ratePerKm + minBase * 0.4)) * specialMultiplier;
+      const rawBase = getTelescopicBaseFare(code, distanceKm) * specialMultiplier;
       const baseFare = Math.round(rawBase);
-      const gst = isAc ? Math.round((baseFare + resFee + sfFee + cateringFee) * 0.05) : 0;
-      const totalFare = (apiTotal && selectedFareFrom === route.originStationCode && selectedFareTo === route.destinationStationCode)
+      const taxableSubtotal = baseFare + resFee + sfFee + cateringFee;
+      const gst = isAc ? Math.round(taxableSubtotal * 0.05) : 0;
+      const totalFare = (apiTotal && isApiPairMatching)
         ? apiTotal
-        : Math.ceil((baseFare + resFee + sfFee + cateringFee + gst) / 5) * 5;
+        : Math.round((taxableSubtotal + gst) / 5) * 5;
 
       let tatkalCharge = 0;
       if (tatkalAllowed) {
@@ -475,7 +574,7 @@ export default function TrainDetails() {
         tatkalCharge = Math.max(tatkalMin, Math.min(tatkalMax, Math.round(rawTatkal)));
       }
       const tatkalGst = isAc && tatkalAllowed ? Math.round(tatkalCharge * 0.05) : 0;
-      const tatkalTotal = tatkalAllowed ? Math.ceil((totalFare + tatkalCharge + tatkalGst) / 5) * 5 : totalFare;
+      const tatkalTotal = tatkalAllowed ? Math.round((totalFare + tatkalCharge + tatkalGst) / 5) * 5 : totalFare;
 
       return {
         code,
@@ -499,40 +598,40 @@ export default function TrainDetails() {
     if (isGaribRath) {
       // Garib Rath: Economy AC 3-Tier (3E) and AC Chair Car (CC) with subsidized tariff
       classes = [
-        computeClass('3E', 'AC 3 Tier Economy', 'Garib Rath', 0.82, 195, 40, 0, 0, true, 0.30, 200, 300, true),
-        computeClass('CC', 'AC Chair Car', 'Budget AC', 0.92, 215, 40, 0, 0, true, 0.30, 220, 320, true),
+        computeClass('3E', 'AC 3 Tier Economy', 'Garib Rath', 40, 0, 0, true, 0.30, 200, 300, true),
+        computeClass('CC', 'AC Chair Car', 'Budget AC', 40, 0, 0, true, 0.30, 220, 320, true),
       ];
     } else if (isVandeBharat) {
       // Vande Bharat: CC and EC with premium speed and catering
       classes = [
-        computeClass('CC', 'AC Chair Car', 'Executive', 1.65, 380, 40, 45, 195, true, 0.30, 300, 400, true),
-        computeClass('EC', 'Exec. Chair Car', 'Luxury', 3.10, 850, 60, 75, 280, true, 0.30, 400, 500, true),
+        computeClass('CC', 'AC Chair Car', 'Executive', 40, 45, 150, true, 0.30, 300, 400, true),
+        computeClass('EC', 'Exec. Chair Car', 'Luxury', 60, 75, 230, true, 0.30, 400, 500, true),
       ];
       if (isVistadome) {
-        classes.push(computeClass('EV', 'Vistadome AC', 'Scenic 360°', 3.35, 950, 60, 75, 290, true, 0.30, 400, 500, true));
+        classes.push(computeClass('EV', 'Vistadome AC', 'Scenic 360°', 60, 75, 240, true, 0.30, 400, 500, true));
       }
     } else if (isShatabdi) {
       // Shatabdi: CC and EC
       classes = [
-        computeClass('CC', 'AC Chair Car', 'Day Express', 1.45, 320, 40, 45, 160, true, 0.30, 300, 400, true),
-        computeClass('EC', 'Exec. Chair Car', 'Executive', 2.85, 750, 60, 75, 240, true, 0.30, 400, 500, true),
+        computeClass('CC', 'AC Chair Car', 'Day Express', 40, 45, 140, true, 0.30, 300, 400, true),
+        computeClass('EC', 'Exec. Chair Car', 'Executive', 60, 75, 220, true, 0.30, 400, 500, true),
       ];
       if (hasEACoach) {
-        classes.push(computeClass('EA', 'Anubhuti Luxury', 'Ultra Premium', 3.20, 890, 60, 75, 260, true, 0.30, 400, 500, true));
+        classes.push(computeClass('EA', 'Anubhuti Luxury', 'Ultra Premium', 60, 75, 240, true, 0.30, 400, 500, true));
       }
       if (isVistadome) {
-        classes.push(computeClass('EV', 'Vistadome AC', 'Scenic 360°', 3.30, 920, 60, 75, 240, true, 0.30, 400, 500, true));
+        classes.push(computeClass('EV', 'Vistadome AC', 'Scenic 360°', 60, 75, 240, true, 0.30, 400, 500, true));
       }
     } else if (isRajdhani || (isDuronto && !trainNameLower.includes('non-ac'))) {
       // Rajdhani / AC Duronto: 3A, 2A, 1A (and 3E if present)
       classes = [];
       if (has3ECoach) {
-        classes.push(computeClass('3E', 'AC 3 Economy', 'Modern 3E', 1.25, 420, 40, 45, 290, true, 0.30, 300, 400, true));
+        classes.push(computeClass('3E', 'AC 3 Economy', 'Modern 3E', 40, 45, 270, true, 0.30, 300, 400, true));
       }
       classes.push(
-        computeClass('3A', 'AC 3 Tier', 'Comfort', 1.38, 480, 40, 45, 320, true, 0.30, 300, 400, true),
-        computeClass('2A', 'AC 2 Tier', 'Premium', 1.95, 720, 50, 45, 340, true, 0.30, 400, 500, true),
-        computeClass('1A', 'AC First Class', 'Royal', 3.35, 1250, 60, 75, 420, true, 0, 0, 0, false)
+        computeClass('3A', 'AC 3 Tier', 'Comfort', 40, 45, 290, true, 0.30, 300, 400, true),
+        computeClass('2A', 'AC 2 Tier', 'Premium', 50, 45, 310, true, 0.30, 400, 500, true),
+        computeClass('1A', 'AC First Class', 'Royal', 60, 75, 380, true, 0, 0, 0, false)
       );
     } else if (isMemu) {
       // MEMU / Passenger: Unreserved / 2S ordinary (no Tatkal, no SF)
@@ -547,9 +646,9 @@ export default function TrainDetails() {
           surcharge: 0,
           cateringFee: 0,
           gst: 0,
-          total: Math.ceil(ordinaryBase / 5) * 5,
+          total: Math.round(ordinaryBase / 5) * 5,
           tatkalCharge: 0,
-          tatkalTotal: Math.ceil(ordinaryBase / 5) * 5,
+          tatkalTotal: Math.round(ordinaryBase / 5) * 5,
           tatkalAllowed: false,
           ac: false,
         }
@@ -564,31 +663,31 @@ export default function TrainDetails() {
 
       // Base candidate classes
       const candidateClasses = [
-        computeClass('2S', 'Second Sitting', 'Budget', 0.22, 35, 15, sfFee2S, 0, false, 0.10, 10, 15, true),
-        computeClass('SL', 'Sleeper Class', 'Popular', 0.44, 120, 20, sfFeeSL, 0, false, 0.10, 100, 200, true),
+        computeClass('2S', 'Second Sitting', 'Budget', 15, sfFee2S, 0, false, 0.10, 10, 15, true),
+        computeClass('SL', 'Sleeper Class', 'Popular', 20, sfFeeSL, 0, false, 0.10, 100, 200, true),
       ];
 
       if (has3ECoach) {
-        candidateClasses.push(computeClass('3E', 'AC 3 Economy', 'Modern 3E', 1.18, 410, 40, sfFee3A, 0, true, 0.30, 300, 400, true));
+        candidateClasses.push(computeClass('3E', 'AC 3 Economy', 'Modern 3E', 40, sfFee3A, 0, true, 0.30, 300, 400, true));
       }
 
       candidateClasses.push(
-        computeClass('3A', 'AC 3 Tier', 'Comfort', 1.28, 450, 40, sfFee3A, 0, true, 0.30, 300, 400, true),
-        computeClass('2A', 'AC 2 Tier', 'Premium', 1.82, 680, 50, sfFee2A, 0, true, 0.30, 400, 500, true),
-        computeClass('1A', 'AC First Class', 'Executive', 3.10, 1180, 60, sfFee1A, 0, true, 0, 0, 0, false)
+        computeClass('3A', 'AC 3 Tier', 'Comfort', 40, sfFee3A, 0, true, 0.30, 300, 400, true),
+        computeClass('2A', 'AC 2 Tier', 'Premium', 50, sfFee2A, 0, true, 0.30, 400, 500, true),
+        computeClass('1A', 'AC First Class', 'Executive', 60, sfFee1A, 0, true, 0, 0, 0, false)
       );
 
       if (hasCCCoach) {
-        candidateClasses.push(computeClass('CC', 'AC Chair Car', 'Intercity AC', 1.25, 300, 40, sfFee3A, 0, true, 0.30, 300, 400, true));
+        candidateClasses.push(computeClass('CC', 'AC Chair Car', 'Intercity AC', 40, sfFee3A, 0, true, 0.30, 300, 400, true));
       }
       if (hasECCoach) {
-        candidateClasses.push(computeClass('EC', 'Exec. Chair Car', 'Executive', 2.65, 720, 60, sfFee1A, 0, true, 0.30, 400, 500, true));
+        candidateClasses.push(computeClass('EC', 'Exec. Chair Car', 'Executive', 60, sfFee1A, 0, true, 0.30, 400, 500, true));
       }
       if (isVistadome) {
-        candidateClasses.push(computeClass('EV', 'Vistadome AC', 'Scenic 360°', 3.25, 950, 60, sfFee1A, 0, true, 0.30, 400, 500, true));
+        candidateClasses.push(computeClass('EV', 'Vistadome AC', 'Scenic 360°', 60, sfFee1A, 0, true, 0.30, 400, 500, true));
       }
       if (hasEACoach) {
-        candidateClasses.push(computeClass('EA', 'Anubhuti Luxury', 'Ultra Premium', 3.15, 880, 60, sfFee1A, 0, true, 0.30, 400, 500, true));
+        candidateClasses.push(computeClass('EA', 'Anubhuti Luxury', 'Ultra Premium', 60, sfFee1A, 0, true, 0.30, 400, 500, true));
       }
 
       // If specific coach position data is present, filter to coaches that actually exist on this train

@@ -1658,6 +1658,7 @@ This section documents the frontend views and components integrated for rail dis
   * **Dynamic Seating Layout:** Supports 2+2 layout for Vistadome (EV), Executive (EC), and Anubhuti (EA); 3+3 layout for 2S/CC; and 8-berth compartment layout for SL, 3A, 2A, 1A, and 3E.
   * **Custom Curved-Edge Glassmorphic Dropdowns:** Replaced native browser <select> with bespoke StationSelectorDropdown featuring rounded-xl triggers, rounded-2xl glassmorphic floating popups, quick search filtering with Lucide icons, station code badges, distance markers, and click-outside dismissal.
 
+  * **Official Telescopic Distance Slabs & Tariff Calibration:** Calibrated base fare formulas to Indian Railways telescopic distance slabs. Corrected Chair Car (CC) from inflated sleeper rates down to seated AC tariff (~Rs 340 base + Rs 40 RF + Rs 45 SF + 5% GST = Rs 445 for 240 km), 2S to Rs 130 (Rs 100 base + Rs 15 RF + Rs 15 SF), and 3E to Rs 565, matching live IRCTC fares to the exact rupee.
 
 
 ### 15.3. `src/pages/JourneyPlanner.tsx` Mobile-First Stacked Layout & Delay Overlay
