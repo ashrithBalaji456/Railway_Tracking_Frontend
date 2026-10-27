@@ -1662,6 +1662,20 @@ This section documents the frontend views and components integrated for rail dis
 
   * **Amrit Bharat Express Non-AC Superfast Tariff Integration:** Integrated dedicated Amrit Bharat tariff engine per Railway Board Commercial Circular 23/2023 applying 1.15x (+15%) base fare surcharge exclusively to Non-AC Sleeper (SL) and General Unreserved (GN) coaches with mandatory Superfast surcharges and automated coach composition filtering.
 
+  * **Heritage Mountain Toy Trains (UNESCO Routes):** Comprehensive support for India's 5 iconic hill railways:
+    * **Kalka-Shimla Railway (KSR):** Shivalik Deluxe, Himalayan Queen, Rail Motor Car, and Him Darshan Vistadome (FC, EV, 2S).
+    * **Darjeeling Himalayan Railway (DHR):** Steam & Diesel Joyrides and NJP-Darjeeling toy rakes.
+    * **Nilgiri Mountain Railway (NMR):** Mettupalayam - Udagamandalam (Ooty) UNESCO rack-and-pinion mountain steam trains (FC & 2S).
+    * **Matheran Hill Railway (MHR):** Neral - Matheran narrow-gauge hill shuttles.
+    * **Kangra Valley Railway (KVR):** Pathankot - Joginder Nagar scenic mountain passenger.
+
+  * **Ultra-Luxury Heritage Cruise Trains (Countable Signature Fleets):**
+    * **Maharajas' Express, Palace on Wheels, The Golden Chariot, and Deccan Odyssey:** Configured with luxury cabins (Deluxe Cabin, Junior Suite, Presidential Suite), formatting 7-day royal itineraries, all-inclusive gourmet dining, private guided royal excursions, and chauffeur services.
+
+  * **Bharat Gaurav Spiritual & Pilgrimage Circuits (Round-Trip Tours):**
+    * **IRCTC Religious Circuits:** Shri Ramayana Yatra, Jyotirlinga Yatra, Buddhist Circuit, Uttar Bharat Darshan, Divya Dakshin Yatra, Guru Kripa Yatra, and Kashi-Ayodhya Pilgrimage.
+    * **All-Inclusive Packages:** Displays complete tour packages across Economy (SL), Comfort AC (3A), Superior Deluxe (2A), and Royal Pilgrim (1A) with round-trip train travel, AC hotel accommodation, pure vegetarian catering, local transfers, travel insurance, and VIP temple darshan.
+
   * **Official UTS General Unreserved (GN / UR) Fare Engine & Multi-Tier Calibration:**
     * **Unreserved Ticketing System (UTS) Integration:** Added dedicated GN (General Unreserved) coach cards tagged UTS Counter / Ordinary / UTS, supporting the unreserved travel needs of daily commuters and general compartment passengers.
     * **Ordinary / MEMU / DEMU Passenger Tariff:** Calibrated against the official Indian Railways passenger distance slabs (minimum Rs 10 floor fare; Rs 15 for 21-45 km; Rs 20 for 46-75 km; Rs 25 for 76-100 km; Rs 30 for 101-135 km; Rs 35 for 136-175 km; Rs 45 for 176-210 km; Rs 55 for 211-250 km). On trains like Ramgiri MEMU Express (BPQ to KZJ, 235.9 km), the fare evaluates to **exactly Rs 55**, matching the official UTS app to the rupee with Rs 0 reservation fee and Rs 0 superfast surcharge.

@@ -413,9 +413,12 @@ export default function TrainDetails() {
     const isGaribRath = trainNameLower.includes('garib rath') || trainTypeLower.includes('garib rath');
     const isAntyodaya = trainNameLower.includes('antyodaya') || trainNameLower.includes('jan sadharan') || trainNameLower.includes('jansadharan');
     const isAmritBharat = trainNameLower.includes('amrit bharat') || trainNameLower.includes('amritbharat') || trainTypeLower.includes('amrit bharat');
-    const isMemu = trainNameLower.includes('memu') || trainNameLower.includes('passenger') || trainTypeLower.includes('passenger') || trainTypeLower.includes('demu');
+    const isToyTrain = trainNameLower.includes('toy train') || trainNameLower.includes('himalayan queen') || trainNameLower.includes('shivalik') || trainNameLower.includes('kalka shimla') || trainNameLower.includes('kalka-shimla') || trainNameLower.includes('darjeeling') || trainNameLower.includes('nilgiri') || trainNameLower.includes('matheran') || trainNameLower.includes('kangra') || trainNameLower.includes('him darshan') || trainNum.startsWith('52') || trainNum.startsWith('56');
+    const isLuxuryTrain = trainNameLower.includes('maharajas') || trainNameLower.includes('palace on wheels') || trainNameLower.includes('golden chariot') || trainNameLower.includes('deccan odyssey') || trainNameLower.includes('royal rajasthan');
+    const isBharatGaurav = trainNameLower.includes('bharat gaurav') || trainNameLower.includes('ramayana') || trainNameLower.includes('buddhist circuit') || trainNameLower.includes('jyotirlinga') || trainNameLower.includes('guru kripa') || trainNameLower.includes('divya dakshin') || trainNameLower.includes('dakshin yatra') || (trainNameLower.includes('kashi') && trainNameLower.includes('yatra'));
+    const isMemu = !isToyTrain && (trainNameLower.includes('memu') || trainNameLower.includes('passenger') || trainTypeLower.includes('passenger') || trainTypeLower.includes('demu'));
     const isSpecial = trainNum.startsWith('0') || trainNameLower.includes('special') || trainNameLower.includes('spl') || trainTypeLower.includes('special');
-    const isSF = !isMemu && (trainTypeLower.includes('superfast') || trainNameLower.includes('sf') || trainNameLower.includes('superfast') || isRajdhani || isShatabdi || isDuronto || isVandeBharat || isAntyodaya || isAmritBharat);
+    const isSF = !isMemu && !isToyTrain && !isLuxuryTrain && !isBharatGaurav && (trainTypeLower.includes('superfast') || trainNameLower.includes('sf') || trainNameLower.includes('superfast') || isRajdhani || isShatabdi || isDuronto || isVandeBharat || isAntyodaya || isAmritBharat);
 
     // Coach presence detection
     const isVistadome = trainNameLower.includes('vistadome') || trainTypeLower.includes('vistadome') || coachesList.some((c: string) => c.startsWith('EV') || c.startsWith('V'));
@@ -428,7 +431,10 @@ export default function TrainDetails() {
     const specialMultiplier = isSpecial ? 1.30 : 1.0;
 
     // Train category label
-    const categoryLabel = isVandeBharat ? 'Vande Bharat Express'
+    const categoryLabel = isLuxuryTrain ? 'Ultra-Luxury Heritage Cruise'
+      : isBharatGaurav ? 'Bharat Gaurav Spiritual Circuit'
+      : isToyTrain ? 'Heritage Mountain Toy Train'
+      : isVandeBharat ? 'Vande Bharat Express'
       : isRajdhani ? 'Rajdhani Express'
       : isShatabdi ? 'Shatabdi Express'
       : isDuronto ? 'Duronto Express'
@@ -476,6 +482,27 @@ export default function TrainDetails() {
         if (d <= 300) return Math.round((65 + (d - 150) * 0.35) / 5) * 5;
         if (d <= 600) return Math.round((118 + (d - 300) * 0.28) / 5) * 5;
         return Math.round((202 + (d - 600) * 0.22) / 5) * 5;
+      }
+
+      if (isLuxuryTrain) {
+        if (code === 'DLX') return 450000;
+        if (code === 'JR') return 680000;
+        if (code === 'PS') return 1250000;
+        return 450000;
+      }
+
+      if (isBharatGaurav) {
+        if (code === 'SL') return 18500;
+        if (code === '3A') return 29800;
+        if (code === '2A') return 42500;
+        if (code === '1A') return 65000;
+        return 29800;
+      }
+
+      if (isToyTrain) {
+        if (code === 'FC') return Math.max(295, Math.round(d * 4.5));
+        if (code === 'EV') return Math.max(550, Math.round(450 + d * 3.5));
+        if (code === '2S') return Math.max(35, Math.round(d * 0.75));
       }
 
       if (isGaribRath) {
@@ -655,6 +682,32 @@ export default function TrainDetails() {
         computeClass('2A', 'AC 2 Tier', 'Premium', 50, 45, 310, true, 0.30, 400, 500, true),
         computeClass('1A', 'AC First Class', 'Royal', 60, 75, 380, true, 0, 0, 0, false)
       );
+    } else if (isLuxuryTrain) {
+      // Luxury Tourist Trains (Maharajas' Express, Palace on Wheels, Golden Chariot, Deccan Odyssey)
+      classes = [
+        computeClass('DLX', 'Deluxe Cabin', 'Royal Cruise', 0, 0, 0, false, 0, 0, 0, false),
+        computeClass('JR', 'Junior Suite', 'Palatial', 0, 0, 0, false, 0, 0, 0, false),
+        computeClass('PS', 'Presidential Suite', 'Grand Royal', 0, 0, 0, false, 0, 0, 0, false),
+      ];
+    } else if (isBharatGaurav) {
+      // Bharat Gaurav Tourist Trains (Spiritual & Pilgrimage Circuits)
+      classes = [
+        computeClass('3A', 'Comfort AC', 'All-Inclusive', 0, 0, 0, false, 0, 0, 0, false),
+        computeClass('2A', 'Superior Deluxe', 'All-Inclusive', 0, 0, 0, false, 0, 0, 0, false),
+        computeClass('1A', 'Royal Pilgrim', 'All-Inclusive', 0, 0, 0, false, 0, 0, 0, false),
+      ];
+      if (has3ECoach || coachesList.some((c: string) => c.startsWith('S'))) {
+        classes.unshift(computeClass('SL', 'Economy Pilgrim', 'All-Inclusive', 0, 0, 0, false, 0, 0, 0, false));
+      }
+    } else if (isToyTrain) {
+      // Heritage Mountain Toy Trains (Kalka-Shimla, Darjeeling, Nilgiri, Matheran, Kangra Valley)
+      classes = [
+        computeClass('FC', 'First Class', 'Heritage Toy', 20, 0, 0, false, 0, 0, 0, false),
+        computeClass('2S', 'Second Sitting', 'Mountain Vista', 15, 0, 0, false, 0, 0, 0, false),
+      ];
+      if (isVistadome || trainNameLower.includes('shivalik') || trainNameLower.includes('him darshan')) {
+        classes.unshift(computeClass('EV', 'Vistadome AC', 'Scenic 360°', 40, 0, 0, true, 0, 0, 0, false));
+      }
     } else if (isAntyodaya) {
       // Antyodaya / Jan Sadharan: 100% General Unreserved Superfast
       classes = [
@@ -741,6 +794,9 @@ export default function TrainDetails() {
       toStation,
       isSF,
       isSpecial,
+      isToyTrain,
+      isLuxuryTrain,
+      isBharatGaurav,
       categoryLabel,
       classes,
     };
@@ -1676,7 +1732,7 @@ export default function TrainDetails() {
                       <div className={`text-base font-extrabold mt-1 ${
                         isTatkal && c.tatkalAllowed ? 'text-amber-400' : isTatkalN_A ? 'text-slate-400' : 'text-white'
                       }`}>
-                        ₹{displayPrice}
+                        ₹{displayPrice.toLocaleString('en-IN')}
                       </div>
                     </button>
                   );
@@ -1697,27 +1753,33 @@ export default function TrainDetails() {
                         {activeClass.name} ({activeClass.code}) • {isTatkal ? 'Tatkal Quota' : 'General Quota'} Breakdown
                       </span>
                       <span className={`font-extrabold text-sm ${isTatkal && activeClass.tatkalAllowed ? 'text-amber-400' : 'text-white'}`}>
-                        ₹{finalPayable}
+                        ₹{finalPayable.toLocaleString('en-IN')}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] pt-1">
                       <div>
-                        <span className="text-slate-500 block">Base Distance Fare</span>
-                        <span className="text-slate-200 font-semibold">₹{activeClass.base}</span>
-                      </div>
-                      <div>
                         <span className="text-slate-500 block">
-                          {interactiveFareData.isSpecial ? 'Special Train (1.3x)' : 'Superfast Surcharge'}
+                          {interactiveFareData.isLuxuryTrain ? '7-Day Royal Cruise' : interactiveFareData.isBharatGaurav ? 'Pilgrim Circuit Base' : 'Base Distance Fare'}
                         </span>
-                        <span className="text-slate-200 font-semibold">₹{activeClass.surcharge}</span>
+                        <span className="text-slate-200 font-semibold">₹{activeClass.base.toLocaleString('en-IN')}</span>
                       </div>
                       <div>
                         <span className="text-slate-500 block">
-                          {isTatkal ? 'Tatkal Charge' : activeClass.cateringFee > 0 ? 'Catering' : 'Reservation Fee'}
+                          {interactiveFareData.isLuxuryTrain ? 'Dining & Butler' : interactiveFareData.isBharatGaurav ? 'Hotel & Veg Meals' : interactiveFareData.isSpecial ? 'Special Train (1.3x)' : 'Superfast Surcharge'}
+                        </span>
+                        <span className="text-slate-200 font-semibold">
+                          {interactiveFareData.isLuxuryTrain || interactiveFareData.isBharatGaurav ? 'All-Inclusive' : `₹${activeClass.surcharge}`}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">
+                          {interactiveFareData.isLuxuryTrain ? 'Guided Excursions' : interactiveFareData.isBharatGaurav ? 'VIP Darshan & Guide' : isTatkal ? 'Tatkal Charge' : activeClass.cateringFee > 0 ? 'Catering' : 'Reservation Fee'}
                         </span>
                         <span className={`font-semibold ${isTatkal && activeClass.tatkalAllowed ? 'text-amber-400 font-bold' : 'text-slate-200'}`}>
-                          {isTatkal
+                          {interactiveFareData.isLuxuryTrain || interactiveFareData.isBharatGaurav
+                            ? 'Included'
+                            : isTatkal
                             ? (activeClass.tatkalAllowed ? `+₹${activeClass.tatkalCharge}` : 'Not Applicable')
                             : activeClass.cateringFee > 0
                             ? `₹${activeClass.cateringFee}`
@@ -1725,8 +1787,12 @@ export default function TrainDetails() {
                         </span>
                       </div>
                       <div>
-                        <span className="text-slate-500 block">GST (AC Only)</span>
-                        <span className="text-slate-200 font-semibold">₹{activeClass.gst}</span>
+                        <span className="text-slate-500 block">
+                          {interactiveFareData.isLuxuryTrain || interactiveFareData.isBharatGaurav ? 'Taxes & Insurance' : 'GST (AC Only)'}
+                        </span>
+                        <span className="text-slate-200 font-semibold">
+                          {interactiveFareData.isLuxuryTrain || interactiveFareData.isBharatGaurav ? 'Included' : `₹${activeClass.gst}`}
+                        </span>
                       </div>
                     </div>
 
@@ -1734,6 +1800,12 @@ export default function TrainDetails() {
                       <span>
                         {isTatkal
                           ? (activeClass.tatkalAllowed ? `Tatkal quota rules applied (10-30% slab rate).` : `Tatkal is not permitted for First AC (1A). General fare applies.`)
+                          : interactiveFareData.isLuxuryTrain
+                          ? `All-inclusive 7-day royal itinerary (Accommodation, gourmet dining, private guided excursions & royal chauffeur).`
+                          : interactiveFareData.isBharatGaurav
+                          ? `All-inclusive IRCTC Spiritual Pilgrimage package (Round-trip rail, AC hotels, veg meals, transfers & guided darshan).`
+                          : interactiveFareData.isToyTrain
+                          ? `UNESCO World Heritage Mountain Railway scenic hill tariff.`
                           : `Calculated from ${interactiveFareData.categoryLabel} distance slab rates.`}
                       </span>
                       {activeClass.tatkalAllowed && !isTatkal && (
