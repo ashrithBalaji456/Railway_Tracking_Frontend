@@ -1659,6 +1659,7 @@ This section documents the frontend views and components integrated for rail dis
   * **Custom Curved-Edge Glassmorphic Dropdowns:** Replaced native browser <select> with bespoke StationSelectorDropdown featuring rounded-xl triggers, rounded-2xl glassmorphic floating popups, quick search filtering with Lucide icons, station code badges, distance markers, and click-outside dismissal.
 
   * **Official Telescopic Distance Slabs & Tariff Calibration:** Calibrated base fare formulas to Indian Railways telescopic distance slabs. Corrected Chair Car (CC) from inflated sleeper rates down to seated AC tariff (~Rs 340 base + Rs 40 RF + Rs 45 SF + 5% GST = Rs 445 for 240 km), 2S to Rs 130 (Rs 100 base + Rs 15 RF + Rs 15 SF), and 3E to Rs 565, matching live IRCTC fares to the exact rupee.
+  * **Strict Component-Sum Invariance:** Guaranteed that the total fare badge and class cards strictly reflect the exact sum of the itemized breakdown components (Base Fare + Superfast Surcharge + Reservation Fee + GST), eliminating any stale or desynchronized API overrides.
 
 
 ### 15.3. `src/pages/JourneyPlanner.tsx` Mobile-First Stacked Layout & Delay Overlay
