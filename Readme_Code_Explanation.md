@@ -1610,7 +1610,7 @@ This section documents the frontend views and components integrated for rail dis
 
 ### 15.2. `src/pages/TrainDetails.tsx` Extensions
 
-* **Disruption Alert Banner:** Mounted conditionally at the top of the details view if `liveStatus.isCancelled`, `isDiverted`, `isRescheduled`, or `skippedStations` are detected, displaying the count and list of affected stations with a direct link to find alternatives.
+* **Concise Red Disruption Alert Banner:** Mounted conditionally at the top of the details view and directly above the route schedule timeline whenever cancellations, diversions, or station skips occur. Rather than displaying cluttered raw station codes, it formats a clear passenger-friendly notice matching official railway tracker standards: `"This train is partially cancelled between [Origin Station] and [Active Station]. It will start from [Active Station]."` with an interactive `✕` dismiss button.
 
 * **Granular Partial Cancellation Resolution in Route Schedule:**
 
@@ -1631,6 +1631,11 @@ This section documents the frontend views and components integrated for rail dis
   * **Origin Short-Origination Detection:** If the scheduled first station is cancelled (e.g. Tambaram cancelled), the app dynamically detects the new active starting station (e.g. Chennai Beach) and clearly renders: `"Starting from Chennai Beach (MSB) [Origin adjusted: Tambaram cancelled]"`.
 
   * **Next Halt Station Filter:** Next stop calculation strictly filters out all cancelled and skipped stops (`isStationCancelled`). For instance, when Chennai Egmore is cancelled, the next passenger halt automatically jumps forward to the actual upcoming station, **Sullurupeta (SPE)**.
+
+  * **Live Train Toy Icon (`[Train] LIVE`) Placement & Station Synchronization:**
+    * `bubbleStationCode` calculation explicitly guards against cancelled stations. If upstream sends a dead origin (such as `TBM`), the app detects that `TBM` is in `skippedStations` and resolves the live train icon to the actual live station extracted from `lastLocationInfo` (e.g. `MSB` Chennai Beach) or the first active stop on route.
+    * The bouncing blue live train toy indicator (`[Train] LIVE`) is strictly prevented from rendering on any cancelled stop (`!isStationCancelled`).
+    * When the train is currently at or passing a non-stopping station (such as Chennai Beach `MSB`), the pass-through stations block automatically opens (`isExpanded = true`), the station row receives an active sky-blue indicator border (`bg-sky-500/15 border-sky-500/40`), and the full bouncing train toy icon is rendered directly on that station.
 
 * **Historical Punctuality Card:**
 

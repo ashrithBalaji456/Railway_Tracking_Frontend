@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock } from 'lucide-react';
+import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X } from 'lucide-react';
 import api, { getTrainDelayReport, getTrainFare } from '../services/api';
 import type { TrainDelayReport, TrainFare } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -49,6 +49,7 @@ export default function TrainDetails() {
 
   const { language, t } = useLanguage();
   const [syncState, setSyncState] = useState<'IDLE' | 'CONNECTING' | 'CONNECTED' | 'POLLING'>('IDLE');
+  const [dismissDisruptionBanner, setDismissDisruptionBanner] = useState<boolean>(false);
 
   const isSpecialTrain = Boolean(
     trainNumber?.startsWith('0') ||
@@ -79,32 +80,112 @@ export default function TrainDetails() {
       return train?.destinationStation?.toUpperCase();
     }
 
-    // 1. If currentStationCode is set and valid, use it
-    if (liveStatus.currentStationCode && liveStatus.currentStationCode !== '-') {
-      return liveStatus.currentStationCode.toUpperCase();
-    }
+    const isSkippedStation = (sc?: string) => 
+      !sc ? false : (liveStatus.skippedStations && liveStatus.skippedStations.some((x: string) => x?.toUpperCase() === sc?.toUpperCase()));
 
-    // 2. Match from lastLocationInfo (e.g. "at-station at Chennai Beach")
+    // 1. Explicit station match from live location text (e.g. "at-station at Chennai Beach" -> MSB)
     if (liveStatus.lastLocationInfo && route?.stations) {
       const locLower = liveStatus.lastLocationInfo.toLowerCase();
       const matched = route.stations.find((s: any) => 
-        s.stationName && locLower.includes(s.stationName.toLowerCase())
+        s.stationName && locLower.includes(s.stationName.toLowerCase()) && !isSkippedStation(s.stationCode)
       );
       if (matched && matched.stationCode) {
         return matched.stationCode.toUpperCase();
       }
     }
 
-    // 3. Find first non-cancelled active station
-    const isSkippedStation = (sc?: string) => 
-      liveStatus.skippedStations && liveStatus.skippedStations.some((x: string) => x?.toUpperCase() === sc?.toUpperCase());
+    // 2. If currentStationCode is set and is NOT cancelled/skipped, use it
+    if (liveStatus.currentStationCode && liveStatus.currentStationCode !== '-' && !isSkippedStation(liveStatus.currentStationCode)) {
+      return liveStatus.currentStationCode.toUpperCase();
+    }
 
+    // 3. If scheduled origin or current station is cancelled, find the first non-cancelled active station (e.g. Chennai Beach MSB)
     const firstActiveStation = route?.stations?.find((s: any) => !isSkippedStation(s.stationCode));
     if (firstActiveStation && firstActiveStation.stationCode) {
       return firstActiveStation.stationCode.toUpperCase();
     }
 
-    return liveStatus.nextStationCode?.toUpperCase();
+    return liveStatus.nextStationCode && !isSkippedStation(liveStatus.nextStationCode) ? liveStatus.nextStationCode.toUpperCase() : null;
+  })();
+
+  const disruptionBannerText = (() => {
+    if (!liveStatus) return '';
+    const isPartiallyCancelled = !!(liveStatus.skippedStations && liveStatus.skippedStations.length > 0);
+    const isFullyCancelled = !!(
+      liveStatus.isCancelled && 
+      (!isPartiallyCancelled || (route?.stations && liveStatus.skippedStations.length >= route.stations.length))
+    );
+
+    if (isFullyCancelled) {
+      return 'This train is fully cancelled today.';
+    }
+
+    if (isPartiallyCancelled && route?.stations && liveStatus.skippedStations) {
+      const skippedSet = new Set(liveStatus.skippedStations.map((s: string) => s?.toUpperCase()));
+      const firstStation = route.stations[0];
+      const isOriginSkipped = skippedSet.has(firstStation?.stationCode?.toUpperCase());
+
+      if (isOriginSkipped) {
+        let lastSkippedStation = firstStation;
+        let newSourceStation: any = null;
+        for (let i = 0; i < route.stations.length; i++) {
+          const st = route.stations[i];
+          if (skippedSet.has(st.stationCode?.toUpperCase())) {
+            lastSkippedStation = st;
+          } else {
+            newSourceStation = st;
+            break;
+          }
+        }
+
+        const startName = translateName(firstStation.stationName, language);
+        const endName = translateName(newSourceStation?.stationName || lastSkippedStation.stationName, language);
+        const newSourceName = translateName(newSourceStation?.stationName || 'the next station', language);
+
+        return `This train is partially cancelled between ${startName} and ${endName}. It will start from ${newSourceName}.`;
+      }
+
+      // Check if tail/destination is skipped
+      const lastStation = route.stations[route.stations.length - 1];
+      const isDestinationSkipped = skippedSet.has(lastStation?.stationCode?.toUpperCase());
+      if (isDestinationSkipped) {
+        let firstSkippedInTail = lastStation;
+        let newTerminus: any = null;
+        for (let i = route.stations.length - 1; i >= 0; i--) {
+          const st = route.stations[i];
+          if (skippedSet.has(st.stationCode?.toUpperCase())) {
+            firstSkippedInTail = st;
+          } else {
+            newTerminus = st;
+            break;
+          }
+        }
+        const startName = translateName(firstSkippedInTail.stationName, language);
+        const endName = translateName(lastStation.stationName, language);
+        const termName = translateName(newTerminus?.stationName || 'the previous station', language);
+        return `This train is partially cancelled between ${startName} and ${endName}. It will terminate at ${termName}.`;
+      }
+
+      // Intermediate route cancellation
+      const firstSkipped = route.stations.find((s: any) => skippedSet.has(s.stationCode?.toUpperCase()));
+      const lastSkipped = [...route.stations].reverse().find((s: any) => skippedSet.has(s.stationCode?.toUpperCase()));
+      if (firstSkipped && lastSkipped) {
+        const sName = translateName(firstSkipped.stationName, language);
+        const eName = translateName(lastSkipped.stationName, language);
+        return `This train is partially cancelled between ${sName} and ${eName}.`;
+      }
+    }
+
+    if (liveStatus.disruptionMessage) {
+      return liveStatus.disruptionMessage;
+    }
+    if (liveStatus.isDiverted) {
+      return 'This train is running on a diverted route.';
+    }
+    if (liveStatus.isRescheduled) {
+      return 'This train has been rescheduled.';
+    }
+    return '';
   })();
 
   const navigate = useNavigate();
@@ -628,46 +709,27 @@ export default function TrainDetails() {
         </button>
       </div>
 
-      {/* Disruption Alert Banner */}
-      {(liveStatus?.isCancelled || liveStatus?.isDiverted || liveStatus?.isRescheduled || (liveStatus?.skippedStations && liveStatus.skippedStations.length > 0) || liveStatus?.disruptionMessage) && (
-        <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg ${
-          liveStatus?.isCancelled
-            ? 'bg-rose-950/40 border-rose-800/60 text-rose-200'
-            : liveStatus?.isDiverted
-            ? 'bg-amber-950/40 border-amber-800/60 text-amber-200'
-            : 'bg-sky-950/40 border-sky-800/60 text-sky-200'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${
-              liveStatus?.isCancelled ? 'bg-rose-500/20 text-rose-400' : liveStatus?.isDiverted ? 'bg-amber-500/20 text-amber-400' : 'bg-sky-500/20 text-sky-400'
-            }`}>
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="font-bold text-sm tracking-wide uppercase flex items-center gap-2">
-                {liveStatus?.isCancelled
-                  ? (liveStatus.skippedStations && liveStatus.skippedStations.length > 0 ? 'Train Partially Cancelled / Stations Skipped' : 'Train Service Cancelled')
-                  : liveStatus?.isDiverted ? 'Route Diverted' : 'Schedule Disrupted'}
-              </div>
-              <p className="text-xs opacity-90 mt-0.5">
-                {liveStatus?.disruptionMessage || (liveStatus?.isCancelled ? 'This train service has reported operational cancellation between stations.' : 'Route diversions or schedule modifications apply.')}
-              </p>
-              {liveStatus?.skippedStations && liveStatus.skippedStations.length > 0 && (
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-                  <span className="font-bold text-amber-300 bg-amber-950/60 border border-amber-700/40 px-2 py-0.5 rounded">
-                    Cancelled / Skipped Stations ({liveStatus.skippedStations.length}):
-                  </span>
-                  <span className="text-rose-300 font-semibold">{liveStatus.skippedStations.join(', ')}</span>
-                </div>
-              )}
-            </div>
+      {/* Clean Red Disruption Alert Banner (matching official live tracking layout) */}
+      {!dismissDisruptionBanner && disruptionBannerText && (
+        <div className="bg-[#d32f2f] text-white px-4 py-3 rounded-xl shadow-lg flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold animate-fadeIn">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="truncate sm:whitespace-normal">{disruptionBannerText}</span>
           </div>
-          <button
-            onClick={() => navigate('/disruptions')}
-            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white whitespace-nowrap transition shadow-sm"
-          >
-            View Disruption Details
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => navigate('/disruptions')}
+              className="hidden sm:inline-block px-2.5 py-1 rounded bg-black/20 hover:bg-black/30 text-[11px] font-bold uppercase tracking-wider text-white transition"
+            >
+              Details
+            </button>
+            <button
+              onClick={() => setDismissDisruptionBanner(true)}
+              className="p-1 hover:bg-black/20 rounded-md transition text-white/90 hover:text-white"
+              title="Dismiss alert"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -1023,8 +1085,8 @@ export default function TrainDetails() {
                     return translateName(liveStatus.lastLocationInfo, language);
                   }
 
-                  // 2. Map from currentStationCode if available
-                  if (liveStatus.currentStationCode && liveStatus.currentStationCode !== '-') {
+                  // 2. Map from currentStationCode if available and NOT cancelled
+                  if (liveStatus.currentStationCode && liveStatus.currentStationCode !== '-' && !isStationCancelled(liveStatus.currentStationCode)) {
                     const matchedStation = route?.stations?.find(
                       (s: any) => s.stationCode?.toUpperCase() === liveStatus.currentStationCode?.toUpperCase()
                     );
@@ -1530,6 +1592,19 @@ export default function TrainDetails() {
 
         {route && route.stations && route.stations.length > 0 ? (
           <div className="w-full">
+            {/* Clean Red Disruption Bar directly above timetable, matching official tracker app */}
+            {!dismissDisruptionBanner && disruptionBannerText && (
+              <div className="bg-[#d32f2f] text-white px-3.5 py-2.5 rounded-lg shadow-md flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold mb-3 max-w-4xl mx-auto animate-fadeIn">
+                <span className="leading-snug">{disruptionBannerText}</span>
+                <button
+                  onClick={() => setDismissDisruptionBanner(true)}
+                  className="p-1 hover:bg-black/20 rounded-md transition text-white/90 hover:text-white shrink-0"
+                  title="Dismiss alert"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
             <div className="w-full py-1 max-w-4xl mx-auto space-y-0.5">
               {(() => {
                 const timelineItems = getTimelineItems();
@@ -1543,7 +1618,6 @@ export default function TrainDetails() {
                     const liveStop = liveStatus?.stations?.find(
                       (ls: any) => ls.stationCode?.toUpperCase() === s.stationCode?.toUpperCase()
                     );
-                    const isTrainHere = showLive && bubbleStationCode === s.stationCode?.toUpperCase();
                     const isStationCancelled = !!(
                       isFullyCancelled ||
                       liveStop?.status?.toLowerCase()?.includes('cancel') ||
@@ -1553,6 +1627,7 @@ export default function TrainDetails() {
                         (sc: string) => sc?.toUpperCase() === s.stationCode?.toUpperCase()
                       ))
                     );
+                    const isTrainHere = showLive && !isStationCancelled && bubbleStationCode === s.stationCode?.toUpperCase();
 
                     return (
                       <div
@@ -1689,10 +1764,10 @@ export default function TrainDetails() {
                       </div>
                     );
                   } else {
-                    const isExpanded = !!expandedBlocks[item.id];
                     const isTrainInBlock = showLive && item.stations?.some(
                       (ps: any) => ps.stationCode?.toUpperCase() === bubbleStationCode
                     );
+                    const isExpanded = expandedBlocks[item.id] !== undefined ? expandedBlocks[item.id] : isTrainInBlock;
 
                     return (
                       <div key={item.id} className="relative">
@@ -1745,7 +1820,8 @@ export default function TrainDetails() {
                                 ))
                               );
                               return (
-                                <div key={passStation.sequenceNumber} className={`flex items-center py-1 relative rounded transition-colors ${
+                                <div key={passStation.sequenceNumber} className={`flex items-center py-1.5 relative rounded transition-colors ${
+                                  isTrainAtPassStation ? 'bg-sky-500/15 border border-sky-500/40 shadow-sm my-0.5' :
                                   isPassCancelled ? 'bg-rose-950/20 hover:bg-rose-950/30' : 'hover:bg-slate-900/50'
                                 }`}>
                                   {/* Arrival timing */}
@@ -1758,14 +1834,20 @@ export default function TrainDetails() {
                                   </div>
 
                                   {/* Dot / Live train bubble */}
-                                  <div className="w-7 sm:w-10 relative flex items-center justify-center shrink-0 self-stretch min-h-[26px]">
+                                  <div className="w-7 sm:w-10 relative flex items-center justify-center shrink-0 self-stretch min-h-[32px]">
                                     <div className={`absolute top-0 bottom-0 w-0.5 border-r border-dashed left-1/2 -translate-x-1/2 ${
                                       isPassCancelled ? 'border-rose-900/60' : 'border-sky-600/50'
                                     }`} />
                                     {isTrainAtPassStation ? (
-                                      <div className="h-4 w-4 rounded-full bg-slate-900 border-2 border-sky-500 z-10 flex items-center justify-center relative">
-                                        <div className="h-1.5 w-1.5 bg-sky-400 rounded-full" />
-                                        <div className="absolute -inset-1.5 bg-sky-500/30 rounded-full animate-ping" />
+                                      <div className="relative flex items-center justify-center">
+                                        <div className="h-4 w-4 rounded-full bg-slate-900 border-2 border-sky-400 z-10 flex items-center justify-center relative shadow-sm shadow-sky-500/40">
+                                          <div className="h-2 w-2 bg-sky-400 rounded-full" />
+                                          <div className="absolute -inset-1.5 bg-sky-500/40 rounded-full animate-ping" />
+                                        </div>
+                                        <div className="absolute -top-11 sm:-top-12 z-20 bg-gradient-to-br from-sky-400 to-sky-600 text-white w-8 h-8 sm:w-10 sm:h-10 rounded-full shadow-lg shadow-sky-500/35 border-2 border-slate-900 animate-bounce flex items-center justify-center">
+                                          <Train className="h-4 w-4 sm:h-5 sm:w-5" />
+                                          <span className="absolute -bottom-1.5 bg-sky-950 text-[6px] sm:text-[7px] font-black px-1 rounded uppercase tracking-wider border border-sky-400 select-none">Live</span>
+                                        </div>
                                       </div>
                                     ) : (
                                       <div className={`h-1.5 w-1.5 rounded-full z-10 ${
@@ -1776,12 +1858,18 @@ export default function TrainDetails() {
 
                                   {/* Station details */}
                                   <div className="flex-1 min-w-0 px-1 sm:px-2 text-left">
-                                    <div className="flex items-center gap-1.5">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
                                       <span className={`font-medium text-[11px] sm:text-xs truncate block ${
+                                        isTrainAtPassStation ? 'text-sky-200 font-bold' :
                                         isPassCancelled ? 'text-rose-200 line-through opacity-85' : 'text-slate-300'
                                       }`}>
                                         {translateName(passStation.stationName, language)}
                                       </span>
+                                      {isTrainAtPassStation && (
+                                        <span className="text-[7px] sm:text-[8px] font-black text-sky-300 bg-sky-500/30 border border-sky-400/50 px-1 rounded uppercase tracking-wide">
+                                          Train Location
+                                        </span>
+                                      )}
                                       {isPassCancelled && (
                                         <span className="text-[8px] font-bold text-rose-300 bg-rose-500/20 border border-rose-500/30 px-1 rounded">
                                           Skipped
