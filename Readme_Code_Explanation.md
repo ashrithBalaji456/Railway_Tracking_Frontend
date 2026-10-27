@@ -1656,6 +1656,7 @@ This section documents the frontend views and components integrated for rail dis
   * **Interactive Tatkal Quota (Tatkal TQ):** Real-time toggle applying official IRCTC Tatkal percentages and caps (10% for 2S/SL, 30% for 3A/3E/2A/CC/EC/EV with min/max caps; strictly excluded for 1A).
   * **Station Pair Distance Calculation:** Allows selecting any arbitrary boarding and destination stop along the route with instant timetable distance differential calculation and reverse swap.
   * **Dynamic Seating Layout:** Supports 2+2 layout for Vistadome (EV), Executive (EC), and Anubhuti (EA); 3+3 layout for 2S/CC; and 8-berth compartment layout for SL, 3A, 2A, 1A, and 3E.
+  * **Custom Curved-Edge Glassmorphic Dropdowns:** Replaced native browser <select> with bespoke StationSelectorDropdown featuring rounded-xl triggers, rounded-2xl glassmorphic floating popups, quick search filtering with Lucide icons, station code badges, distance markers, and click-outside dismissal.
 
 
 
