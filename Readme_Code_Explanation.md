@@ -1659,6 +1659,15 @@ This section documents the frontend views and components integrated for rail dis
   * **Custom Curved-Edge Glassmorphic Dropdowns:** Replaced native browser <select> with bespoke StationSelectorDropdown featuring rounded-xl triggers, rounded-2xl glassmorphic floating popups, quick search filtering with Lucide icons, station code badges, distance markers, and click-outside dismissal.
 
   * **Official Telescopic Distance Slabs & Tariff Calibration:** Calibrated base fare formulas to Indian Railways telescopic distance slabs. Corrected Chair Car (CC) from inflated sleeper rates down to seated AC tariff (~Rs 340 base + Rs 40 RF + Rs 45 SF + 5% GST = Rs 445 for 240 km), 2S to Rs 130 (Rs 100 base + Rs 15 RF + Rs 15 SF), and 3E to Rs 565, matching live IRCTC fares to the exact rupee.
+
+  * **Official UTS General Unreserved (GN / UR) Fare Engine & Multi-Tier Calibration:**
+    * **Unreserved Ticketing System (UTS) Integration:** Added dedicated GN (General Unreserved) coach cards tagged UTS Counter / Ordinary / UTS, supporting the unreserved travel needs of daily commuters and general compartment passengers.
+    * **Ordinary / MEMU / DEMU Passenger Tariff:** Calibrated against the official Indian Railways passenger distance slabs (minimum Rs 10 floor fare; Rs 15 for 21-45 km; Rs 20 for 46-75 km; Rs 25 for 76-100 km; Rs 30 for 101-135 km; Rs 35 for 136-175 km; Rs 45 for 176-210 km; Rs 55 for 211-250 km). On trains like Ramgiri MEMU Express (BPQ to KZJ, 235.9 km), the fare evaluates to **exactly Rs 55**, matching the official UTS app to the rupee with Rs 0 reservation fee and Rs 0 superfast surcharge.
+    * **Mail / Express Unreserved Tariff:** Uses the standard Mail/Express distance slab (Rs 30 for <= 50 km, scaling to Rs 95 at 236 km) with Rs 0 reservation fee and Rs 0 SF surcharge, yielding **exactly Rs 95** (matching official UTS Mail/Exp e-ticket).
+    * **Superfast Express Unreserved Tariff:** Adds the mandatory Indian Railways Superfast Unreserved Surcharge (+Rs 15) to the Mail/Exp base slab (Rs 95 + Rs 15 = **Rs 110**), matching official UTS Superfast tickets without charging reservation fees.
+    * **100% General Unreserved Trains (Antyodaya & Jan Sadharan):** Automatically detects fully unreserved train rakes (isAntyodaya), dynamically displaying the GN Superfast UTS tariff while hiding non-existent reserved classes.
+    * **Strict Separation of GN vs Reserved 2S:** Passengers see clear distinction between unreserved counter booking (GN, Rs 0 reservation fee, no Tatkal, Rs 95-110) and IRCTC PNR seat reservation (2S, Rs 15 reservation fee, Tatkal eligible, Rs 130).
+
   * **Strict Component-Sum Invariance:** Guaranteed that the total fare badge and class cards strictly reflect the exact sum of the itemized breakdown components (Base Fare + Superfast Surcharge + Reservation Fee + GST), eliminating any stale or desynchronized API overrides.
 
 
