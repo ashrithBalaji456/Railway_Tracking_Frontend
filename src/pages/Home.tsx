@@ -4,6 +4,7 @@ import { Search, Train, Building2, Map, ShieldAlert, Sparkles, History } from 'l
 import { useLanguage } from '../context/LanguageContext';
 import api from '../services/api';
 import { searchHistoryService } from '../services/searchHistoryService';
+import { getStationDisplayName, formatRouteSubtitle } from '../utils/stationUtils';
 import RecentSearchesBar from '../components/RecentSearchesBar';
 import RecentSearchesDropdown from '../components/RecentSearchesDropdown';
 
@@ -100,11 +101,15 @@ export default function Home() {
 
   const handleTrainSelect = (trainNumber: string, itemData?: any) => {
     const match = itemData || trainsList.find((t) => t.trainNumber === trainNumber);
+    const subtitleText = (match?.sourceStation && match?.destinationStation)
+      ? formatRouteSubtitle(match.sourceStation, match.destinationStation)
+      : (match?.trainType || 'Live Tracking');
+
     searchHistoryService.addSearch({
       type: 'TRAIN',
       code: trainNumber,
       title: match?.trainName ? match.trainName : `Train ${trainNumber}`,
-      subtitle: match?.trainType || 'Live Tracking',
+      subtitle: subtitleText,
     });
 
     setShowTrainDrop(false);
@@ -230,7 +235,7 @@ export default function Home() {
                       <span className="text-slate-200 font-medium">{t.trainName}</span>
                       {t.sourceStation && t.destinationStation && (
                         <span className="block text-[11px] text-slate-400 mt-0.5">
-                          {t.sourceStation} &rarr; {t.destinationStation}
+                          {getStationDisplayName(t.sourceStation)} &rarr; {getStationDisplayName(t.destinationStation)}
                         </span>
                       )}
                     </div>

@@ -5,6 +5,7 @@ import api, { getTrainDelayReport } from '../services/api';
 import type { TrainDelayReport } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
+import { getStationDisplayName } from '../utils/stationUtils';
 import { searchHistoryService } from '../services/searchHistoryService';
 
 interface StationSelectorDropdownProps {
@@ -926,7 +927,7 @@ export default function TrainDetails() {
           setTrain(detailsResponse.data);
           const t = detailsResponse.data;
           const routeSubtitle = (t.sourceStation && t.destinationStation)
-            ? `${t.sourceStation} → ${t.destinationStation}`
+            ? `${getStationDisplayName(t.sourceStation)} → ${getStationDisplayName(t.destinationStation)}`
             : t.trainType || 'Train';
           searchHistoryService.addSearch({
             type: 'TRAIN',
@@ -1489,12 +1490,12 @@ export default function TrainDetails() {
           <div className="flex items-center space-x-4">
             <div className="text-left">
               <p className="text-xs text-slate-500">{t('origin')}</p>
-              <p className="font-semibold text-slate-200">{translateName(train.sourceStation, language)}</p>
+              <p className="font-semibold text-slate-200">{translateName(getStationDisplayName(train.sourceStation), language)}</p>
             </div>
             <ArrowRight className="h-4 w-4 text-slate-650" />
             <div className="text-left">
               <p className="text-xs text-slate-500">{t('destination')}</p>
-              <p className="font-semibold text-slate-200">{translateName(train.destinationStation, language)}</p>
+              <p className="font-semibold text-slate-200">{translateName(getStationDisplayName(train.destinationStation), language)}</p>
             </div>
           </div>
 

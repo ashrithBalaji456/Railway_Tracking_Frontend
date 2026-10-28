@@ -1711,3 +1711,19 @@ This section documents the frontend views and components integrated for rail dis
 
 * **`src/types/index.ts`:** Created centralized TypeScript contracts for `TrainException`, `TrainExceptionSummary`, `TrainDelayReport`, `TrainFare`, `JourneyOverlay`, and `TrainBetweenStations`.
 
+
+
+
+### 15.5. Station Code-to-Name Resolution & Human-Readable Route Display
+
+* **`src/utils/stationUtils.ts`:**
+  - Added comprehensive station dictionary mapping Indian Railways station codes to clean names (`SC` -> `Secunderabad Jn`, `R` -> `Raipur Jn`, `COA` -> `Kakinada Port`, `LPI` -> `Lingampalli`, `HYB` -> `Hyderabad Deccan`, `VSKP` -> `Visakhapatnam Jn`, etc.).
+  - `getStationDisplayName(codeOrName)`: Automatically parses individual codes (`SC`), compound route strings (`SC → R`), and multi-word names, producing user-friendly formatted labels e.g. `Secunderabad Jn (SC) → Raipur Jn (R)`.
+  - `formatRouteSubtitle(source, destination)`: Formats train routes consistently across UI cards.
+
+* **UI Enhancements Across Pages:**
+  - **`src/pages/Home.tsx`:** Train search dropdown and search history chips format routes with readable station names.
+  - **`src/components/RecentSearchesDropdown.tsx`:** Formats historical route entries on the fly, eliminating raw codes (like `SC → R` or `COA -> LPI`) from existing cached user history.
+  - **`src/pages/TrainDetails.tsx`:** Origin and Destination header summary cards display resolved station names and codes.
+  - **`src/pages/StationExplorer.tsx`:** Station Timetable tab displays human-readable origin and destination routes instead of raw codes.
+  - **`src/pages/MapTracker.tsx`:** Selected train overview bar displays full station names.

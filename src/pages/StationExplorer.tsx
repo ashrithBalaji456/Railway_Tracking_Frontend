@@ -6,23 +6,24 @@ import { stationService } from '../services/stationService';
 import { searchHistoryService } from '../services/searchHistoryService';
 import RecentSearchesBar from '../components/RecentSearchesBar';
 import RecentSearchesDropdown from '../components/RecentSearchesDropdown';
+import { getStationDisplayName } from '../utils/stationUtils';
 
 export default function StationExplorer() {
   const [searchParams, setSearchParams] = useSearchParams();
   const stationCodeParam = searchParams.get('code') || '';
-  
+
   const [stationQuery, setStationQuery] = useState('');
   const [stationsList, setStationsList] = useState<any[]>([]);
   const [selectedStation, setSelectedStation] = useState<any>(null);
   const [showStationDrop, setShowStationDrop] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  
+
   const [boardMode, setBoardMode] = useState<'SCHEDULED' | 'LIVE'>('SCHEDULED');
   const [liveHours, setLiveHours] = useState(4);
   const [liveData, setLiveData] = useState<any>(null);
   const [liveLoading, setLiveLoading] = useState(false);
   const [liveError, setLiveError] = useState('');
-  
+
   const [trains, setTrains] = useState<any[]>([]);
   const [filterType, setFilterType] = useState('ALL'); // ALL, STOPPING, NON_STOP
   const [dayFilter, setDayFilter] = useState('ALL_DAYS');
@@ -86,11 +87,11 @@ export default function StationExplorer() {
   const dayCode = selectedDayCode();
   const filteredTrains = dayCode
     ? trains.filter((train) => {
-        const offset = train.arrivalDay || 0;
-        const originDays = parseRunningDays(train.runningDays);
-        const arrivalDays = originDays.map((d) => getShiftedDay(d, offset));
-        return arrivalDays.includes(dayCode);
-      })
+      const offset = train.arrivalDay || 0;
+      const originDays = parseRunningDays(train.runningDays);
+      const arrivalDays = originDays.map((d) => getShiftedDay(d, offset));
+      return arrivalDays.includes(dayCode);
+    })
     : trains;
 
   const [isFavorite, setIsFavorite] = useState(false);
@@ -260,7 +261,7 @@ export default function StationExplorer() {
   const handleStationSelect = (code: string, itemData?: any) => {
     const cleanCode = code.toUpperCase();
     const match = itemData || stationsList.find((s) => s.stationCode.toUpperCase() === cleanCode) || selectedStation;
-    
+
     searchHistoryService.addSearch({
       type: 'STATION',
       code: cleanCode,
@@ -372,14 +373,13 @@ export default function StationExplorer() {
                   <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">{selectedStation.stationName}</h1>
                   <span className="bg-indigo-900/60 border border-indigo-750 text-indigo-400 px-2.5 py-0.5 rounded text-sm font-bold uppercase">{selectedStation.stationCode}</span>
                 </div>
-                
+
                 <button
                   onClick={handleToggleFavorite}
-                  className={`border p-1.5 rounded-lg transition-colors cursor-pointer ${
-                    isFavorite 
-                      ? 'bg-red-950/20 border-red-900/30 text-red-500 hover:bg-slate-950' 
+                  className={`border p-1.5 rounded-lg transition-colors cursor-pointer ${isFavorite
+                      ? 'bg-red-950/20 border-red-900/30 text-red-500 hover:bg-slate-950'
                       : 'bg-slate-950 hover:bg-slate-850 border-slate-800 text-slate-400 hover:text-red-400'
-                  }`}
+                    }`}
                 >
                   <Heart className={`h-4.5 w-4.5 ${isFavorite ? 'fill-red-500' : ''}`} />
                 </button>
@@ -410,7 +410,7 @@ export default function StationExplorer() {
                 )}
               </div>
             </div>
-            
+
             <div className="text-xs text-slate-550 border-t md:border-t-0 md:border-l border-slate-800 pt-3 md:pt-0 md:pl-6 space-y-1">
               <p>Latitude: <span className="text-slate-350">{selectedStation.latitude ? `${selectedStation.latitude}° N` : 'N/A'}</span></p>
               <p>Longitude: <span className="text-slate-350">{selectedStation.longitude ? `${selectedStation.longitude}° E` : 'N/A'}</span></p>
@@ -424,38 +424,34 @@ export default function StationExplorer() {
             <div className="flex border-b border-slate-800 bg-slate-950/70 p-1">
               <button
                 onClick={() => setBoardMode('SCHEDULED')}
-                className={`flex-1 py-3 text-center text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer flex items-center justify-center gap-2 ${
-                  boardMode === 'SCHEDULED'
+                className={`flex-1 py-3 text-center text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer flex items-center justify-center gap-2 ${boardMode === 'SCHEDULED'
                     ? 'border-indigo-500 text-indigo-400 bg-indigo-950/10'
                     : 'border-transparent text-slate-450 hover:text-slate-200'
-                }`}
+                  }`}
               >
                 <span>📅 Scheduled Timetable</span>
                 {!loading && trains.length > 0 && (
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                    boardMode === 'SCHEDULED'
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${boardMode === 'SCHEDULED'
                       ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
                       : 'bg-slate-800 text-slate-400'
-                  }`}>
+                    }`}>
                     {filteredTrains.length}
                   </span>
                 )}
               </button>
               <button
                 onClick={() => setBoardMode('LIVE')}
-                className={`flex-1 py-3 text-center text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer flex items-center justify-center gap-2 ${
-                  boardMode === 'LIVE'
+                className={`flex-1 py-3 text-center text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer flex items-center justify-center gap-2 ${boardMode === 'LIVE'
                     ? 'border-indigo-500 text-indigo-400 bg-indigo-950/10'
                     : 'border-transparent text-slate-450 hover:text-slate-200'
-                }`}
+                  }`}
               >
                 <span>⚡ Live Station Board</span>
                 {liveData?.trains && liveData.trains.length > 0 && (
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                    boardMode === 'LIVE'
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${boardMode === 'LIVE'
                       ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
                       : 'bg-slate-800 text-slate-400'
-                  }`}>
+                    }`}>
                     {liveData.trains.length}
                   </span>
                 )}
@@ -472,11 +468,10 @@ export default function StationExplorer() {
                         <button
                           key={type}
                           onClick={() => setFilterType(type)}
-                          className={`flex-1 md:flex-initial px-5 py-2 rounded-lg text-sm font-semibold tracking-wide transition-all cursor-pointer ${
-                            filterType === type
+                          className={`flex-1 md:flex-initial px-5 py-2 rounded-lg text-sm font-semibold tracking-wide transition-all cursor-pointer ${filterType === type
                               ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/10'
                               : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-800/80 hover:bg-slate-850'
-                          }`}
+                            }`}
                         >
                           {type === 'ALL' && 'All Trains'}
                           {type === 'STOPPING' && 'Halting / Stopping'}
@@ -507,11 +502,10 @@ export default function StationExplorer() {
                       <button
                         key={day.value}
                         onClick={() => setDayFilter(day.value)}
-                        className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
-                          dayFilter === day.value
+                        className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer ${dayFilter === day.value
                             ? 'bg-slate-200 text-slate-950 font-bold'
                             : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-100'
-                        }`}
+                          }`}
                       >
                         {day.label}
                       </button>
@@ -542,11 +536,11 @@ export default function StationExplorer() {
                             <h4 className="font-bold text-slate-100">{t.trainName}</h4>
                             <span className="text-xs text-slate-550">({t.trainType})</span>
                           </div>
-                          
+
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
-                            <span className="font-semibold">{t.sourceStation}</span>
+                            <span className="font-semibold">{getStationDisplayName(t.sourceStation)}</span>
                             <ArrowRight className="h-3 w-3 text-slate-600" />
-                            <span className="font-semibold">{t.destinationStation}</span>
+                            <span className="font-semibold">{getStationDisplayName(t.destinationStation)}</span>
                           </div>
                           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                             {parseRunningDays(t.runningDays).length === 7 ? (
@@ -576,15 +570,15 @@ export default function StationExplorer() {
                                 {t.isHalt ? (
                                   <>
                                     {t.scheduledArrival && t.scheduledDeparture ? (
-                                      <>Arr: <span className="font-semibold text-slate-200">{t.scheduledArrival?.substring(0,5)}</span> | Dep: <span className="font-semibold text-slate-200">{t.scheduledDeparture?.substring(0,5)}</span></>
+                                      <>Arr: <span className="font-semibold text-slate-200">{t.scheduledArrival?.substring(0, 5)}</span> | Dep: <span className="font-semibold text-slate-200">{t.scheduledDeparture?.substring(0, 5)}</span></>
                                     ) : t.scheduledDeparture ? (
-                                      <>Dep: <span className="font-semibold text-slate-200">{t.scheduledDeparture?.substring(0,5)}</span> <span className="text-emerald-400 text-xs font-semibold">(Originates)</span></>
+                                      <>Dep: <span className="font-semibold text-slate-200">{t.scheduledDeparture?.substring(0, 5)}</span> <span className="text-emerald-400 text-xs font-semibold">(Originates)</span></>
                                     ) : (
-                                      <>Arr: <span className="font-semibold text-slate-200">{t.scheduledArrival?.substring(0,5)}</span> <span className="text-emerald-400 text-xs font-semibold">(Terminates)</span></>
+                                      <>Arr: <span className="font-semibold text-slate-200">{t.scheduledArrival?.substring(0, 5)}</span> <span className="text-emerald-400 text-xs font-semibold">(Terminates)</span></>
                                     )}
                                   </>
                                 ) : (
-                                  <>Scheduled Passage: <span className="font-semibold text-slate-200">{t.scheduledArrival?.substring(0,5) || t.scheduledDeparture?.substring(0,5)}</span></>
+                                  <>Scheduled Passage: <span className="font-semibold text-slate-200">{t.scheduledArrival?.substring(0, 5) || t.scheduledDeparture?.substring(0, 5)}</span></>
                                 )}
                               </span>
                             </div>
@@ -606,7 +600,7 @@ export default function StationExplorer() {
                                 🔵 NON-STOP
                               </span>
                             )}
-                            
+
                             <button
                               onClick={() => navigate(`/trains/${t.trainNumber}`)}
                               className="bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
@@ -651,11 +645,10 @@ export default function StationExplorer() {
                         <button
                           key={hours}
                           onClick={() => setLiveHours(hours)}
-                          className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                            liveHours === hours
+                          className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${liveHours === hours
                               ? 'bg-indigo-600 text-white shadow-md'
                               : 'text-slate-400 hover:text-slate-205'
-                          }`}
+                            }`}
                         >
                           {hours} Hrs
                         </button>
@@ -688,7 +681,7 @@ export default function StationExplorer() {
                       const delayVal = t.delayMinutes;
                       const formattedDelay = formatDelay(delayVal);
                       const expectedTimeStr = t.expectedArrival || t.expectedDeparture;
-                      
+
                       const formatTimeOnly = (isoStr: string) => {
                         if (!isoStr) return '';
                         try {
@@ -712,11 +705,11 @@ export default function StationExplorer() {
                           const hours = parseInt(parts[0], 10);
                           const minutes = parseInt(parts[1], 10);
                           if (isNaN(hours) || isNaN(minutes)) return timeStr;
-                          
+
                           const totalMins = hours * 60 + minutes + delayMinutes;
                           const newHours = Math.floor(totalMins / 60) % 24;
                           const newMinutes = totalMins % 60;
-                          
+
                           const hh = String(newHours).padStart(2, '0');
                           const mm = String(newMinutes).padStart(2, '0');
                           return `${hh}:${mm}`;
@@ -735,14 +728,14 @@ export default function StationExplorer() {
                               <span className="block font-extrabold text-lg text-slate-100">{expectedTimeFormatted || t.scheduledArrival || t.scheduledDeparture}</span>
                               <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Expected</span>
                             </div>
-                            
+
                             <div className="space-y-1">
                               <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                                 <span className="font-bold text-indigo-400 text-sm">{t.trainNumber}</span>
                                 <h4 className="font-bold text-slate-100 text-sm sm:text-base">{t.trainName}</h4>
                                 <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded uppercase font-bold border border-slate-700">{t.trainType}</span>
                               </div>
-                              
+
                               <div className="flex items-center space-x-2 text-xs text-slate-400">
                                 <span className="font-semibold">{t.source.name} ({t.source.code})</span>
                                 <ArrowRight className="h-3 w-3 text-slate-650" />
@@ -765,7 +758,7 @@ export default function StationExplorer() {
                                   ))
                                 )}
                               </div>
-                              
+
                               <div className="pt-1 flex items-center space-x-2 text-xs">
                                 {isStopping ? (
                                   <span className="inline-flex items-center text-emerald-400 font-bold">
@@ -821,11 +814,10 @@ export default function StationExplorer() {
                                   )}
                                 </div>
                               )}
-                              
+
                               <div className="flex items-center gap-2 mt-1 sm:justify-end">
-                                <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-                                  delayVal > 0 ? 'bg-amber-950/40 text-amber-400 border border-amber-900/30' : 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/30'
-                                }`}>
+                                <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${delayVal > 0 ? 'bg-amber-950/40 text-amber-400 border border-amber-900/30' : 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/30'
+                                  }`}>
                                   {formattedDelay}
                                 </span>
                                 {t.liveStatus && (

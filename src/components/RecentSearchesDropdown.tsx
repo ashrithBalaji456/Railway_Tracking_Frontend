@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Clock, Trash2, ArrowRight } from 'lucide-react';
 import { searchHistoryService, type SearchHistoryItem } from '../services/searchHistoryService';
+import { getStationDisplayName } from '../utils/stationUtils';
 
 interface RecentSearchesDropdownProps {
   type: 'TRAIN' | 'STATION' | 'ALL';
@@ -88,7 +89,7 @@ export default function RecentSearchesDropdown({
                   </span>
                   {item.subtitle && (
                     <span className="text-[11px] text-slate-400 truncate">
-                      {item.subtitle}
+                      {getStationDisplayName(item.subtitle)}
                     </span>
                   )}
                 </div>

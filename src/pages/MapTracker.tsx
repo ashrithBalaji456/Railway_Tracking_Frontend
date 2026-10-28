@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import { Search, Train, RefreshCw, AlertCircle, MapPin, ArrowLeft } from 'lucide-react';
 import api from '../services/api';
+import { getStationDisplayName } from '../utils/stationUtils';
 
 export default function MapTracker() {
   const navigate = useNavigate();
@@ -421,7 +422,7 @@ export default function MapTracker() {
                   <h4 className="font-bold text-slate-100 text-sm leading-snug">{selectedTrain.trainName}</h4>
                   <span className="bg-indigo-950 text-indigo-400 border border-indigo-850 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0">{selectedTrain.trainNumber}</span>
                 </div>
-                <p className="text-[11px] text-slate-450">{selectedTrain.sourceStation} → {selectedTrain.destinationStation}</p>
+                <p className="text-[11px] text-slate-450">{getStationDisplayName(selectedTrain.sourceStation)} → {getStationDisplayName(selectedTrain.destinationStation)}</p>
               </div>
 
               {/* Live telemetry values */}
