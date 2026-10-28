@@ -482,7 +482,9 @@ export default function TrainDetails() {
         if (d <= 150) return Math.round((30 + (d - 50) * 0.35) / 5) * 5;
         if (d <= 300) return Math.round((65 + (d - 150) * 0.35) / 5) * 5;
         if (d <= 600) return Math.round((118 + (d - 300) * 0.28) / 5) * 5;
-        return Math.round((202 + (d - 600) * 0.22) / 5) * 5;
+        if (d <= 1000) return Math.round((202 + (d - 600) * 0.22) / 5) * 5;
+        if (d <= 1500) return Math.round((290 + (d - 1000) * 0.18) / 5) * 5;
+        return Math.round((380 + (d - 1500) * 0.14) / 5) * 5;
       }
 
       if (isLuxuryTrain) {
@@ -544,7 +546,9 @@ export default function TrainDetails() {
           if (d <= 200) slBase = 150;
           else if (d <= 300) slBase = Math.round(150 + (d - 200) * 0.385);
           else if (d <= 600) slBase = Math.round(188 + (d - 300) * 0.50);
-          else slBase = Math.round(338 + (d - 600) * 0.42);
+          else if (d <= 1000) slBase = Math.round(338 + (d - 600) * 0.42);
+          else if (d <= 1500) slBase = Math.round(506 + (d - 1000) * 0.32);
+          else slBase = Math.round(666 + (d - 1500) * 0.222);
           return Math.round(slBase * (isAmritBharat ? 1.15 : 1.0));
         }
 
@@ -553,31 +557,40 @@ export default function TrainDetails() {
           if (d <= 150) return 260;
           if (d <= 300) return Math.round(260 + (d - 150) * 0.90);
           if (d <= 600) return Math.round(395 + (d - 300) * 0.85);
-          return Math.round(650 + (d - 600) * 0.75);
+          if (d <= 1000) return Math.round(650 + (d - 600) * 0.70);
+          return Math.round(930 + (d - 1000) * 0.55);
 
         case '3E':
           // Indian Railways official minimum chargeable distance for 3E is 300 km (Base: 453 -> Total SF: ₹565, Exp: ₹520)
           if (d <= 300) return 453;
           if (d <= 600) return Math.round(453 + (d - 300) * 1.22);
-          return Math.round(819 + (d - 600) * 1.12);
+          if (d <= 1000) return Math.round(819 + (d - 600) * 1.05);
+          if (d <= 1500) return Math.round(1239 + (d - 1000) * 0.60);
+          return Math.round(1539 + (d - 1500) * 0.46);
 
         case '3A':
           // Indian Railways official minimum chargeable distance for 3A is 300 km (Base: 453 -> Total SF: ₹565)
           if (d <= 300) return 453;
           if (d <= 600) return Math.round(453 + (d - 300) * 1.32);
-          return Math.round(849 + (d - 600) * 1.21);
+          if (d <= 1000) return Math.round(849 + (d - 600) * 1.21);
+          if (d <= 1500) return Math.round(1333 + (d - 1000) * 0.64);
+          return Math.round(1653 + (d - 1500) * 0.46);
 
         case '2A':
           // Indian Railways official minimum chargeable distance for 2A is 300 km (Base: 638 -> Total SF: ₹770)
           if (d <= 300) return 638;
           if (d <= 600) return Math.round(638 + (d - 300) * 1.95);
-          return Math.round(1223 + (d - 600) * 1.83);
+          if (d <= 1000) return Math.round(1223 + (d - 600) * 1.83);
+          if (d <= 1500) return Math.round(1955 + (d - 1000) * 0.90);
+          return Math.round(2405 + (d - 1500) * 0.51);
 
         case '1A':
           // Indian Railways official minimum chargeable distance for 1A is 300 km (Base: 1115 -> Total SF: ₹1315)
           if (d <= 300) return 1115;
           if (d <= 600) return Math.round(1115 + (d - 300) * 3.10);
-          return Math.round(2045 + (d - 600) * 3.05);
+          if (d <= 1000) return Math.round(2045 + (d - 600) * 3.05);
+          if (d <= 1500) return Math.round(3265 + (d - 1000) * 1.50);
+          return Math.round(4015 + (d - 1500) * 1.18);
 
         case 'EC':
           if (d <= 150) return 650;
