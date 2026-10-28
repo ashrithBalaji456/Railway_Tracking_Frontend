@@ -556,10 +556,10 @@ export default function TrainDetails() {
           return Math.round(650 + (d - 600) * 0.75);
 
         case '3E':
-          // Indian Railways official minimum chargeable distance for 3E is 300 km
-          if (d <= 300) return 425;
-          if (d <= 600) return Math.round(425 + (d - 300) * 1.22);
-          return Math.round(791 + (d - 600) * 1.12);
+          // Indian Railways official minimum chargeable distance for 3E is 300 km (Base: 453 -> Total SF: ₹565, Exp: ₹520)
+          if (d <= 300) return 453;
+          if (d <= 600) return Math.round(453 + (d - 300) * 1.22);
+          return Math.round(819 + (d - 600) * 1.12);
 
         case '3A':
           // Indian Railways official minimum chargeable distance for 3A is 300 km (Base: 453 -> Total SF: ₹565)
