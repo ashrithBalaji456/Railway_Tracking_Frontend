@@ -539,48 +539,50 @@ export default function TrainDetails() {
           return Math.round(204 + (d - 600) * 0.22);
 
         case 'SL': {
-          let slBase = 140;
-          if (d <= 100) slBase = 140;
-          else if (d <= 300) slBase = Math.round(140 + (d - 100) * 0.375);
-          else if (d <= 600) slBase = Math.round(215 + (d - 300) * 0.42);
-          else slBase = Math.round(341 + (d - 600) * 0.40);
+          // Indian Railways official minimum chargeable distance for Sleeper is 200 km
+          let slBase = 150;
+          if (d <= 200) slBase = 150;
+          else if (d <= 300) slBase = Math.round(150 + (d - 200) * 0.385);
+          else if (d <= 600) slBase = Math.round(188 + (d - 300) * 0.50);
+          else slBase = Math.round(338 + (d - 600) * 0.42);
           return Math.round(slBase * (isAmritBharat ? 1.15 : 1.0));
         }
 
         case 'CC':
-          if (d <= 100) return 215;
-          if (d <= 300) return Math.round(215 + (d - 100) * 0.893);
-          if (d <= 600) return Math.round(394 + (d - 300) * 0.78);
-          return Math.round(628 + (d - 600) * 0.65);
+          // Indian Railways official minimum chargeable distance for AC Chair Car is 150 km
+          if (d <= 150) return 260;
+          if (d <= 300) return Math.round(260 + (d - 150) * 0.90);
+          if (d <= 600) return Math.round(395 + (d - 300) * 0.85);
+          return Math.round(650 + (d - 600) * 0.75);
 
         case '3E':
-          if (d <= 100) return 305;
-          if (d <= 300) return Math.round(305 + (d - 100) * 1.071);
-          if (d <= 600) return Math.round(519 + (d - 300) * 0.95);
-          return Math.round(804 + (d - 600) * 0.82);
+          // Indian Railways official minimum chargeable distance for 3E is 300 km
+          if (d <= 300) return 425;
+          if (d <= 600) return Math.round(425 + (d - 300) * 1.22);
+          return Math.round(791 + (d - 600) * 1.12);
 
         case '3A':
-          if (d <= 100) return 335;
-          if (d <= 300) return Math.round(335 + (d - 100) * 1.18);
-          if (d <= 600) return Math.round(571 + (d - 300) * 1.05);
-          return Math.round(886 + (d - 600) * 0.90);
+          // Indian Railways official minimum chargeable distance for 3A is 300 km (Base: 453 -> Total SF: ₹565)
+          if (d <= 300) return 453;
+          if (d <= 600) return Math.round(453 + (d - 300) * 1.32);
+          return Math.round(849 + (d - 600) * 1.21);
 
         case '2A':
-          if (d <= 100) return 490;
-          if (d <= 300) return Math.round(490 + (d - 100) * 1.714);
-          if (d <= 600) return Math.round(833 + (d - 300) * 1.50);
-          return Math.round(1283 + (d - 600) * 1.30);
+          // Indian Railways official minimum chargeable distance for 2A is 300 km (Base: 638 -> Total SF: ₹770)
+          if (d <= 300) return 638;
+          if (d <= 600) return Math.round(638 + (d - 300) * 1.95);
+          return Math.round(1223 + (d - 600) * 1.83);
 
         case '1A':
-          if (d <= 100) return 820;
-          if (d <= 300) return Math.round(820 + (d - 100) * 2.893);
-          if (d <= 600) return Math.round(1399 + (d - 300) * 2.50);
-          return Math.round(2149 + (d - 600) * 2.10);
+          // Indian Railways official minimum chargeable distance for 1A is 300 km (Base: 1115 -> Total SF: ₹1315)
+          if (d <= 300) return 1115;
+          if (d <= 600) return Math.round(1115 + (d - 300) * 3.10);
+          return Math.round(2045 + (d - 600) * 3.05);
 
         case 'EC':
-          if (d <= 100) return 650;
-          if (d <= 300) return Math.round(650 + (d - 100) * 2.20);
-          return Math.round(1090 + (d - 300) * 1.90);
+          if (d <= 150) return 650;
+          if (d <= 300) return Math.round(650 + (d - 150) * 2.20);
+          return Math.round(980 + (d - 300) * 1.90);
 
         case 'EV':
           if (d <= 100) return 750;
