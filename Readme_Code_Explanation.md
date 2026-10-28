@@ -1727,3 +1727,22 @@ This section documents the frontend views and components integrated for rail dis
   - **`src/pages/TrainDetails.tsx`:** Origin and Destination header summary cards display resolved station names and codes.
   - **`src/pages/StationExplorer.tsx`:** Station Timetable tab displays human-readable origin and destination routes instead of raw codes.
   - **`src/pages/MapTracker.tsx`:** Selected train overview bar displays full station names.
+
+
+### 15.6. Official IRCTC Minimum Chargeable Distance Slabs & Tariff Calibration
+
+* **`src/pages/TrainDetails.tsx` (Ticket Fare Calculator):**
+  - **Minimum Chargeable Distance Enforcement:**
+    * **2A, 3A, 3E, 1A:** Minimum chargeable distance is **300 km**.
+    * **CC (AC Chair Car):** Minimum chargeable distance is **150 km**.
+    * **SL (Sleeper Class):** Minimum chargeable distance is **200 km**.
+    * **2S (Second Sitting):** Minimum chargeable distance is **50 km**.
+  - **Short Journey (< 300 km) Accuracy:**
+    * Previously, distance scaling started from 100 km, inflating short journeys.
+    * Fixed to IRCTC official PRS floors:
+      - **3A:** ₹453 Base + ₹40 Res + ₹45 SF = ₹538 + 5% GST = **₹565** on Superfast.
+      - **3E:** Evaluates to **₹565** on Superfast and **₹520** on Express under 300 km (matching official PRS tariff parity).
+      - **2A:** ₹638 Base + ₹50 Res + ₹45 SF = ₹733 + 5% GST = **₹770** on Superfast.
+      - **SL:** ₹150 Base + ₹20 Res + ₹30 SF = **₹215** at 239 km.
+  - **Long Journey Integrity:**
+    * Preserves exact calibration for long-distance trains (e.g. Hyderabad $\rightarrow$ Visakhapatnam, 709.7 km: SL ₹435, 3A ₹1120, 2A ₹1595, 1A ₹2640).
