@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, Train, LogOut, User as UserIcon, Heart, Globe, History, AlertTriangle } from 'lucide-react';
+import { Menu, X, Train, LogOut, User as UserIcon, Heart, Globe, History, AlertTriangle, BookOpen } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function Navbar() {
@@ -46,6 +46,10 @@ export default function Navbar() {
             <Link to="/disruptions" className={`${isActive('/disruptions')} flex items-center space-x-1`}>
               <AlertTriangle className="h-4 w-4 text-rose-400" />
               <span>Disruptions</span>
+            </Link>
+            <Link to="/blogs" className={`${isActive('/blogs')} flex items-center space-x-1`}>
+              <BookOpen className="h-4 w-4 text-emerald-400" />
+              <span>Stories</span>
             </Link>
             <Link to="/history" className={`${isActive('/history')} flex items-center space-x-1`}>
               <History className="h-4 w-4" />
@@ -155,6 +159,14 @@ export default function Navbar() {
           >
             <AlertTriangle className="h-5 w-5 text-rose-400" />
             <span>Disruptions</span>
+          </Link>
+          <Link
+            to="/blogs"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-emerald-400 hover:bg-slate-800 transition-all"
+          >
+            <BookOpen className="h-5 w-5 text-emerald-400" />
+            <span>Rail Stories</span>
           </Link>
           <Link
             to="/history"

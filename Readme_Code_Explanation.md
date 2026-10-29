@@ -1779,3 +1779,27 @@ This section documents the frontend views and components integrated for rail dis
       - **SL:** ₹775 Base + ₹20 Res + ₹30 SF = **₹825** (Matches official IRCTC ₹825 exactly)
       - **3A:** ₹2021 Base + ₹40 Res + 5% GST = **₹2,165** (Matches official IRCTC ₹2,165)
       - **2A:** ₹2974 Base + ₹50 Res + 5% GST = **₹3,180** (Matches official IRCTC ₹3,180)
+
+
+### 15.8. Indian Railways Stories & Rich Article Reader
+
+* **Pages & Components Added:**
+  - `src/pages/Blogs.tsx`:
+    * Magazine-style responsive feed with hero spotlight for featured railway stories.
+    * Live category filtering (`Scenic Routes`, `Train Tech`, `Heritage & History`, `Travel Tips`, `Food & Culture`).
+    * Real-time search query filter across titles, subtitles, tags, and categories.
+    * Social sharing with Web Share API and instant clipboard fallback with visual checkmark indicator.
+  - `src/pages/BlogDetail.tsx`:
+    * Comprehensive reader layout with breadcrumbs, author credential cards, reading time estimation, and publish dates.
+    * Quick Facts dashboard displaying route length, mountain elevations, test speeds, and tunnel statistics.
+    * Multi-format content rendering:
+      - Section headings with emerald accents.
+      - Interspersed high-resolution railway photography with captions and lazy loading.
+      - **"Pro Traveler Tip"** callout cards with warm amber styling.
+      - **"Did You Know?"** trivia callout cards with indigo styling.
+      - Blockquote excerpts.
+    * **Interactive Train Deep Linking:** Direct action cards for trains featured in the article with one-click **"Track Train"** links navigating to `TrainDetails.tsx`.
+    * **"More Stories"** carousel and related reads.
+  - `src/data/fallbackBlogs.ts`: Offline-first fallback seed ensuring uninterrupted reading experience if network is slow or offline.
+  - `src/components/Navbar.tsx`: Added "Stories" (Desktop) and "Rail Stories" (Mobile) with `BookOpen` icon.
+  - `src/App.tsx`: Registered `/blogs` and `/blogs/:slug` routes.

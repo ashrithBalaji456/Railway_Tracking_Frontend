@@ -66,4 +66,24 @@ export const getJourneyOverlay = async (requestBody: any): Promise<any> => {
   return api.post('/api/v1/journey/overlay', requestBody);
 };
 
+export const getBlogs = async (category?: string, query?: string): Promise<any> => {
+  const params = new URLSearchParams();
+  if (category && category !== 'All') params.append('category', category);
+  if (query && query.trim()) params.append('q', query.trim());
+  const qs = params.toString();
+  return api.get(qs ? `/api/v1/blogs?${qs}` : '/api/v1/blogs');
+};
+
+export const getBlogBySlug = async (slug: string): Promise<any> => {
+  return api.get(`/api/v1/blogs/${encodeURIComponent(slug)}`);
+};
+
+export const getFeaturedBlogs = async (): Promise<any> => {
+  return api.get('/api/v1/blogs/featured');
+};
+
+export const getBlogCategories = async (): Promise<any> => {
+  return api.get('/api/v1/blogs/categories');
+};
+
 export default api;

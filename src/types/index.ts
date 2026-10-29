@@ -91,3 +91,43 @@ export interface TrainBetweenStations {
   toSequence?: number;
 }
 
+export interface QuickFact {
+  label: string;
+  value: string;
+  icon?: string;
+}
+
+export interface RelatedTrain {
+  trainNumber: string;
+  trainName: string;
+  route: string;
+}
+
+export interface ArticleSection {
+  type: 'heading' | 'paragraph' | 'image' | 'tip' | 'trivia' | 'quote';
+  title?: string;
+  content?: string;
+  imageUrl?: string;
+  imageCaption?: string;
+  altText?: string;
+}
+
+export interface BlogArticle {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string;
+  category: string;
+  coverImage: string;
+  author: string;
+  authorRole: string;
+  readTimeMinutes: number;
+  publishedDate: string;
+  featured: boolean;
+  tags: string[];
+  quickFacts: QuickFact[];
+  relatedTrains: RelatedTrain[];
+  sections: ArticleSection[];
+}
+
+
