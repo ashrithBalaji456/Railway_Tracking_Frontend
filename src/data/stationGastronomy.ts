@@ -187,3 +187,4 @@ export function getStationGastronomy(stationCode?: string, stateName?: string): 
     imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/b/ba/Samosa_on_plate.jpg/960px-Samosa_on_plate.jpg'
   };
 }
+

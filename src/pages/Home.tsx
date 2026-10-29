@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Train, Building2, Map, ShieldAlert, Sparkles, History } from 'lucide-react';
+import { Search, Train, Building2, Map, ShieldAlert, Sparkles, History, Ticket } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import api from '../services/api';
 import { searchHistoryService } from '../services/searchHistoryService';
@@ -349,7 +349,18 @@ export default function Home() {
       {/* Quick Action Navigation Grid */}
       <section className="max-w-6xl mx-auto px-3 sm:px-4">
         <h3 className="text-lg sm:text-xl font-bold text-slate-200 mb-4 sm:mb-6 text-center md:text-left">Quick Actions</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
+          <div
+            onClick={() => navigate('/pnr')}
+            className="bg-slate-900 border border-slate-800 hover:border-amber-500/40 p-4 sm:p-6 rounded-xl hover:shadow-lg transition-all group cursor-pointer"
+          >
+            <div className="p-2.5 sm:p-3 bg-amber-950/60 w-fit rounded-lg text-amber-400 mb-3 sm:mb-4 group-hover:scale-105 transition-transform">
+              <Ticket className="h-5 w-5 sm:h-6 sm:w-6" />
+            </div>
+            <h4 className="font-bold text-slate-200 text-sm sm:text-base mb-1">PNR Status</h4>
+            <p className="text-xs text-slate-450">Direct CRIS/IRCTC official verification, berth details & chart timelines.</p>
+          </div>
+
           <div
             onClick={() => navigate('/stations')}
             className="bg-slate-900 border border-slate-800 hover:border-indigo-550/40 p-4 sm:p-6 rounded-xl hover:shadow-lg transition-all group cursor-pointer"

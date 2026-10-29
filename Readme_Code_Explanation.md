@@ -1860,3 +1860,35 @@ This section documents the frontend views and components integrated for rail dis
   - Interactive **"Ask RailAI About Station Stalls"** button to find live platform stalls and catering.
   - One-click deep-link to the editorial story: *Trackside Gastronomy: The Iconic Bites of Indian Railways*.
   - Grid browser allowing travelers to explore and compare all regional platform specialties across India.
+
+
+### 15.11. Official Indian Railways PNR Status & Multi-Channel Verification
+
+* **`src/pages/PnrStatus.tsx` (Official CRIS/IRCTC Gateway Page):**
+  - **10-Digit PNR Input & Routing Architecture Detection:**
+    * Clean numeric input with automatic character stripping and length capping (`maxLength={10}`).
+    * Instant 1-click clipboard copy with visual feedback indicator.
+    * Parses starting digit to automatically identify the authoritative Passenger Reservation System (PRS) server and geographic zone:
+      - `1`: SCR / South Central (Secunderabad PRS Hub)
+      - `2`, `3`: NR / NCR / NWR / NER (New Delhi Northern PRS Hub)
+      - `4`, `5`: WR / CR / WCR (Mumbai Western & Central PRS Hub)
+      - `6`, `7`: SR / SWR (Chennai Southern PRS Hub)
+      - `8`, `9`: ER / ECR / SER / ECoR / NFR (Kolkata Eastern PRS Hub)
+  - **Multi-Channel Verification Gateways:**
+    * **Gateway 1 (IndianRail.gov.in):** Direct 1-click launch to the official CRIS national portal (`indianrail.gov.in/enquiry/PNR/PnrEnquiry.html`) with CAPTCHA verification, showing authentic chart status and coach allocations with zero scraping lag.
+    * **Gateway 2 (IRCTC Official Portal):** Direct launch to the IRCTC passenger booking gateway (`irctc.co.in/nget/enquiry/pnr-status`).
+    * **Gateway 3 (Official 139 SMS & WhatsApp):** Pre-fills `sms:139?body=PNR {pnr}` on mobile devices and deep-links to IRCTC Rail Madad WhatsApp (+91 98811 93322).
+  - **Ticket History Manager (`localStorage`):**
+    * Automatically saves verified PNRs under `rail_pnr_history` with timestamps and zone tags.
+    * Allows quick 1-click re-checking and single-item or bulk history deletion.
+  - **Train Tracking Deep-Link:**
+    * Dedicated shortcut input allowing travelers who know their train number to jump directly to `/trains/{number}` for live GPS telemetry, delay estimation, and coach layout.
+  - **Official Charting Rules & PNR Status Acronyms Guide:**
+    * Educational timeline cards explaining Chart 1 (4 hours prior) and Chart 2 (30 minutes prior).
+    * Clear definitions for `CNF`, `RAC`, `GNWL`, `PQWL`, and `RLWL`.
+    * Critical advisory highlighting IRCTC e-ticket rules (fully waitlisted online tickets automatically cancel after charting and cannot board reserved coaches).
+
+* **Navigation & Home Integration:**
+  - `src/App.tsx`: Registered `/pnr` route.
+  - `src/components/Navbar.tsx`: Added **"PNR"** (Desktop) and **"PNR Status"** (Mobile) with `Ticket` icon.
+  - `src/pages/Home.tsx`: Added **"PNR Status"** quick action card on the home dashboard.

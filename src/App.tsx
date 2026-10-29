@@ -15,6 +15,7 @@ import SearchHistoryPage from './pages/SearchHistoryPage';
 import DisruptionsPage from './pages/DisruptionsPage';
 import Blogs from './pages/Blogs';
 import BlogDetail from './pages/BlogDetail';
+import PnrStatus from './pages/PnrStatus';
 import { LanguageProvider } from './context/LanguageContext';
 import AndroidBackButtonHandler from './components/AndroidBackButtonHandler';
 
@@ -36,6 +37,7 @@ export default function App() {
               <Route path="/map" element={<MapTracker />} />
               <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
               <Route path="/journey" element={<JourneyPlanner />} />
+              <Route path="/pnr" element={<PnrStatus />} />
               <Route path="/disruptions" element={<DisruptionsPage />} />
               <Route path="/blogs" element={<Blogs />} />
               <Route path="/blogs/:slug" element={<BlogDetail />} />
