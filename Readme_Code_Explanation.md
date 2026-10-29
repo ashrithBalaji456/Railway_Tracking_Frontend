@@ -1756,3 +1756,26 @@ This section documents the frontend views and components integrated for rail dis
       - **3A:** ₹1734 Base + ₹40 Res + ₹45 SF + 5% GST = **₹1,910** (Matches official IRCTC ₹1,910)
       - **2A:** ₹2495 Base + ₹50 Res + ₹45 SF + 5% GST = **₹2,720** (Matches official IRCTC ₹2,720)
       - **1A:** ₹4222 Base + ₹60 Res + ₹75 SF + 5% GST = **₹4,575** (Matches official IRCTC ₹4,575)
+
+
+### 15.7. Special Train vs. Special Fare Classification & Ultra Long-Distance Tapering (> 2000 km)
+
+* **`src/pages/TrainDetails.tsx` (Ticket Fare Calculator):**
+  - **Special Train Distinction (`isSpecial` vs. `isSpecialFare`):**
+    * **Holiday / Festival / Summer Special Trains (`isSpecial`):** Trains numbered with a leading `0` (e.g. `04132 SMVB-CNB SPECIAL`) or named `SPECIAL` that operate at **regular standard telescopic tariffs** without dynamic pricing or premium surcharges.
+    * **Designated Special Fare / Suvidha Trains (`isSpecialFare`):** Only trains explicitly designated as `SPECIAL FARE`, `SPL FARE`, `SUVIDHA`, or `TOD` apply the 1.30x surcharge.
+    * Eliminates incorrect 30% surge inflation for standard 0-prefixed holiday specials like `04132`.
+  - **Itemized Surcharge Display Fix:**
+    * Previously, the special multiplier was baked into the base distance fare while the breakdown card rendered `Special Train (1.3x): ₹0` because the surcharge field read the superfast fee (`sfFee`).
+    * Refactored `computeClass` to cleanly isolate `specialSurcharge = isSpecialFare ? Math.round(standardBase * 0.30) : 0` from `baseFare = standardBase`.
+    * If `isSpecialFare` is active, the UI explicitly displays `Special Fare (1.3x): +₹XXX`. If regular or standard special train, it displays `Superfast Surcharge: ₹YY` (or `Express Surcharge`).
+  - **Ultra Long-Distance Slabs ($> 1675\text{ km}$ and $> 2000\text{ km}$):**
+    * Added calibrated telescopic taper for ultra-long trunk routes ($2000\text{--}3500+\text{ km}$):
+      - **SL:** Rate above 2000 km tapers to `0.072/km` ($741 + (d - 2000) \times 0.072$).
+      - **3A:** Rate above 1675 km tapers to `0.36/km` ($1734 + (d - 1675) \times 0.36$).
+      - **2A:** Rate above 1675 km tapers to `0.60/km` ($2495 + (d - 1675) \times 0.60$).
+      - **1A:** Rate above 1675 km tapers to `0.95/km` ($4222 + (d - 1675) \times 0.95$).
+    * Benchmark verification for `04132 SMVB-CNB SPECIAL` (2473.6 km):
+      - **SL:** ₹775 Base + ₹20 Res + ₹30 SF = **₹825** (Matches official IRCTC ₹825 exactly)
+      - **3A:** ₹2021 Base + ₹40 Res + 5% GST = **₹2,165** (Matches official IRCTC ₹2,165)
+      - **2A:** ₹2974 Base + ₹50 Res + 5% GST = **₹3,180** (Matches official IRCTC ₹3,180)

@@ -418,7 +418,8 @@ export default function TrainDetails() {
     const isLuxuryTrain = trainNameLower.includes('maharajas') || trainNameLower.includes('palace on wheels') || trainNameLower.includes('golden chariot') || trainNameLower.includes('deccan odyssey') || trainNameLower.includes('royal rajasthan');
     const isBharatGaurav = trainNameLower.includes('bharat gaurav') || trainNameLower.includes('ramayana') || trainNameLower.includes('buddhist circuit') || trainNameLower.includes('jyotirlinga') || trainNameLower.includes('guru kripa') || trainNameLower.includes('divya dakshin') || trainNameLower.includes('dakshin yatra') || (trainNameLower.includes('kashi') && trainNameLower.includes('yatra'));
     const isMemu = !isToyTrain && (trainNameLower.includes('memu') || trainNameLower.includes('passenger') || trainTypeLower.includes('passenger') || trainTypeLower.includes('demu'));
-    const isSpecial = trainNum.startsWith('0') || trainNameLower.includes('special') || trainNameLower.includes('spl') || trainTypeLower.includes('special');
+    const isSpecialFare = trainNameLower.includes('special fare') || trainTypeLower.includes('special fare') || trainNameLower.includes('spl fare') || trainTypeLower.includes('spl fare') || trainNameLower.includes('suvidha') || trainTypeLower.includes('suvidha') || trainNameLower.includes('tod');
+    const isSpecial = !isSpecialFare && (trainNum.startsWith('0') || trainNameLower.includes('special') || trainNameLower.includes('spl') || trainTypeLower.includes('special'));
     const isSF = !isMemu && !isToyTrain && !isLuxuryTrain && !isBharatGaurav && (trainTypeLower.includes('superfast') || trainNameLower.includes('sf') || trainNameLower.includes('superfast') || isRajdhani || isShatabdi || isDuronto || isVandeBharat || isAntyodaya || isAmritBharat);
 
     // Coach presence detection
@@ -427,9 +428,6 @@ export default function TrainDetails() {
     const hasEACoach = coachesList.some((c: string) => c.startsWith('EA'));
     const hasECCoach = isShatabdi || isVandeBharat || coachesList.some((c: string) => c.startsWith('EC') || (c.startsWith('E') && !c.startsWith('EOG') && !c.startsWith('ENG') && !c.startsWith('EV')));
     const hasCCCoach = isShatabdi || isVandeBharat || isGaribRath || coachesList.some((c: string) => c.startsWith('C') || c === 'CC');
-
-    // Multiplier for Special holiday trains (IRCTC 1.30x surcharge)
-    const specialMultiplier = isSpecial ? 1.30 : 1.0;
 
     // Train category label
     const categoryLabel = isLuxuryTrain ? 'Ultra-Luxury Heritage Cruise'
@@ -443,7 +441,8 @@ export default function TrainDetails() {
       : isAmritBharat ? 'Amrit Bharat Express'
       : isVistadome ? 'Vistadome Scenic Express'
       : isMemu ? 'Passenger / MEMU'
-      : isSpecial ? 'Special Fare Express (1.3x)'
+      : isSpecialFare ? (trainNameLower.includes('suvidha') ? 'Suvidha Special (Dynamic)' : 'Special Fare Express (1.3x)')
+      : isSpecial ? (isSF ? 'Special Superfast' : 'Special Express')
       : isSF ? 'Superfast Express'
       : 'Mail / Express';
 
@@ -548,7 +547,9 @@ export default function TrainDetails() {
           else if (d <= 600) slBase = Math.round(188 + (d - 300) * 0.50);
           else if (d <= 1000) slBase = Math.round(338 + (d - 600) * 0.42);
           else if (d <= 1500) slBase = Math.round(506 + (d - 1000) * 0.32);
-          else slBase = Math.round(666 + (d - 1500) * 0.222);
+          else if (d <= 1675) slBase = Math.round(666 + (d - 1500) * 0.222);
+          else if (d <= 2000) slBase = Math.round(705 + (d - 1675) * 0.110);
+          else slBase = Math.round(741 + (d - 2000) * 0.072);
           return Math.round(slBase * (isAmritBharat ? 1.15 : 1.0));
         }
 
@@ -566,7 +567,8 @@ export default function TrainDetails() {
           if (d <= 600) return Math.round(453 + (d - 300) * 1.22);
           if (d <= 1000) return Math.round(819 + (d - 600) * 1.05);
           if (d <= 1500) return Math.round(1239 + (d - 1000) * 0.60);
-          return Math.round(1539 + (d - 1500) * 0.46);
+          if (d <= 1675) return Math.round(1539 + (d - 1500) * 0.46);
+          return Math.round(1620 + (d - 1675) * 0.33);
 
         case '3A':
           // Indian Railways official minimum chargeable distance for 3A is 300 km (Base: 453 -> Total SF: ₹565)
@@ -574,7 +576,8 @@ export default function TrainDetails() {
           if (d <= 600) return Math.round(453 + (d - 300) * 1.32);
           if (d <= 1000) return Math.round(849 + (d - 600) * 1.21);
           if (d <= 1500) return Math.round(1333 + (d - 1000) * 0.64);
-          return Math.round(1653 + (d - 1500) * 0.46);
+          if (d <= 1675) return Math.round(1653 + (d - 1500) * 0.46);
+          return Math.round(1734 + (d - 1675) * 0.36);
 
         case '2A':
           // Indian Railways official minimum chargeable distance for 2A is 300 km (Base: 638 -> Total SF: ₹770)
@@ -582,7 +585,8 @@ export default function TrainDetails() {
           if (d <= 600) return Math.round(638 + (d - 300) * 1.95);
           if (d <= 1000) return Math.round(1223 + (d - 600) * 1.83);
           if (d <= 1500) return Math.round(1955 + (d - 1000) * 0.90);
-          return Math.round(2405 + (d - 1500) * 0.51);
+          if (d <= 1675) return Math.round(2405 + (d - 1500) * 0.51);
+          return Math.round(2495 + (d - 1675) * 0.60);
 
         case '1A':
           // Indian Railways official minimum chargeable distance for 1A is 300 km (Base: 1115 -> Total SF: ₹1315)
@@ -590,7 +594,8 @@ export default function TrainDetails() {
           if (d <= 600) return Math.round(1115 + (d - 300) * 3.10);
           if (d <= 1000) return Math.round(2045 + (d - 600) * 3.05);
           if (d <= 1500) return Math.round(3265 + (d - 1000) * 1.50);
-          return Math.round(4015 + (d - 1500) * 1.18);
+          if (d <= 1675) return Math.round(4015 + (d - 1500) * 1.18);
+          return Math.round(4222 + (d - 1675) * 0.95);
 
         case 'EC':
           if (d <= 150) return 650;
@@ -626,16 +631,17 @@ export default function TrainDetails() {
       tatkalMax: number,
       tatkalAllowed: boolean
     ) => {
-      const rawBase = getTelescopicBaseFare(code, distanceKm) * specialMultiplier;
-      const baseFare = Math.round(rawBase);
-      const taxableSubtotal = baseFare + resFee + sfFee + cateringFee;
+      const standardBase = getTelescopicBaseFare(code, distanceKm);
+      const specialSurcharge = isSpecialFare ? Math.round(standardBase * 0.30) : 0;
+      const baseFare = standardBase;
+      const taxableSubtotal = baseFare + specialSurcharge + resFee + sfFee + cateringFee;
       const gst = isAc ? Math.round(taxableSubtotal * 0.05) : 0;
       // Total fare must always equal the sum of its itemized breakdown components
       const totalFare = Math.round((taxableSubtotal + gst) / 5) * 5;
 
       let tatkalCharge = 0;
       if (tatkalAllowed) {
-        const rawTatkal = baseFare * tatkalPct;
+        const rawTatkal = (baseFare + specialSurcharge) * tatkalPct;
         tatkalCharge = Math.max(tatkalMin, Math.min(tatkalMax, Math.round(rawTatkal)));
       }
       const tatkalGst = isAc && tatkalAllowed ? Math.round(tatkalCharge * 0.05) : 0;
@@ -646,6 +652,7 @@ export default function TrainDetails() {
         name,
         tag,
         base: baseFare,
+        specialSurcharge,
         resFee,
         surcharge: sfFee,
         cateringFee,
@@ -810,6 +817,7 @@ export default function TrainDetails() {
       toStation,
       isSF,
       isSpecial,
+      isSpecialFare,
       isToyTrain,
       isLuxuryTrain,
       isBharatGaurav,
@@ -1782,10 +1790,22 @@ export default function TrainDetails() {
                       </div>
                       <div>
                         <span className="text-slate-500 block">
-                          {interactiveFareData.isLuxuryTrain ? 'Dining & Butler' : interactiveFareData.isBharatGaurav ? 'Hotel & Veg Meals' : interactiveFareData.isSpecial ? 'Special Train (1.3x)' : 'Superfast Surcharge'}
+                          {interactiveFareData.isLuxuryTrain
+                            ? 'Dining & Butler'
+                            : interactiveFareData.isBharatGaurav
+                            ? 'Hotel & Veg Meals'
+                            : interactiveFareData.isSpecialFare
+                            ? 'Special Fare (1.3x)'
+                            : interactiveFareData.isSF
+                            ? 'Superfast Surcharge'
+                            : 'Express Surcharge'}
                         </span>
                         <span className="text-slate-200 font-semibold">
-                          {interactiveFareData.isLuxuryTrain || interactiveFareData.isBharatGaurav ? 'All-Inclusive' : `₹${activeClass.surcharge}`}
+                          {interactiveFareData.isLuxuryTrain || interactiveFareData.isBharatGaurav
+                            ? 'All-Inclusive'
+                            : interactiveFareData.isSpecialFare
+                            ? `+₹${activeClass.specialSurcharge.toLocaleString('en-IN')}`
+                            : `₹${activeClass.surcharge}`}
                         </span>
                       </div>
                       <div>
