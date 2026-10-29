@@ -7,6 +7,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
 import { getStationDisplayName } from '../utils/stationUtils';
 import { searchHistoryService } from '../services/searchHistoryService';
+import { getStationGastronomyBadge, type StationDelicacy } from '../data/stationGastronomy';
 
 interface StationSelectorDropdownProps {
   label: string;
@@ -227,6 +228,7 @@ export default function TrainDetails() {
   const [selectedCoach, setSelectedCoach] = useState<string | null>(null);
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
   const [showCoachLayout, setShowCoachLayout] = useState(false);
+  const [selectedDelicacyModal, setSelectedDelicacyModal] = useState<StationDelicacy | null>(null);
   
   const [hasAlert, setHasAlert] = useState(false);
   const [alertId, setAlertId] = useState<number | null>(null);
@@ -2573,6 +2575,28 @@ export default function TrainDetails() {
                             {s.haltMinutes > 0 && (
                               <span className="text-indigo-400 font-semibold">{s.haltMinutes}m halt</span>
                             )}
+                            {(() => {
+                              const culinary = getStationGastronomyBadge(s.stationCode, s.haltMinutes);
+                              if (!culinary) return null;
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedDelicacyModal(culinary.delicacy);
+                                  }}
+                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] sm:text-[9px] font-bold border transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95 ${
+                                    culinary.isSafeHalt
+                                      ? 'bg-amber-950/60 border-amber-500/50 text-amber-300 hover:bg-amber-900/80 shadow-amber-950/40'
+                                      : 'bg-orange-950/40 border-orange-600/40 text-orange-300 hover:bg-orange-900/60'
+                                  }`}
+                                  title={`Famous for ${culinary.dishName}. Tap to view stall recommendations & authentic food photo.`}
+                                >
+                                  <span>{culinary.badgeText}</span>
+                                  <span className="text-[7px] text-amber-400/80">📸</span>
+                                </button>
+                              );
+                            })()}
                             {s.speedToNextStationKmph !== undefined && s.speedToNextStationKmph !== null && s.speedToNextStationKmph > 0 && (
                               <span className="bg-amber-950/40 text-amber-400 px-1 py-0.2 rounded border border-amber-900/30 text-[8px] sm:text-[9px] font-bold inline-flex items-center space-x-0.5">
                                 <span>⚡</span>
@@ -2834,6 +2858,89 @@ export default function TrainDetails() {
             <span className="text-xs bg-slate-950 text-slate-400 px-2.5 py-1.5 rounded-lg border border-slate-800 font-bold">
               {(liveStatus.speed != null ? liveStatus.speed : 0)} km/h
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Platform Delicacy & Halt Advisory Modal */}
+      {selectedDelicacyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl space-y-4 animate-scaleUp">
+            {/* Header with authentic image */}
+            <div className="relative h-48 sm:h-56 bg-slate-950">
+              <img
+                src={selectedDelicacyModal.imageUrl}
+                alt={selectedDelicacyModal.delicacyTitle}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
+              <button
+                type="button"
+                onClick={() => setSelectedDelicacyModal(null)}
+                className="absolute top-3 right-3 p-1.5 rounded-full bg-slate-950/80 hover:bg-slate-900 text-slate-300 hover:text-white transition-all cursor-pointer border border-slate-700"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="absolute bottom-3 left-4 right-4">
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 backdrop-blur-md">
+                  {selectedDelicacyModal.highlightTag}
+                </span>
+                <h3 className="text-lg sm:text-xl font-black text-white mt-1 leading-tight">
+                  {selectedDelicacyModal.delicacyTitle}
+                </h3>
+                <p className="text-xs text-slate-300 font-medium">
+                  {selectedDelicacyModal.stationName} • {selectedDelicacyModal.state}
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 sm:p-5 pt-0 space-y-3.5 text-xs text-slate-300">
+              <p className="leading-relaxed text-slate-200">
+                {selectedDelicacyModal.description}
+              </p>
+
+              {/* Platform Stall & Halt Advice */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800">
+                  <span className="font-bold text-amber-400 block mb-0.5">📍 Where to Find on Platform:</span>
+                  <span className="text-slate-300">{selectedDelicacyModal.bestPlatformOrStall}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800">
+                  <span className="font-bold text-emerald-400 block mb-0.5">⏱️ Passenger Halt Advisory:</span>
+                  <span className="text-slate-300">
+                    Safe to step down on <strong>{selectedDelicacyModal.recommendedHaltMin}+ min halts</strong>. For shorter stops, consider IRCTC e-Catering seat delivery.
+                  </span>
+                </div>
+              </div>
+
+              {/* Must Try Items */}
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                <span className="font-bold text-slate-200 block mb-1">🌟 Must-Try Delicacies:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedDelicacyModal.mustTryItems.map((item, idx) => (
+                    <span key={idx} className="px-2 py-0.5 rounded-md bg-amber-950/30 border border-amber-800/40 text-amber-300 text-[10px] font-semibold">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* IRCTC Tip */}
+              <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-800/40 text-indigo-300 flex items-start gap-2">
+                <Sparkles className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                <span><strong>IRCTC Insider Tip:</strong> {selectedDelicacyModal.irctcTip}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedDelicacyModal(null)}
+                className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition cursor-pointer shadow-lg shadow-amber-500/20"
+              >
+                Got it! Return to Timetable
+              </button>
+            </div>
           </div>
         </div>
       )}

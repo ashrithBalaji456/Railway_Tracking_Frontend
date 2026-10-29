@@ -26,6 +26,8 @@ import { getBlogBySlug } from '../services/api';
 import type { BlogArticle } from '../types';
 import { FALLBACK_BLOGS } from '../data/fallbackBlogs';
 import { isArticleSaved, toggleSaveArticle, getOfflineCachedArticle } from '../utils/bookmarkUtils';
+import AudioStoryPlayer from '../components/AudioStoryPlayer';
+import ArticleCommunityTips from '../components/ArticleCommunityTips';
 
 export default function BlogDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -296,6 +298,9 @@ export default function BlogDetail() {
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
         </div>
 
+        {/* Hands-Free Audio Narration Player */}
+        <AudioStoryPlayer article={article} />
+
         {/* Quick Facts Strip */}
         {article.quickFacts && article.quickFacts.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 sm:p-5 rounded-2xl border border-slate-800 bg-slate-900/60 backdrop-blur-md">
@@ -479,6 +484,9 @@ export default function BlogDetail() {
             ))}
           </div>
         </div>
+
+        {/* Passenger Travel Tips & Community Section */}
+        <ArticleCommunityTips slug={article.slug} />
 
         {/* Read More Stories Section */}
         <section className="pt-10 border-t border-slate-800/80 space-y-6">

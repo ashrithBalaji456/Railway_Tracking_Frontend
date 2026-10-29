@@ -86,4 +86,16 @@ export const getBlogCategories = async (): Promise<any> => {
   return api.get('/api/v1/blogs/categories');
 };
 
+export const getArticleTips = async (slug: string): Promise<any> => {
+  return api.get(`/api/v1/blogs/${encodeURIComponent(slug)}/tips`);
+};
+
+export const addArticleTip = async (slug: string, tip: any): Promise<any> => {
+  return api.post(`/api/v1/blogs/${encodeURIComponent(slug)}/tips`, tip);
+};
+
+export const likeArticleTip = async (slug: string, tipId: string): Promise<any> => {
+  return api.post(`/api/v1/blogs/${encodeURIComponent(slug)}/tips/${encodeURIComponent(tipId)}/like`);
+};
+
 export default api;

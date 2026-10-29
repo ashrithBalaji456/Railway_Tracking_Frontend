@@ -8,6 +8,8 @@ import RecentSearchesBar from '../components/RecentSearchesBar';
 import RecentSearchesDropdown from '../components/RecentSearchesDropdown';
 import { getStationDisplayName } from '../utils/stationUtils';
 import { getStationGastronomy, STATION_GASTRONOMY } from '../data/stationGastronomy';
+import { STATION_AMENITIES, type StationAmenity } from '../data/stationAmenities';
+import { X } from 'lucide-react';
 
 export default function StationExplorer() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -19,7 +21,10 @@ export default function StationExplorer() {
   const [showStationDrop, setShowStationDrop] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
-  const [boardMode, setBoardMode] = useState<'SCHEDULED' | 'LIVE' | 'FOOD'>('SCHEDULED');
+  const [boardMode, setBoardMode] = useState<'SCHEDULED' | 'LIVE' | 'FOOD' | 'FACILITIES'>('SCHEDULED');
+  const [selectedAmenityModal, setSelectedAmenityModal] = useState<StationAmenity | null>(null);
+  const [amenityFilter, setAmenityFilter] = useState<string>('ALL');
+  const [weather, setWeather] = useState<{ temperature: number; windspeed: number; weathercode: number } | null>(null);
   const [selectedGastronomyCode, setSelectedGastronomyCode] = useState<string | null>(null);
   const [liveHours, setLiveHours] = useState(4);
   const [liveData, setLiveData] = useState<any>(null);
@@ -27,6 +32,43 @@ export default function StationExplorer() {
   const [liveError, setLiveError] = useState('');
 
   const [trains, setTrains] = useState<any[]>([]);
+  // Fetch Live Station Weather via Open-Meteo
+  useEffect(() => {
+    if (!selectedStation?.latitude || !selectedStation?.longitude) {
+      setWeather(null);
+      return;
+    }
+    let isMounted = true;
+    const fetchWeather = async () => {
+      try {
+        const lat = selectedStation.latitude;
+        const lon = selectedStation.longitude;
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          if (data?.current_weather) {
+            setWeather(data.current_weather);
+          }
+        }
+      } catch (err) {
+        console.warn('Station weather fetch error', err);
+      }
+    };
+    fetchWeather();
+    return () => { isMounted = false; };
+  }, [selectedStation]);
+
+  const getWeatherDisplay = (code?: number) => {
+    if (code === undefined || code === null) return { condition: 'Pleasant Weather', emoji: '🌤️' };
+    if (code === 0) return { condition: 'Clear Sky', emoji: '☀️' };
+    if (code >= 1 && code <= 3) return { condition: 'Partly Cloudy', emoji: '⛅' };
+    if (code === 45 || code === 48) return { condition: 'Foggy (Speed Capped)', emoji: '🌫️' };
+    if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return { condition: 'Rain Showers', emoji: '🌧️' };
+    if (code >= 71 && code <= 77) return { condition: 'Snowfall', emoji: '❄️' };
+    if (code >= 95) return { condition: 'Thunderstorm', emoji: '⛈️' };
+    return { condition: 'Moderate', emoji: '🌤️' };
+  };
+
   const [filterType, setFilterType] = useState('ALL'); // ALL, STOPPING, NON_STOP
   const [dayFilter, setDayFilter] = useState('ALL_DAYS');
   const [loading, setLoading] = useState(false);
@@ -413,9 +455,23 @@ export default function StationExplorer() {
               </div>
             </div>
 
-            <div className="text-xs text-slate-550 border-t md:border-t-0 md:border-l border-slate-800 pt-3 md:pt-0 md:pl-6 space-y-1">
-              <p>Latitude: <span className="text-slate-350">{selectedStation.latitude ? `${selectedStation.latitude}° N` : 'N/A'}</span></p>
-              <p>Longitude: <span className="text-slate-350">{selectedStation.longitude ? `${selectedStation.longitude}° E` : 'N/A'}</span></p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 border-t md:border-t-0 md:border-l border-slate-800 pt-3 md:pt-0 md:pl-6">
+              {weather ? (
+                <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-850">
+                  <span className="text-2xl">{getWeatherDisplay(weather.weathercode).emoji}</span>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-black text-white">{Math.round(weather.temperature)}°C</span>
+                      <span className="text-[10px] font-bold text-slate-300">{getWeatherDisplay(weather.weathercode).condition}</span>
+                    </div>
+                    <span className="text-[9px] text-slate-500 block">Wind: {weather.windspeed} km/h • Station Outdoor</span>
+                  </div>
+                </div>
+              ) : null}
+              <div className="text-xs text-slate-550 space-y-1">
+                <p>Latitude: <span className="text-slate-350">{selectedStation.latitude ? `${selectedStation.latitude}° N` : 'N/A'}</span></p>
+                <p>Longitude: <span className="text-slate-350">{selectedStation.longitude ? `${selectedStation.longitude}° E` : 'N/A'}</span></p>
+              </div>
             </div>
           </div>
 
@@ -470,10 +526,53 @@ export default function StationExplorer() {
                   Specialty
                 </span>
               </button>
+              <button
+                onClick={() => setBoardMode('FACILITIES')}
+                className={`flex-1 py-3 text-center text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer flex items-center justify-center gap-2 ${boardMode === 'FACILITIES'
+                    ? 'border-emerald-500 text-emerald-400 bg-emerald-950/10'
+                    : 'border-transparent text-slate-450 hover:text-slate-200'
+                  }`}
+              >
+                <span>🏢 Station Facilities</span>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  {STATION_AMENITIES.length}
+                </span>
+              </button>
             </div>
 
             {boardMode === 'SCHEDULED' ? (
               <>
+                {/* Platform Amenities Quick Bar alongside Timetable */}
+                <div className="bg-slate-950/80 border-b border-slate-800 p-2.5 sm:p-3 px-3 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-400 font-bold text-xs flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5" /> Station Amenities:
+                    </span>
+                    <span className="text-slate-400 text-[10px] hidden md:inline">Key platform facilities available here:</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {STATION_AMENITIES.map((am) => (
+                      <button
+                        key={am.id}
+                        type="button"
+                        onClick={() => setSelectedAmenityModal(am)}
+                        className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 text-[10px] font-bold text-slate-300 hover:text-white transition cursor-pointer flex items-center gap-1 active:scale-95"
+                        title={am.title}
+                      >
+                        <span>{am.emoji}</span>
+                        <span>{am.badge}</span>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setBoardMode('FACILITIES')}
+                      className="text-[10px] font-bold text-indigo-400 hover:underline px-1.5 py-0.5"
+                    >
+                      All Facilities →
+                    </button>
+                  </div>
+                </div>
+
                 {/* Filter Tabs */}
                 <div className="border-b border-slate-800 bg-slate-950/50 p-3 space-y-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -874,7 +973,7 @@ export default function StationExplorer() {
                   </div>
                 )}
               </>
-            ) : (
+            ) : boardMode === 'FOOD' ? (
               /* Station Food & Delicacies Section */
               (() => {
                 const activeFood = selectedGastronomyCode
@@ -1020,6 +1119,83 @@ export default function StationExplorer() {
                   </div>
                 );
               })()
+            ) : (
+              <div className="p-4 sm:p-6 space-y-5 bg-slate-950/40">
+                {/* Facilities Category Filters */}
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-emerald-400" />
+                      <span>Station Amenities & Passenger Facilities Directory</span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Verified passenger amenities, IRCTC executive lounges, accessibility, and waiting halls:
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                    {['ALL', 'LOUNGE', 'WAITING', 'CLOAK', 'ELEVATOR', 'WATER', 'ACCESSIBILITY', 'WIFI'].map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setAmenityFilter(cat)}
+                        className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer text-[11px] ${
+                          amenityFilter === cat
+                            ? 'bg-emerald-600 text-white shadow'
+                            : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                        }`}
+                      >
+                        {cat === 'ALL' ? 'All Amenities' : cat.charAt(0) + cat.slice(1).toLowerCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Amenities Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {(amenityFilter === 'ALL' ? STATION_AMENITIES : STATION_AMENITIES.filter(a => a.category === amenityFilter)).map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => setSelectedAmenityModal(item)}
+                      className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 hover:bg-slate-850/60 transition-all cursor-pointer flex flex-col justify-between space-y-3 group"
+                    >
+                      <div className="space-y-2.5">
+                        <div className="h-40 rounded-xl overflow-hidden bg-slate-950 relative border border-slate-800/80">
+                          <img
+                            src={item.imageUrl}
+                            alt={item.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                          />
+                          <span className="absolute top-2 left-2 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-950/85 text-emerald-300 border border-emerald-500/30 backdrop-blur-md">
+                            {item.emoji} {item.badge}
+                          </span>
+                        </div>
+
+                        <div>
+                          <h4 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">
+                            {item.title}
+                          </h4>
+                          <p className="text-xs text-slate-400 mt-1 line-clamp-2">
+                            {item.shortDesc}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 border-t border-slate-800/80 pt-2.5 text-[11px]">
+                        <div className="flex items-center justify-between text-slate-400">
+                          <span className="font-semibold text-slate-500">Location:</span>
+                          <span className="text-slate-300 text-right truncate max-w-[60%]">{item.locationOnPlatform}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-slate-400">
+                          <span className="font-semibold text-slate-500">Tariff:</span>
+                          <span className="text-emerald-400 font-bold truncate max-w-[60%]">Verified IRCTC Rule</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -1027,6 +1203,67 @@ export default function StationExplorer() {
         <div className="text-center py-16 text-slate-550 bg-slate-900/40 border border-slate-800/50 rounded-xl">
           <Building2 className="h-12 w-12 mx-auto mb-3 opacity-30 text-indigo-400" />
           <p className="text-sm">Please select a station from the lookup box above to begin exploring.</p>
+        </div>
+      )}
+
+      {/* Station Amenity Detail Modal */}
+      {selectedAmenityModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+          <div className="bg-slate-900 border border-emerald-500/40 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl space-y-4 animate-scaleUp">
+            <div className="relative h-48 sm:h-56 bg-slate-950">
+              <img
+                src={selectedAmenityModal.imageUrl}
+                alt={selectedAmenityModal.title}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
+              <button
+                type="button"
+                onClick={() => setSelectedAmenityModal(null)}
+                className="absolute top-3 right-3 p-1.5 rounded-full bg-slate-950/80 hover:bg-slate-900 text-slate-300 hover:text-white transition cursor-pointer border border-slate-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="absolute bottom-3 left-4 right-4">
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 backdrop-blur-md">
+                  {selectedAmenityModal.emoji} {selectedAmenityModal.badge}
+                </span>
+                <h3 className="text-lg sm:text-xl font-black text-white mt-1 leading-tight">
+                  {selectedAmenityModal.title}
+                </h3>
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-5 pt-0 space-y-3.5 text-xs text-slate-300">
+              <p className="leading-relaxed text-slate-200">
+                {selectedAmenityModal.detailedDesc}
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800">
+                  <span className="font-bold text-emerald-400 block mb-0.5">📍 Location & Access:</span>
+                  <span className="text-slate-300">{selectedAmenityModal.locationOnPlatform}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800">
+                  <span className="font-bold text-indigo-400 block mb-0.5">💰 Official Rules & Tariff:</span>
+                  <span className="text-slate-300">{selectedAmenityModal.tariffsAndRules}</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span className="font-bold text-slate-200 block mb-0.5">ℹ️ Availability & Terms:</span>
+                <span className="text-slate-400">{selectedAmenityModal.availability}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedAmenityModal(null)}
+                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition cursor-pointer shadow-lg shadow-emerald-600/20"
+              >
+                Got It
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

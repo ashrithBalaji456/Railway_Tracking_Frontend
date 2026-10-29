@@ -419,13 +419,23 @@ export default function PnrStatus() {
             <span>Official Chart Preparation Timeline</span>
           </div>
           <div className="space-y-2 text-xs text-slate-300 leading-relaxed">
-            <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80">
-              <strong className="text-white block mb-0.5">1. First Reservation Chart (Chart 1):</strong>
-              Prepared at least <strong>4 hours</strong> prior to scheduled departure from originating station (or at 8:00 PM the previous evening for morning trains).
+            <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 space-y-1">
+              <strong className="text-white block font-bold text-indigo-300">1. First Reservation Chart (Chart 1):</strong>
+              <p className="text-slate-300">
+                Prepared <strong className="text-amber-300">10 hours before</strong> scheduled departure from the originating station, customized by departure window:
+              </p>
+              <ul className="list-disc pl-4 space-y-1 text-[11px] text-slate-400 mt-1">
+                <li>
+                  <strong className="text-slate-200">Trains departing after 2:00 PM or before 5:00 AM:</strong> Chart is finalized exactly <span className="text-emerald-400 font-bold">10 hours</span> before departure.
+                </li>
+                <li>
+                  <strong className="text-slate-200">Trains departing between 5:00 AM and 2:00 PM:</strong> Chart is finalized the previous night at <span className="text-emerald-400 font-bold">8:00 PM</span> (or 9:00 PM depending on specific zonal updates).
+                </li>
+              </ul>
             </div>
             <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80">
-              <strong className="text-white block mb-0.5">2. Second & Final Chart (Chart 2):</strong>
-              Prepared <strong>30 minutes</strong> before departure for last-minute vacant berths and current booking counters.
+              <strong className="text-white block mb-0.5 font-bold text-indigo-300">2. Second & Final Chart (Chart 2):</strong>
+              Prepared exactly <strong className="text-amber-300">30 minutes</strong> before scheduled departure for all trains to allocate last-minute cancellations and current counter bookings.
             </div>
           </div>
         </div>

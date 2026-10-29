@@ -1898,3 +1898,43 @@ This section documents the frontend views and components integrated for rail dis
   - `src/App.tsx`: Registered `/pnr` route.
   - `src/components/Navbar.tsx`: Added **"PNR"** (Desktop) and **"PNR Status"** (Mobile) with `Ticket` icon.
   - `src/pages/Home.tsx`: Added **"PNR Status"** quick action card on the home dashboard.
+
+
+### 15.12. Revised 10-Hour Charting Rules, Station Culinary Badges, Hands-Free Audio Narration, Station Facilities Directory & Community Travel Tips
+
+* **1. Official Indian Railways 10-Hour Chart Preparation Rules (`src/pages/PnrStatus.tsx`):**
+  - Corrected legacy 4-hour guidance to match current Indian Railways regulations:
+    * **Trains departing after 2:00 PM or before 5:00 AM:** First reservation chart (Chart 1) is prepared exactly **10 hours before** scheduled departure from originating station.
+    * **Trains departing between 5:00 AM and 2:00 PM:** First reservation chart is prepared the previous evening at **8:00 PM** (or 9:00 PM depending on specific zonal updates).
+    * **Second & Final Chart (Chart 2):** Prepared **30 minutes** before scheduled departure for all trains to allocate vacant berths released through current reservation counters.
+
+* **2. Timetable Station Culinary Badges & Interactive Modal (`src/pages/TrainDetails.tsx`, `src/data/stationGastronomy.ts`):**
+  - Mapped iconic station delicacies to station codes (Ratlam `RTM`, Kharagpur `KGP`, Vijayawada `BZA`, Kanpur `CNB`, Jaipur `JP`, Varanasi/MGS `BSB`/`DDU`, Mumbai `CSMT`/`MMCT`, Chennai `MAS`, Patna `PNBE`, Hyderabad `SC`/`HYB`, Pune `PUNE`, Amritsar `ASR`, Kerala `CLT`/`SRR`/`ERS`, Nagpur `NGP`, Bhopal `BPL`/`RKMP`, Mathura `MTJ`).
+  - Automatically renders clickable culinary pills directly inside the timetable row:
+    * e.g., `🍲 Ratlam Sev (10 min halt)`, `☕ Kharagpur Chai (15 min halt)`, `🌶️ Vijayawada Bajji (10 min halt)`.
+    * Differentiates safe halts (enough time to step onto platform) versus short stops where IRCTC e-Catering seat delivery is recommended.
+  - Tapping a badge opens an interactive modal with authentic 960px Wikimedia Commons photos, stall platform locations, passenger halt advisories, and must-try delicacies.
+
+* **3. Hands-Free Railway Story Audio Narration (`src/components/AudioStoryPlayer.tsx`, `src/pages/BlogDetail.tsx`):**
+  - Built an audio player using the browser's native `window.speechSynthesis` API and `SpeechSynthesisUtterance`.
+  - Intelligently chunks article title, subtitle, quick facts, headings, paragraphs, tips, and trivia into natural sentence segments to prevent browser speech timeouts on long text.
+  - Controls: Play, Pause, Resume, Stop, Speed selector (`0.8x`, `1.0x`, `1.25x`, `1.5x`), animated soundwave equalizer, and dynamic progress bar.
+  - Configured with `en-IN` voice pitch and rate tailored for listening while watching scenic landscapes from the train window.
+
+* **4. Smart Station Weather & Platform Amenities Directory (`src/pages/StationExplorer.tsx`, `src/data/stationAmenities.ts`):**
+  - **Live Weather Integration:** Uses station latitude and longitude to query the Open-Meteo current weather API (temperature in °C, sky condition, wind speed, platform comfort).
+  - **Timetable Quick Amenities Bar:** Displays verified amenity chips alongside the timetable so passengers immediately know what facilities are available.
+  - **Dedicated Facilities Directory Tab:** Full categorized explorer (`ALL`, `LOUNGE`, `WAITING`, `CLOAK`, `ELEVATOR`, `WATER`, `ACCESSIBILITY`, `WIFI`) with verified authentic photos and details for:
+    * *IRCTC Executive Lounge* (buffet, recliners, ₹150-200 tariff)
+    * *AC & Upper Class Waiting Halls* (free for ticket holders, separate ladies rooms)
+    * *24-Hour Cloak Room & Luggage Lockers* (secure storage at ₹20/bag)
+    * *Modern Escalators & Lifts* (FOB connectivity for all platforms)
+    * *Water Vending Machines* (Water ATMs dispensing chilled RO/UV water at ₹1 to ₹5/L)
+    * *Wheelchair & Divyangjan Accessibility* (free wheelchairs, Sahayak carts, ramps)
+    * *RailWire Free Wi-Fi* (RailTel 30-min high-speed internet)
+
+* **5. Passenger Travel Tips & Community Section (`src/components/ArticleCommunityTips.tsx`, `src/services/api.ts`):**
+  - Interactive community section on each article allowing logged-in travelers to share authentic travel tips, scenic window advice, and photo experiences.
+  - Category filters: `🌅 Scenic Window View`, `🍲 Platform Food Advice`, `💺 Berth Selection`, `📸 Photography Spot`, `⚡ Booking Tactic`, `🧭 Travel Tip`.
+  - Real-time helpful upvoting with local storage deduplication and REST API synchronization.
+  - Modal form for authenticated users to post new tips with optional photo URLs and travel dates.
