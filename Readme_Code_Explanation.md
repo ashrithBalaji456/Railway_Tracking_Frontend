@@ -1812,3 +1812,51 @@ This section documents the frontend views and components integrated for rail dis
   - **Authentic Indian Railways Imagery:** 100% genuine Indian Railways photographs (no generic foreign trains or stock placeholders).
   - `src/components/Navbar.tsx`: Added "Stories" (Desktop) and "Rail Stories" (Mobile) with `BookOpen` icon.
   - `src/App.tsx`: Registered `/blogs` and `/blogs/:slug` routes.
+
+
+### 15.9. Offline Journey Bookmarking & Interactive RailAI Prompt Integrations
+
+* **`src/utils/bookmarkUtils.ts` (Offline Reading Manager):**
+  - Manages saved article slugs and full JSON payload caching in browser `localStorage` (`rail_saved_articles` and `rail_story_{slug}`).
+  - Provides instant offline access during remote travel across tunnels and low-connectivity railway stretches without requiring mobile data.
+  - Exposes `getSavedArticleSlugs()`, `isArticleSaved(slug)`, `toggleSaveArticle(slug, article)`, and `getOfflineCachedArticle(slug)`.
+
+* **`src/components/RailAiWidget.tsx` (Deep Event Trigger):**
+  - Registered window event listener `rail-ai:open` with payload `{ prompt }`.
+  - When triggered, automatically expands the floating AI assistant widget, sets the input query, and triggers instant assistant reasoning without manual user copy-pasting.
+
+* **`src/pages/BlogDetail.tsx` (Interactive Reader Enhancements):**
+  - **"Save for Journey"** toggle button in the header bar with active bookmark badge.
+  - Offline fallback recovery that restores full articles from `getOfflineCachedArticle` when upstream network drops.
+  - **"Ask RailAI About This Journey"** interactive card with pre-tailored route queries (e.g. scenic window sides, best halts for tea, photographic vantage points).
+
+* **`src/pages/Blogs.tsx` (Saved Stories Filter):**
+  - Added dedicated **"Saved for Journey (X)"** category tab to immediately access downloaded offline reads.
+  - Card-level bookmark icon buttons for 1-click save/unsave straight from the magazine feed.
+
+
+### 15.10. Station Flavors & Trackside Food Explorer
+
+* **`src/data/stationGastronomy.ts` (Authentic Platform Food Directory):**
+  - Curated database of iconic Indian Railways culinary heritage across trunk junction stations:
+    * **Ratlam Jn (RTM):** Legendary Ratlam Laung Sev & Steaming Turmeric Poha.
+    * **Mumbai Stations (CSMT / Central / Dadar / Kalyan):** Batata Vada Pav & Ginger Cutting Chai.
+    * **Kharagpur Jn (KGP):** Earthen Kulhad Milk Tea & Bengali Dim-er Devil (Egg Chops).
+    * **Vijayawada Jn (BZA):** Fiery Guntur Mirchi Bajji & Pesarattu Upma.
+    * **Kanpur Central (CNB):** Iconic Thaggu Ke Laddu & Matka Rabdi Kulfi.
+    * **Jaipur Jn (JP):** Crispy Pyaaz Kachori & Honeycombed Ghevar.
+    * **Varanasi Jn (BSB / BSBS):** Tamatar Chaat in Clay Bowls & Winter Malaiyyo.
+    * **Howrah / Sealdah (HWH / SDAH):** Fish Kabiraji, Kolkata Biryani & Baked Mishti Doi.
+    * **Chennai Central / Egmore (MAS / MS):** Medu Vada Sambar, Ghee Podi Idli & Filter Kaapi.
+    * **Patna Jn (PNBE):** Charcoal-Baked Sattu Litti Chokha with Desi Ghee.
+    * **Bengaluru / Mysuru (SBC / MYS):** Butter Benne Dosa & Melt-in-Mouth Mysore Pak.
+    * **Agra Cantt (AGC):** Angoori & Kesar Petha with Bedai Aloo Sabzi.
+    * **Pan-India Fallback:** Fresh Fried Golden Samosa & Masala Chai with IRCTC MRP guidelines.
+  - Powered by verified Wikimedia Commons CDN photography.
+
+* **`src/pages/StationExplorer.tsx` (Integrated 3rd Mode Tab):**
+  - Added **"🍲 Station Flavors & Food"** tab alongside Scheduled Timetable and Live Station Board.
+  - Features hero delicacy spotlight card with station name, state, description, stall locations, must-try items, and IRCTC travel tips.
+  - Interactive **"Ask RailAI About Station Stalls"** button to find live platform stalls and catering.
+  - One-click deep-link to the editorial story: *Trackside Gastronomy: The Iconic Bites of Indian Railways*.
+  - Grid browser allowing travelers to explore and compare all regional platform specialties across India.

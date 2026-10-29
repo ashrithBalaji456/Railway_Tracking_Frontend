@@ -9,11 +9,13 @@ import {
   ArrowRight, 
   Share2, 
   SlidersHorizontal,
-  Check
+  Check,
+  Bookmark
 } from 'lucide-react';
 import { getBlogs, getBlogCategories } from '../services/api';
 import type { BlogArticle } from '../types';
 import { FALLBACK_BLOGS, BLOG_CATEGORIES } from '../data/fallbackBlogs';
+import { getSavedArticleSlugs, toggleSaveArticle } from '../utils/bookmarkUtils';
 
 export default function Blogs() {
   const navigate = useNavigate();
@@ -22,6 +24,7 @@ export default function Blogs() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+  const [savedSlugs, setSavedSlugs] = useState<string[]>(getSavedArticleSlugs());
 
   useEffect(() => {
     let isMounted = true;
@@ -33,24 +36,27 @@ export default function Blogs() {
         ]);
 
         if (isMounted) {
+          let baseList = FALLBACK_BLOGS;
           if (resArticles.status === 'fulfilled' && resArticles.value?.data) {
-            setArticles(resArticles.value.data);
-          } else {
-            // Fallback filtering locally
-            let filtered = FALLBACK_BLOGS;
-            if (selectedCategory !== 'All') {
-              filtered = filtered.filter(a => a.category.toLowerCase() === selectedCategory.toLowerCase());
-            }
-            if (searchQuery.trim()) {
-              const q = searchQuery.toLowerCase().trim();
-              filtered = filtered.filter(a => 
-                a.title.toLowerCase().includes(q) || 
-                a.subtitle.toLowerCase().includes(q) ||
-                a.tags.some(t => t.toLowerCase().includes(q))
-              );
-            }
-            setArticles(filtered);
+            baseList = resArticles.value.data;
           }
+
+          let filtered = baseList;
+          if (selectedCategory === 'Saved Stories') {
+            filtered = filtered.filter(a => savedSlugs.includes(a.slug));
+          } else if (selectedCategory !== 'All') {
+            filtered = filtered.filter(a => a.category.toLowerCase() === selectedCategory.toLowerCase());
+          }
+
+          if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase().trim();
+            filtered = filtered.filter(a => 
+              a.title.toLowerCase().includes(q) || 
+              a.subtitle.toLowerCase().includes(q) ||
+              a.tags.some(t => t.toLowerCase().includes(q))
+            );
+          }
+          setArticles(filtered);
 
           if (resCategories.status === 'fulfilled' && resCategories.value?.data) {
             setCategories(resCategories.value.data);
@@ -66,7 +72,7 @@ export default function Blogs() {
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, searchQuery, savedSlugs]);
 
   const featuredArticle = articles.find(a => a.featured) || articles[0];
   const regularArticles = articles.filter(a => a.id !== featuredArticle?.id);
@@ -84,6 +90,12 @@ export default function Blogs() {
       setCopiedSlug(slug);
       setTimeout(() => setCopiedSlug(null), 2000);
     }
+  };
+
+  const handleToggleSave = (e: React.MouseEvent, art: BlogArticle) => {
+    e.stopPropagation();
+    toggleSaveArticle(art);
+    setSavedSlugs(getSavedArticleSlugs());
   };
 
   return (
@@ -180,6 +192,17 @@ export default function Blogs() {
 
                   <div className="flex items-center gap-2">
                     <button 
+                      onClick={(e) => handleToggleSave(e, featuredArticle)}
+                      className={`p-2 rounded-xl border transition-colors ${
+                        savedSlugs.includes(featuredArticle.slug)
+                          ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                          : 'bg-slate-800 hover:bg-slate-700 border-slate-700/60 text-slate-300'
+                      }`}
+                      title={savedSlugs.includes(featuredArticle.slug) ? 'Remove from Saved' : 'Save for Journey'}
+                    >
+                      <Bookmark className={`w-4 h-4 ${savedSlugs.includes(featuredArticle.slug) ? 'fill-amber-400 text-amber-400' : ''}`} />
+                    </button>
+                    <button 
                       onClick={(e) => handleShare(e, featuredArticle.slug)}
                       className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
                       title="Share Article"
@@ -250,6 +273,19 @@ export default function Blogs() {
                 </button>
               );
             })}
+
+            {/* Saved Stories Filter Tab */}
+            <button
+              onClick={() => setSelectedCategory('Saved Stories')}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+                selectedCategory === 'Saved Stories'
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-bold'
+                  : 'bg-slate-900/90 text-amber-300 border border-amber-500/30 hover:border-amber-500/50'
+              }`}
+            >
+              <Bookmark className="w-3.5 h-3.5 fill-current" />
+              <span>Saved for Journey ({savedSlugs.length})</span>
+            </button>
           </div>
         </div>
 
@@ -259,7 +295,9 @@ export default function Blogs() {
             <BookOpen className="w-12 h-12 text-slate-600 mx-auto mb-3" />
             <h3 className="text-lg font-bold text-white">No Stories Found</h3>
             <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-              No railway articles matched your search query or selected category filter. Try clearing filters or searching for terms like "Konkan", "Vande Bharat", or "Tatkal".
+              {selectedCategory === 'Saved Stories'
+                ? 'You have not saved any stories yet. Tap the bookmark icon on any article to save it for offline reading on your journey!'
+                : 'No railway articles matched your search query or selected category filter. Try clearing filters or searching for terms like "Konkan", "Vande Bharat", or "Tatkal".'}
             </p>
             <button 
               onClick={() => { setSelectedCategory('All'); setSearchQuery(''); }}
@@ -292,17 +330,31 @@ export default function Blogs() {
                       {article.category}
                     </span>
 
-                    <button 
-                      onClick={(e) => handleShare(e, article.slug)}
-                      className="absolute top-3 right-3 p-2 rounded-lg bg-slate-950/80 backdrop-blur-md text-slate-300 hover:text-white transition-colors"
-                      title="Share Article"
-                    >
-                      {copiedSlug === article.slug ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      ) : (
-                        <Share2 className="w-3.5 h-3.5" />
-                      )}
-                    </button>
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                      <button 
+                        onClick={(e) => handleToggleSave(e, article)}
+                        className={`p-2 rounded-lg backdrop-blur-md transition-colors ${
+                          savedSlugs.includes(article.slug)
+                            ? 'bg-amber-500 text-slate-950 shadow-md'
+                            : 'bg-slate-950/80 text-slate-300 hover:text-white'
+                        }`}
+                        title={savedSlugs.includes(article.slug) ? 'Remove from Saved' : 'Save for Journey'}
+                      >
+                        <Bookmark className={`w-3.5 h-3.5 ${savedSlugs.includes(article.slug) ? 'fill-current' : ''}`} />
+                      </button>
+
+                      <button 
+                        onClick={(e) => handleShare(e, article.slug)}
+                        className="p-2 rounded-lg bg-slate-950/80 backdrop-blur-md text-slate-300 hover:text-white transition-colors"
+                        title="Share Article"
+                      >
+                        {copiedSlug === article.slug ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <Share2 className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Card Body */}

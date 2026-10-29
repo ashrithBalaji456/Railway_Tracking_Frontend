@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Search, Train, Building2, Clock, AlertTriangle, ArrowRight, Heart, CalendarDays, ArrowLeft } from 'lucide-react';
+import { Search, Train, Building2, Clock, AlertTriangle, ArrowRight, Heart, CalendarDays, ArrowLeft, Utensils, Sparkles, MapPin, BookOpen } from 'lucide-react';
 import api from '../services/api';
 import { stationService } from '../services/stationService';
 import { searchHistoryService } from '../services/searchHistoryService';
 import RecentSearchesBar from '../components/RecentSearchesBar';
 import RecentSearchesDropdown from '../components/RecentSearchesDropdown';
 import { getStationDisplayName } from '../utils/stationUtils';
+import { getStationGastronomy, STATION_GASTRONOMY } from '../data/stationGastronomy';
 
 export default function StationExplorer() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -18,7 +19,8 @@ export default function StationExplorer() {
   const [showStationDrop, setShowStationDrop] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
-  const [boardMode, setBoardMode] = useState<'SCHEDULED' | 'LIVE'>('SCHEDULED');
+  const [boardMode, setBoardMode] = useState<'SCHEDULED' | 'LIVE' | 'FOOD'>('SCHEDULED');
+  const [selectedGastronomyCode, setSelectedGastronomyCode] = useState<string | null>(null);
   const [liveHours, setLiveHours] = useState(4);
   const [liveData, setLiveData] = useState<any>(null);
   const [liveLoading, setLiveLoading] = useState(false);
@@ -456,6 +458,18 @@ export default function StationExplorer() {
                   </span>
                 )}
               </button>
+              <button
+                onClick={() => setBoardMode('FOOD')}
+                className={`flex-1 py-3 text-center text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer flex items-center justify-center gap-2 ${boardMode === 'FOOD'
+                    ? 'border-amber-500 text-amber-400 bg-amber-950/10'
+                    : 'border-transparent text-slate-450 hover:text-slate-200'
+                  }`}
+              >
+                <span>🍲 Station Flavors & Food</span>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  Specialty
+                </span>
+              </button>
             </div>
 
             {boardMode === 'SCHEDULED' ? (
@@ -619,7 +633,7 @@ export default function StationExplorer() {
                   </div>
                 )}
               </>
-            ) : (
+            ) : boardMode === 'LIVE' ? (
               <>
                 {/* Live Board Window Selector */}
                 <div className="border-b border-slate-800 bg-slate-950/40 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -860,6 +874,152 @@ export default function StationExplorer() {
                   </div>
                 )}
               </>
+            ) : (
+              /* Station Food & Delicacies Section */
+              (() => {
+                const activeFood = selectedGastronomyCode
+                  ? (STATION_GASTRONOMY.find(item => item.stationCodes.includes(selectedGastronomyCode)) || getStationGastronomy(selectedStation?.stationCode, selectedStation?.state))
+                  : getStationGastronomy(selectedStation?.stationCode, selectedStation?.state);
+
+                const handleAskFoodAi = () => {
+                  const prompt = `What are the most famous local food specialties, platform refreshment stalls, and travel snacks to try at ${activeFood.stationName} (${selectedStation?.stationCode || activeFood.stationCodes[0]})?`;
+                  window.dispatchEvent(new CustomEvent('rail-ai:open', { detail: { prompt } }));
+                };
+
+                return (
+                  <div className="p-4 sm:p-6 space-y-6">
+                    {/* Featured Delicacy Banner */}
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/30 border border-amber-500/30 shadow-xl">
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-5 sm:p-6 items-center">
+                        <div className="lg:col-span-5 relative group overflow-hidden rounded-xl border border-slate-700/60 shadow-lg">
+                          <img
+                            src={activeFood.imageUrl}
+                            alt={activeFood.delicacyTitle}
+                            className="w-full h-56 sm:h-64 object-cover group-hover:scale-105 transition-transform duration-500"
+                            loading="lazy"
+                          />
+                          <div className="absolute top-3 left-3">
+                            <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wide bg-amber-500 text-slate-950 shadow-md">
+                              {activeFood.highlightTag}
+                            </span>
+                          </div>
+                          <div className="absolute bottom-2 right-2 text-[10px] text-slate-300 bg-black/70 backdrop-blur-sm px-2 py-0.5 rounded">
+                            Verified Authentic IRCTC Food
+                          </div>
+                        </div>
+
+                        <div className="lg:col-span-7 space-y-3">
+                          <div className="flex items-center gap-2 text-xs font-semibold text-amber-400">
+                            <Utensils className="w-4 h-4" />
+                            <span>{activeFood.stationName} • {activeFood.state}</span>
+                          </div>
+                          <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">
+                            {activeFood.delicacyTitle}
+                          </h3>
+                          <p className="text-sm text-slate-300 leading-relaxed">
+                            {activeFood.description}
+                          </p>
+
+                          <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
+                            <MapPin className="w-4 h-4 text-rose-400 shrink-0" />
+                            <span><strong>Where to find:</strong> {activeFood.bestPlatformOrStall}</span>
+                          </div>
+
+                          {/* Must Try Items */}
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Must-Try Specialties:</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {activeFood.mustTryItems.map((item, i) => (
+                                <span key={i} className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-950/40 text-amber-200 border border-amber-500/30">
+                                  ✨ {item}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Travel Tip */}
+                          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-200/90 flex items-start gap-2">
+                            <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                            <div>
+                              <strong className="text-amber-300">Platform Travel Tip:</strong> {activeFood.irctcTip}
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex flex-wrap items-center gap-3 pt-2">
+                            <button
+                              type="button"
+                              onClick={handleAskFoodAi}
+                              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                              Ask RailAI About Station Stalls
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => navigate('/blogs/trackside-gastronomy-iconic-food-indian-railways')}
+                              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold border border-slate-700 transition-all cursor-pointer"
+                            >
+                              <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+                              Read Trackside Gastronomy Story
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Explore Iconic Railway Station Foods Across India */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                          <span>🇮🇳 Famous Station Delicacies Across Indian Railways</span>
+                          <span className="text-xs text-slate-500 font-normal">({STATION_GASTRONOMY.length} regional classics)</span>
+                        </h4>
+                        {selectedGastronomyCode && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedGastronomyCode(null)}
+                            className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer"
+                          >
+                            Reset to Current Station
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {STATION_GASTRONOMY.map((item) => {
+                          const isSelected = activeFood.stationCodes[0] === item.stationCodes[0];
+                          return (
+                            <button
+                              key={item.stationCodes[0]}
+                              type="button"
+                              onClick={() => setSelectedGastronomyCode(item.stationCodes[0])}
+                              className={`text-left p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                                isSelected
+                                  ? 'bg-amber-950/30 border-amber-500/50 shadow-md shadow-amber-500/10'
+                                  : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-850'
+                              }`}
+                            >
+                              <div>
+                                <div className="flex items-center justify-between text-[11px] font-bold text-amber-400 mb-1">
+                                  <span>{item.stationCodes.join(', ')}</span>
+                                  <span className="text-slate-400">{item.state}</span>
+                                </div>
+                                <h5 className="text-xs font-bold text-white line-clamp-1">{item.delicacyTitle}</h5>
+                                <p className="text-[11px] text-slate-400 line-clamp-2 mt-1">{item.description}</p>
+                              </div>
+                              <div className="mt-2.5 text-[10px] font-semibold text-indigo-300 flex items-center gap-1">
+                                <span>Explore Taste & Stalls</span>
+                                <ArrowRight className="w-3 h-3" />
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()
             )}
           </div>
         </div>

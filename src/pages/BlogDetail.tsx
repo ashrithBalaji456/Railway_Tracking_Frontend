@@ -17,11 +17,15 @@ import {
   Zap, 
   Shield, 
   Layers, 
-  Award 
+  Award,
+  Bookmark,
+  Bot,
+  MessageSquare
 } from 'lucide-react';
 import { getBlogBySlug } from '../services/api';
 import type { BlogArticle } from '../types';
 import { FALLBACK_BLOGS } from '../data/fallbackBlogs';
+import { isArticleSaved, toggleSaveArticle, getOfflineCachedArticle } from '../utils/bookmarkUtils';
 
 export default function BlogDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -29,6 +33,7 @@ export default function BlogDetail() {
   const [article, setArticle] = useState<BlogArticle | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [copied, setCopied] = useState<boolean>(false);
+  const [isSaved, setIsSaved] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -39,16 +44,30 @@ export default function BlogDetail() {
         const res = await getBlogBySlug(slug);
         if (isMounted && res?.data) {
           setArticle(res.data);
+          setIsSaved(isArticleSaved(res.data.slug));
           return;
         }
       } catch (err) {
-        console.warn('Backend unavailable, using fallback article:', err);
+        console.warn('Backend unavailable, trying offline cache / fallback:', err);
+      }
+
+      // Check offline local cache first
+      if (slug) {
+        const cached = getOfflineCachedArticle(slug);
+        if (cached && isMounted) {
+          setArticle(cached);
+          setIsSaved(true);
+          setLoading(false);
+          return;
+        }
       }
 
       // Fallback lookup
       const found = FALLBACK_BLOGS.find(a => a.slug === slug || a.id === slug);
       if (isMounted) {
-        setArticle(found || FALLBACK_BLOGS[0]);
+        const art = found || FALLBACK_BLOGS[0];
+        setArticle(art);
+        setIsSaved(isArticleSaved(art.slug));
         setLoading(false);
       }
     };
@@ -57,6 +76,75 @@ export default function BlogDetail() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return () => { isMounted = false; };
   }, [slug]);
+
+  const handleToggleSave = () => {
+    if (!article) return;
+    const saved = toggleSaveArticle(article);
+    setIsSaved(saved);
+  };
+
+  const handleAskRailAi = (prompt: string) => {
+    window.dispatchEvent(new CustomEvent('rail-ai:open', { detail: { prompt } }));
+  };
+
+  const getAiPrompts = (art: BlogArticle): string[] => {
+    switch (art.slug) {
+      case 'konkan-railway-scenic-odyssey':
+        return [
+          'What is the best month to see Dudhsagar Falls by train?',
+          'Which side has Arabian Sea views on Mandovi Express from Mumbai to Goa?',
+          'Why does Indian Railways operate a special Monsoon Timetable on Konkan Railway?'
+        ];
+      case 'vande-bharat-evolution-future-sleeper':
+        return [
+          'How does the Kavach anti-collision system work on Vande Bharat?',
+          'When will Vande Bharat Sleeper trains launch for overnight routes?',
+          'What is the top speed and acceleration of Vande Bharat 2.0?'
+        ];
+      case 'pamban-sea-bridge-rameswaram':
+        return [
+          'Is the new Pamban vertical lift sea bridge operational for passenger trains?',
+          'Which trains run from Chennai to Rameswaram over the sea?',
+          'Why do trains run at 10-15 km/h across the Pamban rail bridge?'
+        ];
+      case 'csmt-mumbai-unesco-gothic-wonder':
+        return [
+          'What are the most famous heritage trains departing from CSMT Mumbai?',
+          'Why is CSMT designated as a UNESCO World Heritage site?',
+          'How many platforms are there at CSMT Mumbai?'
+        ];
+      case 'kalka-shimla-unesco-toy-train':
+        return [
+          'How can I book the Him Darshan Vistadome toy train on IRCTC?',
+          'What is the story of Colonel Barog and Tunnel 33 on Kalka-Shimla line?',
+          'What is the travel duration from Kalka to Shimla by toy train?'
+        ];
+      case 'nilgiri-mountain-railway-rack-pinion':
+        return [
+          'Why does the steam engine push the train from behind on Nilgiri Mountain Railway?',
+          'How far in advance do Ooty toy train tickets open on IRCTC?',
+          'What is the route between Mettupalayam and Ooty?'
+        ];
+      case 'mastering-irctc-tatkal-booking-rules':
+        return [
+          'What are the exact Tatkal opening hours for AC and Sleeper tickets?',
+          'Can I get a refund if my Tatkal ticket is waitlisted (WL) after chart preparation?',
+          'How to pre-save passenger details in IRCTC Master List before 10 AM?'
+        ];
+      case 'iconic-station-food-indian-railways':
+        return [
+          'How to order food directly to my train seat using IRCTC e-Catering?',
+          'What are the most famous station snacks in Madhya Pradesh and South India?',
+          'Which stations are known for authentic Kulhad Chai?'
+        ];
+      default:
+        return [
+          `Tell me more about the history of ${art.title}`,
+          `Which trains run on this route in India?`,
+          `What are the best travel tips for this journey?`
+        ];
+    }
+  };
 
   const handleShare = () => {
     const url = window.location.href;
@@ -131,22 +219,37 @@ export default function BlogDetail() {
             <span className="text-slate-500">{article.category}</span>
           </div>
 
-          <button
-            onClick={handleShare}
-            className="self-start sm:self-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-xs font-semibold text-slate-200 transition-all cursor-pointer"
-          >
-            {copied ? (
-              <>
-                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400">Link Copied!</span>
-              </>
-            ) : (
-              <>
-                <Share2 className="w-3.5 h-3.5 text-slate-400" />
-                <span>Share Story</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={handleToggleSave}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+                isSaved
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                  : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white'
+              }`}
+              title={isSaved ? 'Remove from Saved' : 'Save for Offline Journey'}
+            >
+              <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-amber-400 text-amber-400' : ''}`} />
+              <span>{isSaved ? 'Saved for Journey' : 'Save Story'}</span>
+            </button>
+
+            <button
+              onClick={handleShare}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-xs font-semibold text-slate-200 transition-all cursor-pointer"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-emerald-400">Link Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Share</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Article Header Section */}
@@ -344,6 +447,37 @@ export default function BlogDetail() {
               #{tag}
             </span>
           ))}
+        </div>
+
+        {/* Interactive Ask RailAI Section */}
+        <div className="p-6 rounded-3xl border border-indigo-500/30 bg-gradient-to-br from-indigo-950/40 via-slate-900 to-slate-950 space-y-4 shadow-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                <Bot className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>Ask RailAI About This Journey</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium">Gemini 2.5 Flash</span>
+                </h3>
+                <p className="text-xs text-slate-400">Tap any question below to get instant AI travel insights:</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+            {getAiPrompts(article).map((prompt, i) => (
+              <button
+                key={i}
+                onClick={() => handleAskRailAi(prompt)}
+                className="text-left p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-indigo-500/50 hover:bg-indigo-950/20 text-xs text-slate-300 hover:text-white transition-all cursor-pointer flex items-start gap-2 group"
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                <span className="line-clamp-2 leading-relaxed">{prompt}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Read More Stories Section */}

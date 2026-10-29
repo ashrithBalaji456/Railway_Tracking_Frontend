@@ -148,6 +148,20 @@ export default function RailAiWidget() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
+  useEffect(() => {
+    const handleOpenWithPrompt = (e: any) => {
+      const prompt = e.detail?.prompt;
+      setIsOpen(true);
+      if (prompt) {
+        setTimeout(() => {
+          handleSendMessage(prompt);
+        }, 150);
+      }
+    };
+    window.addEventListener('rail-ai:open' as any, handleOpenWithPrompt);
+    return () => window.removeEventListener('rail-ai:open' as any, handleOpenWithPrompt);
+  }, []);
+
   const handleSendMessage = async (textToSend: string) => {
     if (!textToSend.trim() || loading) return;
 
