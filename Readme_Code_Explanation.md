@@ -1800,7 +1800,7 @@ This section documents the frontend views and components integrated for rail dis
       - Blockquote excerpts.
     * **Interactive Train Deep Linking:** Direct action cards for trains featured in the article with one-click **"Track Train"** links navigating directly to `TrainDetails.tsx`.
     * **"More Stories"** carousel and related reads.
-  - `src/data/fallbackBlogs.ts`: Offline-first fallback seed with 8 curated stories ensuring uninterrupted reading experience if network is slow or offline:
+  - `src/data/fallbackBlogs.ts`: Offline-first fallback seed with **14 curated, fully-structured Indian Railways stories** with **4 to 5 verified authentic photos per story** (65+ total verified Wikimedia Commons CDN 960px images):
     1. *The Konkan Railway Odyssey:* Dudhsagar Falls & Western Ghats viaducts (Mandovi Express 10103, Jan Shatabdi 12051, Goa Vande Bharat 22229).
     2. *Vande Bharat 2.0 & Beyond:* Kavach safety armor, 0-100 acceleration, and upcoming Sleeper trains (20607, 22436, 20641).
     3. *The Pamban Sea Bridge:* India’s 2 km historic Scherzer cantilever lift bridge across Palk Strait ocean waves (Boat Mail 16851, Sethu SF 22661).
@@ -1809,7 +1809,13 @@ This section documents the frontend views and components integrated for rail dis
     6. *Nilgiri Mountain Railway (Ooty):* Steepest rack-and-pinion incline in Asia with pusher steam engines (06136, 06137).
     7. *Mastering the Tatkal Rush:* 10:00 AM AC vs 11:00 AM Non-AC rules, Master List pre-filling, and cancellation policies (12723, 12791).
     8. *Trackside Gastronomy:* Ratlam Sev, Kharagpur Kulhad Chai, Vijayawada Mirchi Bajji, and e-Catering to seat.
-  - **Authentic Indian Railways Imagery:** 100% genuine Indian Railways photographs (no generic foreign trains or stock placeholders).
+    9. *Maharajas' Express:* Voted World's Leading Luxury Train 7 times; Navratna Presidential Suite (entire rail coach), Mayur & Rang Mahal dining cars, private butler service (22221, 12002).
+    10. *Palace on Wheels:* Sovereign desert odyssey across Rajasthan; royal saloons named after Rajputana dynasties, Jaisalmer dunes, Udaipur lakes (12413, 12981).
+    11. *Darjeeling Himalayan Railway (UNESCO Toy Train):* 1881 2-foot narrow gauge wonder, Batasia Loop 360° circle, Ghum station at 2,258 m (India's highest), original B-Class steam locos (52541, 52544).
+    12. *The Golden Chariot & Deccan Odyssey:* Royal heritage cruisers of South & West; Hampi stone chariot, Badami caves, Ajanta & Ellora sanctuaries, Goa beaches (16591, 12051).
+    13. *1853 to Present: Complete Chronicles of Indian Railways:* 16 April 1853 maiden run (Sindh, Sultan, Sahib), 1855 Fairy Queen, nationalization, Project Unigauge, 100% green electrification (12138, 12301).
+    14. *Matheran Hill Railway:* Asia's only automobile-free mountain railway; 281 sharp curves, One-Kiss tunnel, red-clay forest peace (52101, 52103).
+  - **Authentic Indian Railways Imagery:** 100% genuine Indian Railways photographs (no generic foreign trains or stock placeholders). Every story includes at least 4-5 verified photographs with contextual captions.
   - `src/components/Navbar.tsx`: Added "Stories" (Desktop) and "Rail Stories" (Mobile) with `BookOpen` icon.
   - `src/App.tsx`: Registered `/blogs` and `/blogs/:slug` routes.
 

@@ -109,6 +109,7 @@ export interface ArticleSection {
   content?: string;
   imageUrl?: string;
   imageCaption?: string;
+  caption?: string;
   altText?: string;
 }
 
