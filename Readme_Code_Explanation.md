@@ -1794,12 +1794,21 @@ This section documents the frontend views and components integrated for rail dis
     * Quick Facts dashboard displaying route length, mountain elevations, test speeds, and tunnel statistics.
     * Multi-format content rendering:
       - Section headings with emerald accents.
-      - Interspersed high-resolution railway photography with captions and lazy loading.
+      - Interspersed high-resolution authentic Indian Railways photography with captions and lazy loading.
       - **"Pro Traveler Tip"** callout cards with warm amber styling.
       - **"Did You Know?"** trivia callout cards with indigo styling.
       - Blockquote excerpts.
-    * **Interactive Train Deep Linking:** Direct action cards for trains featured in the article with one-click **"Track Train"** links navigating to `TrainDetails.tsx`.
+    * **Interactive Train Deep Linking:** Direct action cards for trains featured in the article with one-click **"Track Train"** links navigating directly to `TrainDetails.tsx`.
     * **"More Stories"** carousel and related reads.
-  - `src/data/fallbackBlogs.ts`: Offline-first fallback seed ensuring uninterrupted reading experience if network is slow or offline.
+  - `src/data/fallbackBlogs.ts`: Offline-first fallback seed with 8 curated stories ensuring uninterrupted reading experience if network is slow or offline:
+    1. *The Konkan Railway Odyssey:* Dudhsagar Falls & Western Ghats viaducts (Mandovi Express 10103, Jan Shatabdi 12051, Goa Vande Bharat 22229).
+    2. *Vande Bharat 2.0 & Beyond:* Kavach safety armor, 0-100 acceleration, and upcoming Sleeper trains (20607, 22436, 20641).
+    3. *The Pamban Sea Bridge:* India’s 2 km historic Scherzer cantilever lift bridge across Palk Strait ocean waves (Boat Mail 16851, Sethu SF 22661).
+    4. *CSMT Mumbai Living Legend:* UNESCO Victorian Gothic palace handling 3M commuters (Punjab Mail 12138, Kolkata Mail 12322, Rajdhani 22221).
+    5. *Kalka-Shimla Mountain Railway:* 102 tunnels, Barog tunnel history, and Him Darshan Vistadome (52457, 52453, 52459).
+    6. *Nilgiri Mountain Railway (Ooty):* Steepest rack-and-pinion incline in Asia with pusher steam engines (06136, 06137).
+    7. *Mastering the Tatkal Rush:* 10:00 AM AC vs 11:00 AM Non-AC rules, Master List pre-filling, and cancellation policies (12723, 12791).
+    8. *Trackside Gastronomy:* Ratlam Sev, Kharagpur Kulhad Chai, Vijayawada Mirchi Bajji, and e-Catering to seat.
+  - **Authentic Indian Railways Imagery:** 100% genuine Indian Railways photographs (no generic foreign trains or stock placeholders).
   - `src/components/Navbar.tsx`: Added "Stories" (Desktop) and "Rail Stories" (Mobile) with `BookOpen` icon.
   - `src/App.tsx`: Registered `/blogs` and `/blogs/:slug` routes.
