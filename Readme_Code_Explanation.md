@@ -2008,3 +2008,19 @@ This section documents the frontend views and components integrated for rail dis
   - **Interactive Dynamic Amenities Directory in `StationExplorer.tsx`:**
     * Features an Amrit Bharat Classification card showing tier, annual passenger footfall criteria, and official deployment count.
     * Real-time category filtering: `ALL`, `LOUNGE`, `WAITING`, `CLOAK`, `ELEVATOR`, `WATER`, `ACCESSIBILITY`, `WIFI`, `FOOD`, `MEDICAL`, `SECURITY`, `TRANSIT`.
+
+
+### 15.16. Complete Elimination of Duplicate Editorial Imagery
+
+* **Asset Uniqueness Verification:**
+  - Audited all 70 local story image assets across `Frontend/public/images/blogs/` using cryptographic MD5 checksums, confirming 100% distinct, high-resolution photography.
+  - Aligned all `coverImage` and `imageUrl` properties in `fallbackBlogs.ts` and `BlogServiceImpl.java` to point to their exact distinct assets:
+    - *Vande Bharat 2.0:* Aerodynamic trainsets, Balasore halt, executive rotating seats.
+    - *Pamban Sea Bridge:* Historic ocean cantilever, new vertical-lift bridge, Rameswaram shores.
+    - *CSMT Mumbai Terminus:* Victorian Gothic stone facade, tricolor night illumination, vaulted ceilings.
+    - *Kalka-Shimla Toy Train:* Multi-tier arched stone viaducts, pine forest tracks, Barog station.
+    - *Nilgiri Mountain Railway:* Swiss Abt cogwheels, Nilgiri pusher steam locomotive, Coonoor tea gardens.
+    - *Maharajas' Express & Palace on Wheels:* Royal dining saloons, ruby suites, Jaisalmer arrival.
+    - *Darjeeling Toy Train:* Batasia Loop 360-degree spiral, Ghum summit station.
+    - *Matheran Hill Railway:* Neral junction gateway, tight mountain horseshoe curves.
+    - *1853 to Present History:* 1853 Bori Bunder terminus, 1855 Fairy Queen engine, Bombay Times timetable.
