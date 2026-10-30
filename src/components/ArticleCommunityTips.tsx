@@ -75,9 +75,143 @@ export default function ArticleCommunityTips({ slug }: ArticleCommunityTipsProps
     let isMounted = true;
     const loadTips = async () => {
       setLoading(true);
+      // Curated seed tips map per article
+      const DEFAULT_TIPS_BY_SLUG: Record<string, PassengerTip[]> = {
+        'vande-bharat-evolution-future-sleeper': [
+          {
+            id: 'vb-tip-1',
+            articleSlug: slug,
+            authorName: 'Ananya Deshmukh',
+            authorHandle: '@ananya_travels',
+            category: 'FOOD_TIP',
+            tipText: 'The onboard breakfast service is top-notch! Warm vegetable cutlets, upma, and piping hot tea served right on your fold-out tray table.',
+            photoUrl: '/images/blogs/advice-vande-bharat-catering-tea.jpg',
+            travelDate: 'October 2026',
+            likesCount: 46,
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 'vb-tip-2',
+            articleSlug: slug,
+            authorName: 'Vikram Sethi',
+            authorHandle: '@vikram_rails',
+            category: 'BERTH_ADVICE',
+            tipText: 'Book seats 19 to 24 in Executive Class (EC) for the smoothest ride between the bogies and effortless 180° rotation toward the panoramic window!',
+            photoUrl: '/images/blogs/advice-vande-bharat-rotating-seat.jpg',
+            travelDate: 'October 2026',
+            likesCount: 52,
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 'vb-tip-3',
+            articleSlug: slug,
+            authorName: 'Karthik Raja',
+            authorHandle: '@karthik_techrail',
+            category: 'GENERAL',
+            tipText: 'Connect to the onboard local Wi-Fi intranet on your smartphone to stream movies and monitor the live speed telemetry in real-time as it clocks 130 km/h!',
+            photoUrl: '/images/blogs/advice-vande-bharat-speed-telemetry.jpg',
+            travelDate: 'October 2026',
+            likesCount: 39,
+            createdAt: new Date().toISOString()
+          }
+        ],
+        'kalka-shimla-unesco-toy-train': [
+          {
+            id: 'ks-tip-1',
+            articleSlug: slug,
+            authorName: 'Deepak Sharma',
+            authorHandle: '@deepak_travels',
+            category: 'FOOD_TIP',
+            tipText: 'At Barog station during the 10-minute halt, hop onto the platform for the legendary piping hot vegetable cutlets and masala chai from the heritage refreshment room!',
+            photoUrl: '/images/blogs/advice-kalka-barog-refreshments.jpg',
+            travelDate: 'October 2026',
+            likesCount: 35,
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 'ks-tip-2',
+            articleSlug: slug,
+            authorName: 'Rohit Mehta',
+            authorHandle: '@rohit_himalayas',
+            category: 'SCENIC_SPOT',
+            tipText: 'Always reserve right-side seats when departing Kalka uphill toward Shimla for breathtaking panoramic views of the multi-tier stone arch bridges and Himalayan valleys.',
+            photoUrl: '/images/blogs/advice-kalka-valley-seat.jpg',
+            travelDate: 'October 2026',
+            likesCount: 41,
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 'ks-tip-3',
+            articleSlug: slug,
+            authorName: 'Meera Sen',
+            authorHandle: '@meera_heritage',
+            category: 'GENERAL',
+            tipText: 'Arriving at Shimla station feels like stepping into a Swiss Alpine village. Grab a steaming cup of adrak chai near the old heritage colonial clock tower!',
+            photoUrl: '/images/blogs/advice-kalka-shimla-arrival.jpg',
+            travelDate: 'October 2026',
+            likesCount: 27,
+            createdAt: new Date().toISOString()
+          }
+        ],
+        'nilgiri-mountain-railway-rack-pinion': [
+          {
+            id: 'nm-tip-1',
+            articleSlug: slug,
+            authorName: 'Suresh Raman',
+            authorHandle: '@suresh_ooty',
+            category: 'BERTH_ADVICE',
+            tipText: 'Book the front coach when traveling uphill from Mettupalayam to Ooty. Since the steam engine pushes from behind, your front window has an unobstructed view of the rack-and-pinion tracks!',
+            photoUrl: '/images/blogs/advice-nilgiri-front-coach.jpg',
+            travelDate: 'October 2026',
+            likesCount: 33,
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 'nm-tip-2',
+            articleSlug: slug,
+            authorName: 'Kavita Krishnan',
+            authorHandle: '@kavita_rails',
+            category: 'FOOD_TIP',
+            tipText: 'During the 20-minute water replenishment halt at Coonoor, step out to sample fresh Nilgiri orthodox green tea and handmade hill chocolates!',
+            photoUrl: '/images/blogs/advice-nilgiri-coonoor-tea.jpg',
+            travelDate: 'October 2026',
+            likesCount: 25,
+            createdAt: new Date().toISOString()
+          }
+        ],
+        'konkan-railway-scenic-odyssey': [
+          {
+            id: 'kr-tip-1',
+            articleSlug: slug,
+            authorName: 'Aditya Sharma',
+            authorHandle: '@aditya_rails',
+            category: 'SCENIC_SPOT',
+            tipText: 'Sit on the right side window seat while traveling south from Mumbai to Goa for breathtaking coastal valley and waterfall views during monsoon!',
+            photoUrl: '/images/blogs/advice-konkan-window-seat.jpg',
+            travelDate: 'October 2026',
+            likesCount: 38,
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 'kr-tip-2',
+            articleSlug: slug,
+            authorName: 'Priya Nair',
+            authorHandle: '@priya_travels',
+            category: 'FOOD_TIP',
+            tipText: 'Ratnagiri Alphonso aam panna and Chiplun jackfruit chips from platform vendors are an absolute must-try!',
+            photoUrl: '/images/blogs/advice-konkan-platform-snacks.jpg',
+            travelDate: 'September 2026',
+            likesCount: 29,
+            createdAt: new Date().toISOString()
+          }
+        ]
+      };
+
+      const defaultTips = DEFAULT_TIPS_BY_SLUG[slug] || DEFAULT_TIPS_BY_SLUG['konkan-railway-scenic-odyssey'];
+
       try {
         const res = await getArticleTips(slug);
-        if (isMounted && res?.data) {
+        if (isMounted && res?.data && Array.isArray(res.data) && res.data.length > 0) {
           const liked = getLikedIds();
           const mapped: PassengerTip[] = res.data.map((t: any) => ({
             ...t,
@@ -97,42 +231,16 @@ export default function ArticleCommunityTips({ slug }: ArticleCommunityTipsProps
         const cached = localStorage.getItem(localKey);
         if (cached && isMounted) {
           const parsed = JSON.parse(cached);
-          const liked = getLikedIds();
-          setTips(parsed.map((t: any) => ({ ...t, userLiked: liked.includes(t.id) })));
-          setLoading(false);
-          return;
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const liked = getLikedIds();
+            setTips(parsed.map((t: any) => ({ ...t, userLiked: liked.includes(t.id) })));
+            setLoading(false);
+            return;
+          }
         }
       } catch (e) {
         console.warn('Local storage tips read error:', e);
       }
-
-      // Default seed tips for high-traffic articles
-      const defaultTips: PassengerTip[] = [
-        {
-          id: 'seed-1',
-          articleSlug: slug,
-          authorName: 'Aditya Sharma',
-          authorHandle: '@aditya_rails',
-          category: 'SCENIC_SPOT',
-          tipText: 'Sit on the right side window seat while traveling south from Mumbai to Goa for breathtaking coastal valley and waterfall views during monsoon!',
-          photoUrl: '/images/blogs/advice-konkan-window-seat.jpg',
-          travelDate: 'October 2026',
-          likesCount: 38,
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: 'seed-2',
-          articleSlug: slug,
-          authorName: 'Priya Nair',
-          authorHandle: '@priya_travels',
-          category: 'FOOD_TIP',
-          tipText: 'Ratlam Junction sev and Chiplun jackfruit chips from platform vendors are an absolute must-try!',
-          photoUrl: '/images/blogs/advice-konkan-platform-snacks.jpg',
-          travelDate: 'September 2026',
-          likesCount: 29,
-          createdAt: new Date().toISOString()
-        }
-      ];
 
       if (isMounted) {
         const liked = getLikedIds();

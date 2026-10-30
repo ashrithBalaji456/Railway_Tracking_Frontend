@@ -596,7 +596,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       {
         "type": "image",
         "imageUrl": "/images/blogs/kalka-shimla-unesco-toy-train-4.jpg",
-        "imageCaption": "Inside the luxury Him Darshan Vistadome coach with curved panoramic glass ceilings offering 360-degree views of mountain ridges.",
+        "imageCaption": "The toy train slowing to a halt at a quaint colonial wooden railway station platform under Himalayan pines.",
         "altText": "Heritage wooden platform on Kalka Shimla railway"
       },
       {
