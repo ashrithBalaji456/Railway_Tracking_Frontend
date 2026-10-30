@@ -59,6 +59,7 @@ export default function BlogDetail() {
   // Animated Scroll Tracking
   const [scrollProgress, setScrollProgress] = useState<number>(0);
   const [activeChapterIndex, setActiveChapterIndex] = useState<number>(0);
+  const [trainTopPx, setTrainTopPx] = useState<number>(44);
   const storyContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -198,28 +199,59 @@ export default function BlogDetail() {
       if (!ticking) {
         window.requestAnimationFrame(() => {
           const container = storyContainerRef.current;
-          if (container) {
-            const rect = container.getBoundingClientRect();
-            const windowHeight = window.innerHeight;
-            const totalDistance = rect.height - windowHeight * 0.5;
-
-            if (totalDistance > 0) {
-              const traveled = windowHeight * 0.4 - rect.top;
-              const ratio = Math.max(0, Math.min(1, traveled / totalDistance));
-              setScrollProgress(ratio);
-            }
+          if (!container || chapters.length === 0) {
+            ticking = false;
+            return;
           }
 
-          // Track active chapter
+          const windowHeight = window.innerHeight;
+          // Trigger line: Card highlights IMMEDIATELY when its top enters the top 75% of viewport
+          const triggerLine = windowHeight * 0.75;
+
+          // 1. Determine active chapter: find the latest chapter whose top has crossed into the viewing zone
+          let newActiveIdx = 0;
           chapters.forEach((ch, idx) => {
             const el = document.getElementById(ch.id);
             if (el) {
               const r = el.getBoundingClientRect();
-              if (r.top <= window.innerHeight * 0.45 && r.bottom >= window.innerHeight * 0.2) {
-                setActiveChapterIndex(idx);
+              if (r.top <= triggerLine) {
+                newActiveIdx = idx;
               }
             }
           });
+          setActiveChapterIndex(newActiveIdx);
+
+          // 2. Calculate exact pixel position of the locomotive along the continuous railway track
+          const activeEl = document.getElementById(chapters[newActiveIdx]?.id);
+          if (activeEl) {
+            const activeNodeCenter = activeEl.offsetTop + 44; // pt-6 + button radius
+
+            const nextEl = chapters[newActiveIdx + 1] ? document.getElementById(chapters[newActiveIdx + 1].id) : null;
+            if (nextEl) {
+              const nextNodeCenter = nextEl.offsetTop + 44;
+              const rNext = nextEl.getBoundingClientRect();
+              const distanceBetween = Math.max(1, nextNodeCenter - activeNodeCenter);
+              
+              // As next chapter approaches the trigger line from the bottom, smoothly glide the locomotive
+              const approachDistance = windowHeight - triggerLine;
+              const currentOffset = windowHeight - rNext.top;
+              const progressToNext = Math.max(0, Math.min(1, currentOffset / approachDistance));
+              
+              const currentTrainY = activeNodeCenter + (progressToNext * distanceBetween);
+              setTrainTopPx(currentTrainY);
+            } else {
+              setTrainTopPx(activeNodeCenter);
+            }
+          }
+
+          // 3. Overall ratio for top mobile progress bar
+          const rect = container.getBoundingClientRect();
+          const totalDistance = rect.height - windowHeight * 0.4;
+          if (totalDistance > 0) {
+            const traveled = (windowHeight * 0.5) - rect.top;
+            const ratio = Math.max(0, Math.min(1, traveled / totalDistance));
+            setScrollProgress(ratio);
+          }
 
           ticking = false;
         });
@@ -228,14 +260,18 @@ export default function BlogDetail() {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll, { passive: true });
     handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
   }, [chapters]);
 
   const scrollToChapter = (chapterId: string) => {
     const el = document.getElementById(chapterId);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -525,14 +561,14 @@ export default function BlogDetail() {
 
             {/* Live Glowing Track Progress Fill */}
             <div 
-              className="absolute top-0 w-[4px] bg-gradient-to-b from-amber-400 via-emerald-400 to-cyan-400 rounded-full shadow-[0_0_14px_rgba(251,191,36,0.85)] transition-all duration-100 ease-out"
-              style={{ height: `${Math.min(100, Math.max(0, scrollProgress * 100))}%` }}
+              className="absolute top-0 w-[4px] bg-gradient-to-b from-amber-400 via-emerald-400 to-cyan-400 rounded-full shadow-[0_0_14px_rgba(251,191,36,0.85)] transition-all duration-75 ease-out"
+              style={{ height: `${Math.max(0, trainTopPx)}px` }}
             />
 
             {/* Animated Moving Locomotive Engine Indicator */}
             <div 
-              className="absolute -translate-x-1/2 left-1/2 transition-all duration-150 ease-out z-20 pointer-events-none"
-              style={{ top: `${Math.min(98, Math.max(0, scrollProgress * 100))}%` }}
+              className="absolute -translate-x-1/2 left-1/2 -translate-y-1/2 transition-all duration-100 ease-out z-20 pointer-events-none"
+              style={{ top: `${trainTopPx}px` }}
             >
               <div className="w-8 h-8 rounded-full bg-slate-900 border-2 border-amber-400 flex items-center justify-center shadow-[0_0_18px_rgba(251,191,36,0.95)] animate-pulse">
                 <Train className="w-4 h-4 text-amber-300" />
