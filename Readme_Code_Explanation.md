@@ -1977,3 +1977,34 @@ This section documents the frontend views and components integrated for rail dis
       1. **Trains departing after 2:00 PM or before 5:00 AM:** First reservation chart is finalized exactly **10 hours** before departure.
       2. **Trains departing between 5:00 AM and 2:00 PM:** First chart is finalized the previous evening at **8:00 PM** (or 9:00 PM per zonal circulars).
       3. **Second & Final Chart:** Finalized **30 minutes** before scheduled departure for all trains.
+
+
+### 15.15. 8,500+ Pan-India Station Gastronomy Engine & Amrit Bharat Amenities System
+
+* **1. Comprehensive 8,542 Indian Railway Station Mapping (`src/data/allStationsMeta.json`):**
+  - Synthesized a high-speed, compact JSON database containing all 8,542 operational railway stations in India directly derived from official railway master records.
+  - Each station entry indexes: `[stationName, state, zone, newCategory, district]`.
+  - Enables instant, 0-latency resolution of station parameters across all 32 States & Union Territories and 16 Railway Zones without database queries.
+
+* **2. 100% Pan-India Station Gastronomy & Trackside Delicacies Engine (`src/data/stationGastronomy.ts`):**
+  - **Hierarchical Triple-Tier Culinary Resolution:**
+    1. *Iconic Junction Signature Delicacies (100+ Top Junctions):* Famous station signatures (e.g. Ratlam Sev, Kharagpur Kulhad Chai & Egg Chop, Vijayawada Mirchi Bajji, Mumbai Vada Pav, Pune Misal & Lonavala Chikki, Kanpur Thaggu Ke Laddu, Jaipur Pyaaz Kachori, Varanasi Tamatar Chaat, Howrah Fish Kabiraji & Mishti Doi, Chennai Filter Kaapi, Patna Litti Chokha, Bengaluru Benne Dosa, Amritsari Kulcha, Agra Petha, Mathura Peda, Kozhikode Pazham Pori & Banana Chips, Hyderabad Dum Biryani, etc.).
+    2. *State-Level Regional Gastronomy Registry (All 32 States & UTs):* When a station does not have an isolated junction signature, the engine dynamically pairs it with its state's authentic trackside culinary heritage (e.g., Gujarat -> Surati Locho/Dhokla, Odisha -> Cuttack Dahi Bara/Pahala Rasgulla, Assam -> Malty CTC Tea & Pitha, Jammu & Kashmir -> Saffron Kehwa & Kaladi Kulcha, Goa -> Goan Poi & Bebinca, etc.).
+    3. *Universal Indian Railways Classic Fallback:* Platform Hot Samosa with Ginger Cardamom Tea.
+  - **Dynamic Route Timetable Badge Injection (`TrainDetails.tsx`):**
+    * Automatically computes halt duration and labels stations:
+      - Stops under 5 mins: `⚡ Quick Grab (2 min quick halt)` with caution styling so passengers don't miss departures.
+      - Stops 10+ mins: `🍲 Ratlam Sev (10 min - Safe step-out)` inviting passengers down onto the platform.
+    * Interactive modal displays verified platform stall locations, IRCTC travel tips, must-try items, and photos.
+
+* **3. Official Amrit Bharat Station Categorization & Passenger Amenities System (`src/data/stationAmenities.ts`, `StationExplorer.tsx`):**
+  - **Categorization Engine (NSG-1 to NSG-6, SG-1 to SG-3, HG-1 to HG-3):**
+    * Evaluates each station's official Indian Railways Citizens' Charter grade:
+      - *NSG-1 & NSG-2 (Mega Terminals):* 18 amenities (IRCTC Executive Lounge, Sleeping Pods, AC Resting Halls, Biometric Smart Lockers, Stretcher Glass Elevators, Electric Buggy Carts, Janani Sewa Nursing Pods, 24/7 Medical Booth, Pre-paid Taxi Bays).
+      - *NSG-3 & NSG-4 (Major Junctions):* 14 amenities (Upper Class Waiting Halls, Cloak Rooms, FOB Escalators, Water ATMs, Food Plazas, RPF Help Desk, Coach Indicators).
+      - *NSG-5 & NSG-6 (Town Stations):* 8 core passenger amenities (All-weather covered shelters, RO pure water posts, ATVM ticketing, RailWire optical fiber Wi-Fi, Divyangjan ramps).
+      - *SG-1 to SG-3 (Suburban Hubs):* Commuter-density amenities (ATVMs, High-capacity FOBs, suburban indicators, fast-commute medical booths).
+      - *HG-1 to HG-3 (Rural Halts):* Passenger waiting shed, deep-bore water post, solar lighting, ramp approach.
+  - **Interactive Dynamic Amenities Directory in `StationExplorer.tsx`:**
+    * Features an Amrit Bharat Classification card showing tier, annual passenger footfall criteria, and official deployment count.
+    * Real-time category filtering: `ALL`, `LOUNGE`, `WAITING`, `CLOAK`, `ELEVATOR`, `WATER`, `ACCESSIBILITY`, `WIFI`, `FOOD`, `MEDICAL`, `SECURITY`, `TRANSIT`.

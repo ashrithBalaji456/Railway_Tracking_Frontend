@@ -8,7 +8,7 @@ import RecentSearchesBar from '../components/RecentSearchesBar';
 import RecentSearchesDropdown from '../components/RecentSearchesDropdown';
 import { getStationDisplayName } from '../utils/stationUtils';
 import { getStationGastronomy, STATION_GASTRONOMY } from '../data/stationGastronomy';
-import { STATION_AMENITIES, type StationAmenity } from '../data/stationAmenities';
+import { STATION_AMENITIES, type StationAmenity, getStationAmenitiesForStation, getStationCategoryDetails } from '../data/stationAmenities';
 import { X } from 'lucide-react';
 
 export default function StationExplorer() {
@@ -23,6 +23,9 @@ export default function StationExplorer() {
 
   const [boardMode, setBoardMode] = useState<'SCHEDULED' | 'LIVE' | 'FOOD' | 'FACILITIES'>('SCHEDULED');
   const [selectedAmenityModal, setSelectedAmenityModal] = useState<StationAmenity | null>(null);
+
+  const stationAmenitiesList = getStationAmenitiesForStation(selectedStation?.stationCode, selectedStation?.newCategory || selectedStation?.category);
+  const stationCatDetails = getStationCategoryDetails(selectedStation?.stationCode || selectedStation?.newCategory || selectedStation?.category);
   const [amenityFilter, setAmenityFilter] = useState<string>('ALL');
   const [weather, setWeather] = useState<{ temperature: number; windspeed: number; weathercode: number } | null>(null);
   const [selectedGastronomyCode, setSelectedGastronomyCode] = useState<string | null>(null);
@@ -535,7 +538,7 @@ export default function StationExplorer() {
               >
                 <span>🏢 Station Facilities</span>
                 <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  {STATION_AMENITIES.length}
+                  {stationAmenitiesList.length}
                 </span>
               </button>
             </div>
@@ -551,7 +554,7 @@ export default function StationExplorer() {
                     <span className="text-slate-400 text-[10px] hidden md:inline">Key platform facilities available here:</span>
                   </div>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {STATION_AMENITIES.map((am) => (
+                    {stationAmenitiesList.slice(0, 8).map((am) => (
                       <button
                         key={am.id}
                         type="button"
@@ -976,9 +979,11 @@ export default function StationExplorer() {
             ) : boardMode === 'FOOD' ? (
               /* Station Food & Delicacies Section */
               (() => {
-                const activeFood = selectedGastronomyCode
-                  ? (STATION_GASTRONOMY.find(item => item.stationCodes.includes(selectedGastronomyCode)) || getStationGastronomy(selectedStation?.stationCode, selectedStation?.state))
-                  : getStationGastronomy(selectedStation?.stationCode, selectedStation?.state);
+                const activeFood = getStationGastronomy(
+                    selectedGastronomyCode || selectedStation?.stationCode,
+                    selectedStation?.state,
+                    selectedStation?.district
+                  );
 
                 const handleAskFoodAi = () => {
                   const prompt = `What are the most famous local food specialties, platform refreshment stalls, and travel snacks to try at ${activeFood.stationName} (${selectedStation?.stationCode || activeFood.stationCodes[0]})?`;
@@ -998,7 +1003,7 @@ export default function StationExplorer() {
                             className="w-full h-56 sm:h-64 object-cover group-hover:scale-105 transition-transform duration-500"
                             loading="lazy"
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Vada_Pav-Indian_street_food.JPG/960px-Vada_Pav-Indian_street_food.JPG';
+                              (e.target as HTMLImageElement).src = '/images/gastronomy/ratlam_sev.jpg';
                             }}
                           />
                           <div className="absolute top-3 left-3">
@@ -1155,9 +1160,33 @@ export default function StationExplorer() {
                   </div>
                 </div>
 
+                {/* Station Classification Banner */}
+                {selectedStation && (
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-950 border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-semibold text-slate-400">Amrit Bharat Station Classification:</span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase border ${stationCatDetails.badgeColor}`}>
+                          {stationCatDetails.code} • {stationCatDetails.tier.replace('_', ' ')}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-bold text-white">{selectedStation.stationName || selectedStation.stationCode} ({selectedStation.stationCode})</h4>
+                      <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">{stationCatDetails.description}</p>
+                      <span className="text-[10px] text-slate-400 block">Footfall Criteria: {stationCatDetails.passengerFootfall}</span>
+                    </div>
+                    <div className="md:text-right shrink-0 p-3 rounded-xl bg-slate-950/80 border border-slate-800">
+                      <span className="text-lg font-black text-emerald-400 block">{stationAmenitiesList.length} Facilities</span>
+                      <span className="text-[10px] text-slate-400">Deployed under IR Citizens' Charter</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Amenities Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {(amenityFilter === 'ALL' ? STATION_AMENITIES : STATION_AMENITIES.filter(a => a.category === amenityFilter)).map((item) => (
+                  {((amenityFilter === 'ALL' ? stationAmenitiesList : stationAmenitiesList.filter(a => a.category === amenityFilter)).length > 0
+                    ? (amenityFilter === 'ALL' ? stationAmenitiesList : stationAmenitiesList.filter(a => a.category === amenityFilter))
+                    : (amenityFilter === 'ALL' ? STATION_AMENITIES : STATION_AMENITIES.filter(a => a.category === amenityFilter))
+                  ).map((item) => (
                     <div
                       key={item.id}
                       onClick={() => setSelectedAmenityModal(item)}
@@ -1172,7 +1201,7 @@ export default function StationExplorer() {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             loading="lazy"
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e1/Chhatrapati_Shivaji_Terminus_Building_20.jpg/960px-Chhatrapati_Shivaji_Terminus_Building_20.jpg';
+                              (e.target as HTMLImageElement).src = '/images/amenities/waiting_hall.jpg';
                             }}
                           />
                           <span className="absolute top-2 left-2 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-950/85 text-emerald-300 border border-emerald-500/30 backdrop-blur-md">
@@ -1225,7 +1254,7 @@ export default function StationExplorer() {
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e1/Chhatrapati_Shivaji_Terminus_Building_20.jpg/960px-Chhatrapati_Shivaji_Terminus_Building_20.jpg';
+                  (e.target as HTMLImageElement).src = '/images/amenities/waiting_hall.jpg';
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
