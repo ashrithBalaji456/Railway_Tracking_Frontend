@@ -2024,3 +2024,32 @@ This section documents the frontend views and components integrated for rail dis
     - *Darjeeling Toy Train:* Batasia Loop 360-degree spiral, Ghum summit station.
     - *Matheran Hill Railway:* Neral junction gateway, tight mountain horseshoe curves.
     - *1853 to Present History:* 1853 Bori Bunder terminus, 1855 Fairy Queen engine, Bombay Times timetable.
+
+
+### 15.17. High-Definition Editorial Architecture, Zig-Zag Layout & Animated Scroll Thread
+
+* **1. Crystal-Clear 1080p/2K High-Definition Imagery:**
+  - Audited and upgraded all 70 local railway photography assets in `public/images/blogs/` to uncompressed 1920px Full HD and 2K originals sourced directly from high-resolution archives.
+  - Eliminated all low-resolution/blurry thumbnails (e.g. upgraded Golden Chariot platform from 496x370 / 29 KB to crystal-clear 1920px / 446 KB).
+  - Configured hardware-accelerated image smoothing via `image-rendering: -webkit-optimize-contrast` and sleek ambient glassmorphism container frames.
+  - Mirrored all 70 high-res assets to `Backend/src/main/resources/static/images/blogs/` for zero-latency, 100% offline-ready operation.
+
+* **2. Responsive Alternating Zig-Zag Chapter Layout (`src/pages/BlogDetail.tsx`):**
+  - **Dynamic Chapter Ingestion:** `useMemo` dynamically synthesizes linear article sections into structured `StoryChapter` models with dedicated titles, rich paragraphs, high-res images, and pro traveler tips/trivia.
+  - **Even Chapters (Milestones 01, 03, 05):** Text, historical lore, and callouts on the Left (7 columns); High-Definition Photo Frame with zoom-on-hover on the Right (5 columns).
+  - **Odd Chapters (Milestones 02, 04):** High-Definition Photo Frame on the Left (5 columns); Text and civil engineering analysis on the Right (7 columns).
+  - **Mobile Stacking:** Intelligently stacks chapter title, visual photograph, prose, and callouts in natural visual hierarchy on mobile screens.
+
+* **3. Scroll-Following Railway Track Thread Animation:**
+  - **Desktop Railway Spine:** Features a realistic dual-rail track with wooden ties running alongside the story.
+  - **Live Dynamic Track Fill:** An energetic amber-emerald-cyan glowing track fills progressively (`0%` to `100%`) based on `window.scrollY`.
+  - **Animated Locomotive Engine:** An illuminated train engine icon (`<Train />`) with pulse glow rides at the leading tip of the scroll progress bar.
+  - **Milestone Station Beads:** Numbered station beads light up with an energetic amber beacon as the train passes each milestone, allowing one-click smooth scrolling to any chapter.
+  - **Mobile Progress Header:** A sticky glassmorphism top header showing current chapter title and a live horizontal train track progress bar.
+
+* **4. Deep, Comprehensive Editorial Narratives for All 14 Stories:**
+  - Expanded all 14 stories in `src/data/fallbackBlogs.ts` and `BlogServiceImpl.java` into complete, long-form editorial chapters (1,000 to 1,500+ words per story) covering historical genesis, civil engineering, route geography, onboard luxury, and passenger guides.
+  - **Official Reservation Chart Preparation Rules:** Standardized across `PnrStatus.tsx`, `fallbackBlogs.ts`, and `BlogServiceImpl.java`:
+    - First Chart: Prepared 10 hours before departure for trains departing after 2:00 PM or before 5:00 AM; prepared the previous night at 8:00 PM (or 9:00 PM) for trains departing between 5:00 AM and 2:00 PM.
+    - Final Chart: Prepared exactly 30 minutes before departure for all trains.
+
