@@ -507,84 +507,88 @@ export default function BlogDetail() {
         {/* ========================================================================= */}
         <div ref={storyContainerRef} className="relative pt-6">
           
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
-            {/* Desktop Left Rail Track Navigator Spine */}
-            <aside className="hidden lg:block lg:col-span-1 sticky top-24 self-start py-6">
-              <div className="flex flex-col items-center relative min-h-[500px]">
-                
-                {/* Visual Railway Track Rails */}
-                <div className="absolute top-2 bottom-2 w-4 flex justify-between pointer-events-none">
-                  {/* Left Rail */}
-                  <div className="w-[3px] bg-slate-800 h-full rounded-full" />
-                  {/* Right Rail */}
-                  <div className="w-[3px] bg-slate-800 h-full rounded-full" />
-                </div>
+          {/* Continuous Railway Track Spine running from Chapter 1 to the last Chapter */}
+          <div className="absolute top-10 bottom-12 left-5 sm:left-7 lg:left-8 -translate-x-1/2 w-6 flex flex-col items-center pointer-events-none z-0">
+            {/* Dual Steel Rails */}
+            <div className="absolute inset-y-0 w-4 flex justify-between">
+              <div className="w-[3px] bg-slate-800 h-full rounded-full" />
+              <div className="w-[3px] bg-slate-800 h-full rounded-full" />
+            </div>
 
-                {/* Live Glowing Railway Fill Track */}
-                <div 
-                  className="absolute top-2 w-[4px] bg-gradient-to-b from-amber-400 via-emerald-400 to-cyan-400 rounded-full shadow-[0_0_12px_rgba(251,191,36,0.6)] transition-all duration-75"
-                  style={{ height: `${Math.round(scrollProgress * 92)}%` }}
-                />
+            {/* Wooden Railway Ties (Sleepers) */}
+            <div 
+              className="absolute inset-y-0 w-5 opacity-40"
+              style={{
+                backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0px, transparent 18px, #475569 18px, #475569 22px)'
+              }}
+            />
 
-                {/* Animated Moving Locomotive Engine Indicator */}
-                <div 
-                  className="absolute left-1/2 -translate-x-1/2 transition-all duration-150 ease-out z-20 pointer-events-none"
-                  style={{ top: `${Math.round(scrollProgress * 90)}%` }}
-                >
-                  <div className="w-8 h-8 rounded-full bg-slate-900 border-2 border-amber-400 flex items-center justify-center shadow-[0_0_15px_rgba(251,191,36,0.8)] animate-pulse">
-                    <Train className="w-4 h-4 text-amber-300" />
-                  </div>
-                </div>
+            {/* Live Glowing Track Progress Fill */}
+            <div 
+              className="absolute top-0 w-[4px] bg-gradient-to-b from-amber-400 via-emerald-400 to-cyan-400 rounded-full shadow-[0_0_14px_rgba(251,191,36,0.85)] transition-all duration-100 ease-out"
+              style={{ height: `${Math.min(100, Math.max(0, scrollProgress * 100))}%` }}
+            />
 
-                {/* Chapter Milestone Station Nodes */}
-                <div className="flex flex-col justify-between h-[480px] w-full z-10">
-                  {chapters.map((ch, idx) => {
-                    const isPassed = scrollProgress * chapters.length >= idx;
-                    const isActive = activeChapterIndex === idx;
-
-                    return (
-                      <button
-                        key={ch.id}
-                        onClick={() => scrollToChapter(ch.id)}
-                        title={`Jump to Chapter ${idx + 1}: ${ch.title}`}
-                        className={`group relative flex items-center justify-center cursor-pointer transition-all ${
-                          isActive ? 'scale-125' : 'hover:scale-110'
-                        }`}
-                      >
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black font-mono transition-all duration-300 ${
-                          isActive 
-                            ? 'bg-amber-400 text-slate-950 ring-4 ring-amber-400/30 shadow-[0_0_12px_rgba(251,191,36,0.9)]' 
-                            : isPassed
-                            ? 'bg-emerald-500 text-slate-950 shadow-[0_0_8px_rgba(16,185,129,0.7)]'
-                            : 'bg-slate-900 border-2 border-slate-700 text-slate-400 hover:border-slate-500'
-                        }`}>
-                          {idx + 1}
-                        </div>
-
-                        {/* Hover Tooltip with Chapter Title */}
-                        <div className="absolute left-9 px-2.5 py-1 rounded-md bg-slate-900/95 border border-slate-700 text-[11px] font-semibold text-slate-200 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl z-30">
-                          {ch.title}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
+            {/* Animated Moving Locomotive Engine Indicator */}
+            <div 
+              className="absolute -translate-x-1/2 left-1/2 transition-all duration-150 ease-out z-20 pointer-events-none"
+              style={{ top: `${Math.min(98, Math.max(0, scrollProgress * 100))}%` }}
+            >
+              <div className="w-8 h-8 rounded-full bg-slate-900 border-2 border-amber-400 flex items-center justify-center shadow-[0_0_18px_rgba(251,191,36,0.95)] animate-pulse">
+                <Train className="w-4 h-4 text-amber-300" />
               </div>
-            </aside>
+            </div>
+          </div>
 
-            {/* Chapters Container in Zig-Zag Layout */}
-            <div className="lg:col-span-11 space-y-16">
-              {chapters.map((ch, idx) => {
-                const isEven = idx % 2 === 0;
+          {/* Chapters Container: Each card has its corresponding milestone number directly beside it */}
+          <div className="space-y-12 sm:space-y-16">
+            {chapters.map((ch, idx) => {
+              const isEven = idx % 2 === 0;
+              const isActive = activeChapterIndex === idx;
+              const isPassed = activeChapterIndex > idx;
 
-                return (
-                  <section 
-                    key={ch.id} 
-                    id={ch.id}
-                    className="scroll-mt-28 p-6 sm:p-8 rounded-3xl border border-slate-800/80 bg-gradient-to-br from-slate-900/80 via-slate-950/70 to-slate-900/40 backdrop-blur-md shadow-2xl transition-all hover:border-slate-700"
-                  >
+              return (
+                <div 
+                  key={ch.id} 
+                  id={ch.id}
+                  className="relative flex items-start gap-3 sm:gap-6 lg:gap-8 scroll-mt-24 group/chapter"
+                >
+                  {/* Milestone Station Node - Perfectly Aligned Beside THIS Card */}
+                  <div className="shrink-0 w-10 sm:w-14 lg:w-16 flex flex-col items-center pt-6 z-10">
+                    <button
+                      type="button"
+                      onClick={() => scrollToChapter(ch.id)}
+                      title={`Jump to Chapter ${idx + 1}: ${ch.title}`}
+                      className={`group relative flex items-center justify-center cursor-pointer transition-all ${
+                        isActive ? 'scale-125' : 'hover:scale-110'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-black font-mono transition-all duration-300 ${
+                        isActive 
+                          ? 'bg-amber-400 text-slate-950 ring-4 ring-amber-400/40 shadow-[0_0_18px_rgba(251,191,36,1)] scale-110' 
+                          : isPassed
+                          ? 'bg-emerald-500 text-slate-950 shadow-[0_0_10px_rgba(16,185,129,0.8)]'
+                          : 'bg-slate-900 border-2 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200'
+                      }`}>
+                        {idx + 1}
+                      </div>
+
+                      {/* Station Name Label Tag */}
+                      <span className={`absolute -bottom-5 text-[9px] font-bold font-mono tracking-wider transition-colors ${
+                        isActive ? 'text-amber-400 font-black' : isPassed ? 'text-emerald-400' : 'text-slate-500'
+                      }`}>
+                        CH {String(idx + 1).padStart(2, '0')}
+                      </span>
+
+                      {/* Hover Tooltip with Chapter Title */}
+                      <div className="absolute left-12 sm:left-14 px-2.5 py-1 rounded-md bg-slate-900/95 border border-slate-700 text-[11px] font-semibold text-slate-200 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl z-30">
+                        Chapter {idx + 1}: {ch.title}
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Chapter Card Section in Zig-Zag Layout */}
+                  <section className="flex-1 min-w-0 p-5 sm:p-8 rounded-3xl border border-slate-800/80 bg-gradient-to-br from-slate-900/80 via-slate-950/70 to-slate-900/40 backdrop-blur-md shadow-2xl transition-all hover:border-slate-700">
                     
                     {/* Chapter Header Badge */}
                     <div className="flex items-center gap-2 mb-6">
@@ -760,10 +764,9 @@ export default function BlogDetail() {
 
                     </div>
                   </section>
-                );
-              })}
-            </div>
-
+                </div>
+              );
+            })}
           </div>
 
         </div>
