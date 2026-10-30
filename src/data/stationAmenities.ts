@@ -163,7 +163,7 @@ export const MASTER_STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Platform 1 near Station Superintendent Office',
     tariffsAndRules: 'Complimentary for all female passengers holding a valid railway travel ticket.',
     availability: '24/7 dedicated surveillance and assistance.',
-    imageUrl: '/images/amenities/waiting_hall.jpg',
+    imageUrl: '/images/amenities/ladies_waiting.jpg',
     applicableCategories: ['NSG1', 'NSG2', 'NSG3', 'NSG4']
   },
   {
@@ -191,7 +191,7 @@ export const MASTER_STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: '1st & 2nd Floor above Main Concourse Building',
     tariffsAndRules: 'Bookable online via IRCTC Tourism portal or station counter using a valid PNR (from 3 hours up to 48 hours). Tariffs start from ₹150 for dormitory beds to ₹800 for AC rooms.',
     availability: 'Available at all NSG-1 to NSG-4 junction stations across India.',
-    imageUrl: '/images/amenities/waiting_hall.jpg',
+    imageUrl: '/images/amenities/retiring_room.jpg',
     applicableCategories: ['NSG1', 'NSG2', 'NSG3', 'NSG4']
   },
   {
@@ -205,7 +205,7 @@ export const MASTER_STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Connecting all platform tracks (Center and ends of platforms)',
     tariffsAndRules: 'Free public passenger amenity. Priority given to senior citizens, Divyangjan travelers, and families with heavy luggage.',
     availability: 'Operational 24/7 with on-site railway electrical maintenance staff.',
-    imageUrl: '/images/amenities/escalators_lifts.jpg',
+    imageUrl: '/images/amenities/escalators_fob.jpg',
     applicableCategories: ['NSG1', 'NSG2', 'NSG3', 'NSG4', 'SG1', 'SG2']
   },
   {
@@ -219,7 +219,7 @@ export const MASTER_STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Installed every 100 meters on all passenger platforms',
     tariffsAndRules: '₹1 for 300ml glass refill, ₹3 for 500ml container, ₹5 for 1000ml (1 liter) refill, and ₹8 for fresh container + 1 liter water.',
     availability: '24/7 automated coin and QR UPI payment dispensing.',
-    imageUrl: '/images/amenities/water_vending.jpg',
+    imageUrl: '/images/amenities/water_atm.jpg',
     applicableCategories: ['NSG1', 'NSG2', 'NSG3', 'NSG4', 'NSG5', 'SG1', 'SG2', 'SG3']
   },
   {
@@ -233,7 +233,7 @@ export const MASTER_STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Seamless wireless coverage across entire station concourse and all platform tracks',
     tariffsAndRules: 'First 30 minutes complimentary per mobile device per day (OTP login). High-speed extended packs available starting from ₹10.',
     availability: 'Available 24/7 across all electrified stations.',
-    imageUrl: '/images/amenities/escalators_lifts.jpg',
+    imageUrl: '/images/amenities/railwire_wifi.jpg',
     applicableCategories: ['NSG1', 'NSG2', 'NSG3', 'NSG4', 'NSG5', 'NSG6', 'SG1', 'SG2', 'SG3']
   },
   {
@@ -247,7 +247,7 @@ export const MASTER_STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Station Master / Deputy Station Superintendent Office on Platform 1',
     tariffsAndRules: 'Wheelchairs provided free of cost upon submitting a valid ID card or PNR. Advance booking available via Indian Railways 139 helpline.',
     availability: 'Available 24/7 at all stations.',
-    imageUrl: '/images/amenities/waiting_hall.jpg',
+    imageUrl: '/images/amenities/wheelchair_ramp.jpg',
     applicableCategories: ['NSG1', 'NSG2', 'NSG3', 'NSG4', 'NSG5', 'NSG6', 'SG1', 'SG2', 'SG3', 'HG1', 'HG2', 'HG3']
   },
   {
@@ -261,7 +261,7 @@ export const MASTER_STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Platform 1 Main Portico & Inter-Platform Concourse',
     tariffsAndRules: 'Free for Divyangjan passengers; nominal ₹40-50 per passenger for general senior citizen booking.',
     availability: 'Operational 24/7 at NSG-1 and NSG-2 mega terminals.',
-    imageUrl: '/images/amenities/executive_lounge.jpg',
+    imageUrl: '/images/amenities/battery_buggy.jpg',
     applicableCategories: ['NSG1', 'NSG2']
   },
   {
@@ -275,7 +275,7 @@ export const MASTER_STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Platform 1 & Central Elevated Concourse',
     tariffsAndRules: 'IRCTC Janata Khana thalis available at statutory rate of ₹15 to ₹20; branded food at menu rates.',
     availability: 'Available 24/7 across major junction stations.',
-    imageUrl: '/images/amenities/executive_lounge.jpg',
+    imageUrl: '/images/amenities/food_plaza.jpg',
     applicableCategories: ['NSG1', 'NSG2', 'NSG3', 'NSG4']
   },
   {
@@ -289,7 +289,7 @@ export const MASTER_STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Platform 1 near Emergency Medical Post',
     tariffsAndRules: 'Emergency first aid provided free of cost; medicines dispensed at printed Jan Aushadhi generic MRP.',
     availability: 'Available 24/7 at all NSG-1 to NSG-3 terminals.',
-    imageUrl: '/images/amenities/waiting_hall.jpg',
+    imageUrl: '/images/amenities/medical_booth.jpg',
     applicableCategories: ['NSG1', 'NSG2', 'NSG3']
   },
   {
@@ -303,7 +303,7 @@ export const MASTER_STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Main Station Exit Concourse / Circulating Area',
     tariffsAndRules: 'Fixed kilometer rates fixed by District Transport Authority / Traffic Police.',
     availability: '24/7 operations with police monitoring.',
-    imageUrl: '/images/amenities/escalators_lifts.jpg',
+    imageUrl: '/images/amenities/prepaid_taxi.jpg',
     applicableCategories: ['NSG1', 'NSG2', 'NSG3']
   },
   {
@@ -317,7 +317,7 @@ export const MASTER_STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Entrance Foyers and Platform Foot Over Bridge landings',
     tariffsAndRules: 'Standard Indian Railways unreserved fares; 3% bonus cashback on smart card recharges.',
     availability: 'Available 24/7 across all suburban and non-suburban stations.',
-    imageUrl: '/images/amenities/water_vending.jpg',
+    imageUrl: '/images/amenities/atvm_kiosk.jpg',
     applicableCategories: ['NSG1', 'NSG2', 'NSG3', 'NSG4', 'NSG5', 'SG1', 'SG2', 'SG3']
   },
   {
@@ -331,7 +331,7 @@ export const MASTER_STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Platform 1 Center near Station Master Room',
     tariffsAndRules: 'Free government security service. Emergency dial: 139 / 182 / 112.',
     availability: '24/7 armed platform patrol and assistance.',
-    imageUrl: '/images/amenities/cloak_room.jpg',
+    imageUrl: '/images/amenities/rpf_security.jpg',
     applicableCategories: ['NSG1', 'NSG2', 'NSG3', 'NSG4', 'SG1', 'SG2']
   },
   {
@@ -345,7 +345,7 @@ export const MASTER_STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Suspended beneath platform shelter canopies on all tracks',
     tariffsAndRules: 'Complimentary visual guidance system.',
     availability: 'Synchronized with PRS train dispatch systems.',
-    imageUrl: '/images/amenities/escalators_lifts.jpg',
+    imageUrl: '/images/amenities/coach_indicator.jpg',
     applicableCategories: ['NSG1', 'NSG2', 'NSG3', 'NSG4']
   },
   {
@@ -359,7 +359,7 @@ export const MASTER_STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Every 50 meters along all platform tracks',
     tariffsAndRules: '100% Free public utility.',
     availability: 'Continuous 24/7 supply.',
-    imageUrl: '/images/amenities/water_vending.jpg',
+    imageUrl: '/images/amenities/water_tap.jpg',
     applicableCategories: ['NSG1', 'NSG2', 'NSG3', 'NSG4', 'NSG5', 'NSG6', 'SG1', 'SG2', 'SG3', 'HG1', 'HG2', 'HG3']
   },
   {
@@ -373,7 +373,7 @@ export const MASTER_STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Covering entire passenger boarding lengths across platforms',
     tariffsAndRules: 'Free public passenger seating.',
     availability: 'Standard across all Indian railway stations.',
-    imageUrl: '/images/amenities/waiting_hall.jpg',
+    imageUrl: '/images/amenities/platform_shelter.jpg',
     applicableCategories: ['NSG1', 'NSG2', 'NSG3', 'NSG4', 'NSG5', 'NSG6', 'SG1', 'SG2', 'SG3', 'HG1', 'HG2', 'HG3']
   }
 ];

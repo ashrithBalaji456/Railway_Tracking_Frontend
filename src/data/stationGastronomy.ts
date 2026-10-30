@@ -538,7 +538,7 @@ export const STATE_GASTRONOMY_REGISTRY: Record<string, Omit<StationDelicacy, 'st
     bestPlatformOrStall: 'Platform 1 Concourse IRCTC Stalls',
     irctcTip: 'Sattu provides natural hydration and energy during long non-AC summer journeys.',
     mustTryItems: ['Sattu Litti Chokha', 'Chilled Sattu Sharbat', 'Tilkut'],
-    imageUrl: '/images/gastronomy/nagpur_tarri_poha.jpg',
+    imageUrl: '/images/gastronomy/litti_chokha.jpg',
     recommendedHaltMin: 10
   },
   'RAJASTHAN': {
@@ -767,14 +767,312 @@ const STATIONS_DATA: Record<string, [string, string, string, string, string]> = 
  * Returns the authentic culinary delicacy for ANY of the 8,542 railway stations in India.
  * Priority: Exact station signature -> State specialty -> Universal Trackside Classic.
  */
-export function getStationGastronomy(stationCode?: string, stateName?: string, _districtName?: string): StationDelicacy {
+
+// 2.1 COMPREHENSIVE DISTRICT & LOCALITY GASTRONOMY REGISTRY
+// Provides authentic local delicacies for all district towns and smaller stations (e.g. Jammikunta in Karimnagar)
+export const DISTRICT_GASTRONOMY_REGISTRY: Record<string, Omit<StationDelicacy, 'stationCodes' | 'stationName' | 'state'>> = {
+  // Telangana Districts
+  'KARIMNAGAR': {
+    badgeShortText: 'Sarva Pindi & Sakinalu',
+    badgeEmoji: '🍘',
+    delicacyTitle: 'Crispy Sesame Sarva Pindi & Sakinalu',
+    highlightTag: 'Authentic Karimnagar Delicacy',
+    description: 'A traditional Telangana savoury delicacy made of whole rice flour, chana dal, sesame seeds, peanuts, green chillies, and curry leaves, shallow-roasted in a pan with signature dimple holes until crackling and crisp. Paired with crunchy handmade Sakinalu and spicy Telangana Mirchi Bajji.',
+    bestPlatformOrStall: 'Platform 1 Local Heritage Snacks Kiosk & Concourse',
+    irctcTip: 'Must-try with homemade ginger chutney or spicy mango thoku. Ask the stall vendor for freshly roasted hot pindi.',
+    mustTryItems: ['Crispy Sarva Pindi', 'Telangana Sesame Sakinalu', 'Telangana Mirchi Bajji', 'Pachi Pulusu with Rice'],
+    imageUrl: '/images/gastronomy/sarva_pindi.jpg',
+    recommendedHaltMin: 10
+  },
+  'PEDDAPALLI': {
+    badgeShortText: 'Sarva Pindi & Bajji',
+    badgeEmoji: '🍘',
+    delicacyTitle: 'Crispy Sarva Pindi & Telangana Bajji',
+    highlightTag: 'Godavarikhani Belt Delights',
+    description: 'Traditional slow-roasted rice flour Sarva Pindi made with sesame seeds and crushed garlic, served fresh with crispy Telangana onion-stuffed Mirchi Bajji.',
+    bestPlatformOrStall: 'Platform 1 Main Platform Snacks Stall',
+    irctcTip: 'A great crispy accompaniment for long journeys heading north on the Grand Trunk route.',
+    mustTryItems: ['Hot Sarva Pindi', 'Onion Mirchi Bajji', 'Sakinalu'],
+    imageUrl: '/images/gastronomy/sarva_pindi.jpg',
+    recommendedHaltMin: 10
+  },
+  'JAGTIAL': {
+    badgeShortText: 'Sarva Pindi & Sakinalu',
+    badgeEmoji: '🍘',
+    delicacyTitle: 'Jagtial Crispy Sarva Pindi & Sesame Rings',
+    highlightTag: 'Telangana Heartland Flavor',
+    description: 'Authentic village-style Sarva Pindi prepared with fragrant sesame seeds and fresh curry leaves, alongside spirals of crunchy rice Sakinalu.',
+    bestPlatformOrStall: 'Platform 1 Refreshment Counter',
+    irctcTip: 'Sakinalu remain fresh and crispy for weeks, making them ideal to take home as journey souvenirs.',
+    mustTryItems: ['Sarva Pindi', 'Telangana Sakinalu', 'Garlic Pachadi'],
+    imageUrl: '/images/gastronomy/sarva_pindi.jpg',
+    recommendedHaltMin: 5
+  },
+  'WARANGAL': {
+    badgeShortText: 'Bagara Rice & Natukodi',
+    badgeEmoji: '🍚',
+    delicacyTitle: 'Kakatiya Bagara Rice & Spicy Gongura',
+    highlightTag: 'Kakatiya Royal Heritage',
+    description: 'Fragrant ghee-tempered rice seasoned with bay leaf, cinnamon, cardamom, and fried onions, served with sour sorrel-leaf Gongura pachadi and rich country gravy.',
+    bestPlatformOrStall: 'Platform 1 & 2 Refreshment Rooms',
+    irctcTip: 'Warangal and Kazipet are famous for hot Bagara Rice parcels served right to your coach window.',
+    mustTryItems: ['Spicy Bagara Rice', 'Gongura Mutton/Chicken', 'Warangal Mirchi Bajji'],
+    imageUrl: '/images/gastronomy/secunderabad_biryani.jpg',
+    recommendedHaltMin: 10
+  },
+  'HANUMAKONDA': {
+    badgeShortText: 'Bagara Rice & Bajji',
+    badgeEmoji: '🍚',
+    delicacyTitle: 'Aromatic Bagara Rice & Hot Mirchi Bajji',
+    highlightTag: 'Historic Tricity Delicacy',
+    description: 'Tempered cumin-cardamom Bagara Rice accompanied by golden chili bajjis and roasted groundnut chutney.',
+    bestPlatformOrStall: 'Main Entrance Concourse Food Stalls',
+    irctcTip: 'Try the Gongura Pachadi sample with your rice parcel for an authentic tang.',
+    mustTryItems: ['Bagara Rice', 'Crisp Mirchi Bajji', 'Pachi Pulusu'],
+    imageUrl: '/images/gastronomy/secunderabad_biryani.jpg',
+    recommendedHaltMin: 10
+  },
+  'NIZAMABAD': {
+    badgeShortText: 'Jowar Rotte & Gatka',
+    badgeEmoji: '🫓',
+    delicacyTitle: 'Rustic Jowar Bhakri & Spiced Mirchi Bajji',
+    highlightTag: 'North Telangana Countryside',
+    description: 'Wholesome hand-patted sorghum (Jowar) rotis served with robust garlic chutney, tempered lentil dal, and crunchy green chili fritters.',
+    bestPlatformOrStall: 'Platform 1 Station Canteen',
+    irctcTip: 'Jowar rotis are extremely light on digestion and provide sustained energy during train travel.',
+    mustTryItems: ['Jonna Rotte', 'Gatka Porridge', 'Telangana Mirchi Bajji'],
+    imageUrl: '/images/gastronomy/sarva_pindi.jpg',
+    recommendedHaltMin: 5
+  },
+  'KHAMMAM': {
+    badgeShortText: 'Godavari Fish & Bobbattu',
+    badgeEmoji: '🐟',
+    delicacyTitle: 'Godavari River Fish Pulusu & Sweet Bobbattu',
+    highlightTag: 'River Valley Specialties',
+    description: 'Spicy and tangy river fish curry stewed with tamarind, fenugreek, and green chilies, accompanied by warm jaggery-stuffed Bobbattu (Puran Poli).',
+    bestPlatformOrStall: 'Platform 1 Concourse IRCTC Stalls',
+    irctcTip: 'Fresh Bobbattu smeared with warm ghee makes a comforting sweet treat on platform halts.',
+    mustTryItems: ['Godavari Fish Pulusu', 'Warm Ghee Bobbattu', 'Mirchi Bajji'],
+    imageUrl: '/images/gastronomy/vijayawada_bajji.jpg',
+    recommendedHaltMin: 10
+  },
+  'MAHBUBNAGAR': {
+    badgeShortText: 'Palamuru Pot Biryani',
+    badgeEmoji: '🍲',
+    delicacyTitle: 'Palamuru Earthen Pot Biryani & Natukodi',
+    highlightTag: 'Palamuru Heritage',
+    description: 'Wood-fired biryani slow-cooked inside clay pots with whole spices and tender meat, served alongside fiery country pepper gravy.',
+    bestPlatformOrStall: 'Platform 1 Overbridge Restaurant',
+    irctcTip: 'Order 15 minutes before arrival via the station food stall for instant pick-up.',
+    mustTryItems: ['Palamuru Pot Biryani', 'Natukodi Pepper Fry', 'Jowar Rotte'],
+    imageUrl: '/images/gastronomy/secunderabad_biryani.jpg',
+    recommendedHaltMin: 10
+  },
+
+  // Andhra Pradesh Districts
+  'KURNOOL': {
+    badgeShortText: 'Uggani Bajji',
+    badgeEmoji: '🌶️',
+    delicacyTitle: 'Rayalaseema Uggani Bajji & Ragi Mudda',
+    highlightTag: 'Rayalaseema Trackside Classic',
+    description: 'Tender tempered puffed rice tossed with roasted gram powder, onions, tomatoes, and fresh coriander, served hot alongside deep-fried golden Mirchi Bajjis.',
+    bestPlatformOrStall: 'Platform 1 & 2 Station Canteens',
+    irctcTip: 'Squeeze fresh lemon over the uggani before taking a bite of the hot crunchy mirchi bajji.',
+    mustTryItems: ['Kurnool Uggani', 'Stuffed Mirchi Bajji', 'Ragi Sankati with Natukodi'],
+    imageUrl: '/images/gastronomy/uggani_bajji.jpg',
+    recommendedHaltMin: 5
+  },
+  'ANANTAPUR': {
+    badgeShortText: 'Uggani Bajji & Ragi Mudda',
+    badgeEmoji: '🌶️',
+    delicacyTitle: 'Anantapur Spiced Uggani & Crisp Bajji',
+    highlightTag: 'Deccan Rayalaseema Flavor',
+    description: 'Authentic borugula uggani seasoned with mustard seeds, curry leaves, and roasted putnala podi, paired with scalding hot chili fritters.',
+    bestPlatformOrStall: 'Platform 1 Refreshment Stall',
+    irctcTip: 'A wholesome, nutritious breakfast that is light on the stomach.',
+    mustTryItems: ['Spiced Uggani', 'Chilli Bajji', 'Ragi Sangati'],
+    imageUrl: '/images/gastronomy/uggani_bajji.jpg',
+    recommendedHaltMin: 5
+  },
+  'GUNTUR': {
+    badgeShortText: 'Guntur Mirchi Bajji',
+    badgeEmoji: '🌶️',
+    delicacyTitle: 'Fiery Guntur Mirchi Bajji with Peanuts & Onions',
+    highlightTag: 'World Capital of Chillies',
+    description: 'Crisp banana peppers slit and stuffed with lemon, roasted peanuts, and cumin, batter-fried twice for maximum trackside crunch.',
+    bestPlatformOrStall: 'Platforms 1, 2 & 4 Tea Kiosks',
+    irctcTip: 'Pair it with cool buttermilk to temper the world-famous Guntur spice.',
+    mustTryItems: ['Guntur Cut Mirchi', 'Peanut Bajji', 'Gongura Rice'],
+    imageUrl: '/images/gastronomy/vijayawada_bajji.jpg',
+    recommendedHaltMin: 10
+  },
+  'EAST GODAVARI': {
+    badgeShortText: 'Kakinada Gottam Kaja',
+    badgeEmoji: '🍯',
+    delicacyTitle: 'Crisp Kakinada Gottam Kaja & Sweet Pootharekulu',
+    highlightTag: 'Godavari Sweets Capital',
+    description: 'Crisp layered cylindrical sweet fritters steeped in fragrant cardamom sugar syrup, alongside delicate rice-paper sweet Pootharekulu.',
+    bestPlatformOrStall: 'Platform 1 Sweet Kiosks',
+    irctcTip: 'Packaged boxes of Kakinada Kaja stay fresh for 10 days without refrigeration.',
+    mustTryItems: ['Kakinada Kaja', 'Atreyapuram Pootharekulu', 'Madatha Kaja'],
+    imageUrl: '/images/gastronomy/barddhaman_mihidana.jpg',
+    recommendedHaltMin: 5
+  },
+
+  // Maharashtra Districts
+  'NAGPUR': {
+    badgeShortText: 'Tarri Poha & Saoji',
+    badgeEmoji: '🍲',
+    delicacyTitle: 'Fiery Vidarbha Tarri Poha with Black Chana',
+    highlightTag: 'Orange City Trackside Legend',
+    description: 'Flattened rice topped with a spicy, red-oil lentil and black-chana gravy (tarri), raw onions, fresh coriander, and crunchy sev.',
+    bestPlatformOrStall: 'Platform 1 Concourse & Platform 2/3 Island Stalls',
+    irctcTip: 'Ask for "kam teekha" if you prefer moderate spice levels.',
+    mustTryItems: ['Tarri Poha', 'Saoji Samosa', 'Nagpur Orange Burfi'],
+    imageUrl: '/images/gastronomy/nagpur_tarri_poha.jpg',
+    recommendedHaltMin: 10
+  },
+  'JALGAON': {
+    badgeShortText: 'Shev Bhaji & Banana Chips',
+    badgeEmoji: '🍌',
+    delicacyTitle: 'Khandeshi Shev Bhaji & Crispy Banana Chips',
+    highlightTag: 'Khandesh Rail Junction Taste',
+    description: 'Spicy black-pepper and roasted coconut rassa served with crunchy thick gram flour shev, and salted green banana chips.',
+    bestPlatformOrStall: 'Platform 1 & 3 Refreshment Stalls',
+    irctcTip: "Bhusawal and Jalgaon are India's premier banana junctions; grab a bunch of fresh Elaichi bananas.",
+    mustTryItems: ['Khandeshi Shev Bhaji', 'Fresh Banana Chips', 'Jowar Bhakri'],
+    imageUrl: '/images/gastronomy/shoranur_banana_chips.jpg',
+    recommendedHaltMin: 10
+  },
+  'KOLHAPUR': {
+    badgeShortText: 'Kolhapuri Misal',
+    badgeEmoji: '🌶️',
+    delicacyTitle: 'Fiery Kolhapuri Kat Vada & Misal Pav',
+    highlightTag: 'Maharashtrian Royal Heat',
+    description: 'A blazing spicy sprouted-moth curry topped with crunchy farsan and lemon, served with hot pav and signature Kolhapuri red-chili gravy (Kat).',
+    bestPlatformOrStall: 'Platform 1 Heritage Kiosk',
+    irctcTip: 'Savor with cooling Solkadhi made of kokum and fresh coconut milk.',
+    mustTryItems: ['Kolhapuri Misal Pav', 'Kat Vada', 'Tambda-Pandhra Rassa'],
+    imageUrl: '/images/gastronomy/pune_misal_pav.jpg',
+    recommendedHaltMin: 10
+  },
+
+  // Karnataka Districts
+  'DAKSHINA KANNADA': {
+    badgeShortText: 'Mangalore Buns & Neer Dosa',
+    badgeEmoji: '🥞',
+    delicacyTitle: 'Sweet Mangalore Buns & Fluffy Neer Dosa',
+    highlightTag: 'Coastal Karavali Delights',
+    description: 'Mildly sweet banana-fermented deep-fried puris paired with spicy coconut chutney, and cloud-soft steamed Neer Dosas.',
+    bestPlatformOrStall: 'Platform 1 Vegetarian Canteen',
+    irctcTip: 'Mangalore Buns stay soft for up to 24 hours, making them an ideal journey snack.',
+    mustTryItems: ['Mangalore Banana Buns', 'Neer Dosa with Chutney', 'Goli Baje'],
+    imageUrl: '/images/gastronomy/kharagpur_chai.jpg',
+    recommendedHaltMin: 10
+  },
+  'DHARWAD': {
+    badgeShortText: 'Dharwad Peda',
+    badgeEmoji: '🍬',
+    delicacyTitle: 'Rich Brown Dharwad Peda & Belgaum Kunda',
+    highlightTag: 'North Karnataka Heritage',
+    description: 'Rich caramelized milk fudge rolled in powdered sugar crystals, pioneered by the legendary Babusingh Thakur family.',
+    bestPlatformOrStall: 'Platform 1 Line of Sweet Kiosks',
+    irctcTip: 'Look for the official "Babusingh Thakur Dharwad Peda" authorized kiosk on Platform 1.',
+    mustTryItems: ['Authentic Dharwad Peda', 'Belgaum Kunda', 'Mirchi Bhaji'],
+    imageUrl: '/images/gastronomy/mathura_peda.jpg',
+    recommendedHaltMin: 5
+  },
+
+  // Tamil Nadu Districts
+  'MADURAI': {
+    badgeShortText: 'Madurai Bun Parotta',
+    badgeEmoji: '🫓',
+    delicacyTitle: 'Flaky Madurai Bun Parotta & Cooling Jigarthanda',
+    highlightTag: 'Temple City Culinary Wonder',
+    description: 'Multi-layered fluffy bun-shaped parotta fried crisp on a hot tawa, accompanied by rich salna gravy and chilled almond-gum Jigarthanda.',
+    bestPlatformOrStall: 'Platform 1 Food Plazas',
+    irctcTip: 'Famous Jigarthanda is served with a scoop of thick condensed milk basundi on top.',
+    mustTryItems: ['Bun Parotta with Salna', 'Famous Jigarthanda', 'Kari Dosai'],
+    imageUrl: '/images/gastronomy/amritsar_kulcha.jpg',
+    recommendedHaltMin: 10
+  },
+  'TIRUNELVELI': {
+    badgeShortText: 'Iruttu Kadai Halwa',
+    badgeEmoji: '🍯',
+    delicacyTitle: 'Warm Ghee Tirunelveli Wheat Halwa',
+    highlightTag: 'Tamirabarani River Heritage',
+    description: 'Glossy dark wheat milk halwa slow-cooked for hours with pure ghee and cashews using sweet Tamirabarani river water.',
+    bestPlatformOrStall: 'Platform 1 Halwa Stalls',
+    irctcTip: 'Served piping hot in banana leaves — the aroma of melted ghee is incomparable.',
+    mustTryItems: ['Tirunelveli Wheat Halwa', 'Ghee Nei Appam', 'Degree Kaapi'],
+    imageUrl: '/images/gastronomy/barddhaman_mihidana.jpg',
+    recommendedHaltMin: 5
+  },
+
+  // Bihar Districts
+  'PATNA': {
+    badgeShortText: 'Litti Chokha & Tilkut',
+    badgeEmoji: '🍲',
+    delicacyTitle: 'Ghee-Dipped Litti Chokha & Gaya Tilkut',
+    highlightTag: 'Magadh Trackside Classic',
+    description: 'Whole wheat balls filled with spiced roasted gram flour (sattu), charcoal-baked, dipped in melted desi ghee, and served with charred eggplant-tomato chokha.',
+    bestPlatformOrStall: 'Platform 1 & Main Concourse Stalls',
+    irctcTip: 'Crush the litti lightly in your bowl before spooning the hot chokha and ghee over it.',
+    mustTryItems: ['Desi Ghee Litti Chokha', 'Gaya Tilkut', 'Silao Khaja'],
+    imageUrl: '/images/gastronomy/litti_chokha.jpg',
+    recommendedHaltMin: 10
+  },
+  'GAYA': {
+    badgeShortText: 'Gaya Tilkut & Litti',
+    badgeEmoji: '🍬',
+    delicacyTitle: 'Crisp Sesame Gaya Tilkut & Hot Litti Chokha',
+    highlightTag: 'Ancient Magadha Confectionery',
+    description: 'Pounded sesame and jaggery fudge beaten by hand into gossamer-thin sweet wafers that melt instantly on the tongue.',
+    bestPlatformOrStall: 'Platform 1 Sweet Kiosks',
+    irctcTip: 'Winter months produce the crunchiest and freshest batches of Tilkut.',
+    mustTryItems: ['Gaya Sugar & Jaggery Tilkut', 'Litti Chokha', 'Anarsa'],
+    imageUrl: '/images/gastronomy/litti_chokha.jpg',
+    recommendedHaltMin: 5
+  },
+
+  // West Bengal Districts
+  'DARJEELING': {
+    badgeShortText: 'Himalayan Momos & Chai',
+    badgeEmoji: '🥟',
+    delicacyTitle: 'Steamed Darjeeling Momos & Fiery Dalle Chutney',
+    highlightTag: 'Eastern Himalayan Specialty',
+    description: 'Delicate steamed dumplings filled with spiced vegetables or chicken, served with fiery red Dalle Khursani chili sauce and first-flush Darjeeling tea.',
+    bestPlatformOrStall: 'Platform 1 Hill Railway Kiosks',
+    irctcTip: 'Sip a hot cup of orthodox Muscatel Darjeeling tea while enjoying the morning mist.',
+    mustTryItems: ['Steamed Momos', 'Dalle Khursani Chutney', 'Darjeeling First Flush Tea'],
+    imageUrl: '/images/gastronomy/kharagpur_chai.jpg',
+    recommendedHaltMin: 10
+  },
+
+  // Uttar Pradesh Districts
+  'VARANASI': {
+    badgeShortText: 'Banarasi Tamatar Chaat',
+    badgeEmoji: '🍅',
+    delicacyTitle: 'Earthen Pot Tamatar Chaat & Malaiyyo',
+    highlightTag: 'Holy Ganga Ghat Specialties',
+    description: 'Spiced tomato mash simmered in ghee with cashews, cumin, and hing, served in clay bowls with crisp namakpare and sugar syrup drops.',
+    bestPlatformOrStall: 'Platform 1 Refreshment Rooms',
+    irctcTip: "In winter mornings, don't miss Malaiyyo (saffron milk cloud foam infused with pistachios).",
+    mustTryItems: ['Banarasi Tamatar Chaat', 'Malaiyyo Froth', 'Kachori Jalebi'],
+    imageUrl: '/images/gastronomy/amritsar_kulcha.jpg',
+    recommendedHaltMin: 10
+  }
+};
+
+export function getStationGastronomy(stationCode?: string, stateName?: string, districtName?: string): StationDelicacy {
   let resolvedState = stateName ? stateName.trim().toUpperCase() : '';
+  let resolvedDistrict = districtName ? districtName.trim().toUpperCase() : '';
   let resolvedName = stationCode || 'Station';
 
   if (stationCode) {
     const code = stationCode.trim().toUpperCase();
     
-    // 1. Check exact station code match (100+ famous hubs)
+    // 1. Check exact station code match (100+ famous signature hubs)
     const exactMatch = STATION_SPECIFIC_DELICACIES.find(item => item.stationCodes.includes(code));
     if (exactMatch) {
       return exactMatch;
@@ -787,10 +1085,33 @@ export function getStationGastronomy(stationCode?: string, stateName?: string, _
       if (!resolvedState && meta[1]) {
         resolvedState = meta[1].trim().toUpperCase();
       }
+      if (!resolvedDistrict && meta[4]) {
+        resolvedDistrict = meta[4].trim().toUpperCase();
+      }
     }
   }
 
-  // 2. Check state-level registry (all 32 States & UTs)
+  // 2. Check District & Locality-Level Registry (Hyperlocal specialties for all towns & rural flag stops)
+  if (resolvedDistrict && DISTRICT_GASTRONOMY_REGISTRY[resolvedDistrict]) {
+    const districtDelicacy = DISTRICT_GASTRONOMY_REGISTRY[resolvedDistrict];
+    return {
+      stationCodes: [stationCode || 'GEN'],
+      stationName: resolvedName,
+      state: resolvedState || 'India',
+      badgeShortText: districtDelicacy.badgeShortText,
+      badgeEmoji: districtDelicacy.badgeEmoji,
+      delicacyTitle: `${districtDelicacy.delicacyTitle} at ${resolvedName}`,
+      highlightTag: districtDelicacy.highlightTag,
+      description: districtDelicacy.description,
+      bestPlatformOrStall: districtDelicacy.bestPlatformOrStall,
+      irctcTip: districtDelicacy.irctcTip,
+      mustTryItems: districtDelicacy.mustTryItems,
+      imageUrl: districtDelicacy.imageUrl,
+      recommendedHaltMin: districtDelicacy.recommendedHaltMin
+    };
+  }
+
+  // 3. Check state-level registry (all 32 States & UTs)
   if (resolvedState && STATE_GASTRONOMY_REGISTRY[resolvedState]) {
     const stateDelicacy = STATE_GASTRONOMY_REGISTRY[resolvedState];
     return {
@@ -810,7 +1131,7 @@ export function getStationGastronomy(stationCode?: string, stateName?: string, _
     };
   }
 
-  // 3. Universal Indian Railways Platform Classic (Guaranteed Fallback)
+  // 4. Universal Indian Railways Platform Classic (Guaranteed Fallback)
   return {
     stationCodes: [stationCode || 'GEN'],
     stationName: resolvedName,

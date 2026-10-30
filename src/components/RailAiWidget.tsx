@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { X, Send, AlertCircle, Brain, Search, Zap, CheckCircle2, Cpu } from 'lucide-react';
 import api from '../services/api';
+import { getStationGastronomy } from '../data/stationGastronomy';
 
 interface RailAiResponseData {
   response: string;
@@ -162,6 +163,45 @@ export default function RailAiWidget() {
     return () => window.removeEventListener('rail-ai:open' as any, handleOpenWithPrompt);
   }, []);
 
+  const resolveLocalFallback = (query: string): string | null => {
+    const q = query.toLowerCase();
+
+    // 1. Food / Delicacy / Refreshment inquiries
+    if (q.includes('food') || q.includes('specialt') || q.includes('stall') || q.includes('snack') || q.includes('delicac') || q.includes('eat')) {
+      const codeMatch = query.match(/\(([A-Z0-9]{2,6})\)/i) || query.match(/at\s+([A-Za-z0-9\s]+?)(?:\s*\(|$|\?)/i);
+      const extractedCode = codeMatch ? codeMatch[1].trim() : undefined;
+      const food = getStationGastronomy(extractedCode);
+      return `🍛 **${food.delicacyTitle}** (${food.state})\n\n` +
+        `• **Signature Trackside Delicacy:** ${food.badgeEmoji} ${food.badgeShortText} — ${food.description}\n` +
+        `• **Must-Try Specialties:** ${food.mustTryItems.join(', ')}\n` +
+        `• **Where to Find:** ${food.bestPlatformOrStall}\n` +
+        `• **IRCTC Passenger Travel Tip:** ${food.irctcTip}\n` +
+        `• **Recommended Platform Halt:** ${food.recommendedHaltMin} minutes`;
+    }
+
+    // 2. Reservation Chart Preparation Timings
+    if (q.includes('chart') || q.includes('reservation chart') || q.includes('charting')) {
+      return `📋 **Official Indian Railways Reservation Chart Timings:**\n\n` +
+        `• **Trains departing after 2:00 PM or before 5:00 AM:** The first reservation chart is prepared **10 hours** before the scheduled departure from the originating station.\n` +
+        `• **Trains departing between 5:00 AM and 2:00 PM:** The first reservation chart is prepared the previous night at **8:00 PM** (or 9:00 PM depending on zonal updates).\n` +
+        `• **Final Reservation Chart:** A second and final reservation chart is prepared **30 minutes** before the scheduled departure for all trains.\n` +
+        `• Any vacant berths after the first chart are available for booking via Current Reservation counters or online on IRCTC up until 30 minutes before departure.`;
+    }
+
+    // 3. Station Amenities / Facilities
+    if (q.includes('amenit') || q.includes('facilit') || q.includes('lounge') || q.includes('cloak') || q.includes('wifi') || q.includes('wheelchair')) {
+      return `🏛️ **Indian Railways Key Platform Amenities & Facilities:**\n\n` +
+        `• **IRCTC Executive Lounges:** Air-conditioned luxury waiting lounges with recliners, buffet dining, shower pods, and Wi-Fi (₹150-₹200 for 2 hrs) on Platform 1.\n` +
+        `• **Water ATMs (RO/UV):** Pure chilled drinking water dispensed at ₹1 to ₹5 per liter.\n` +
+        `• **RailWire High-Speed Wi-Fi:** 30 minutes complimentary optical fiber Wi-Fi across 6,000+ stations.\n` +
+        `• **24-Hour Cloak Room & Lockers:** Luggage custody at ₹20 per bag for first 24 hrs (must be padlocked).\n` +
+        `• **Divyangjan Accessibility:** Free wheelchairs, gentle gradient ramps, and Sahayak porter assistance via Station Master Room or Rail Madad 139.\n` +
+        `• **ATVM Touchscreen Kiosks:** Fast unreserved and platform ticket booking without standing in line.`;
+    }
+
+    return null;
+  };
+
   const handleSendMessage = async (textToSend: string) => {
     if (!textToSend.trim() || loading) return;
 
@@ -177,7 +217,7 @@ export default function RailAiWidget() {
         trainNumber: trainCtx
       });
 
-      if (response.success && response.data) {
+      if (response && response.success && response.data) {
         const data: RailAiResponseData = response.data;
         setMessages((prev) => [...prev, {
           sender: 'ai',
@@ -186,13 +226,40 @@ export default function RailAiWidget() {
           confidence: data.confidence,
           responseType: data.responseType
         }]);
+      } else {
+        const fallbackText = resolveLocalFallback(textToSend);
+        if (fallbackText) {
+          setMessages((prev) => [...prev, {
+            sender: 'ai',
+            text: fallbackText,
+            toolsUsed: ['Local Station Gastronomy & Amenities Knowledgebase'],
+            confidence: 'HIGH',
+            responseType: 'KNOWLEDGE_BASE'
+          }]);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            { sender: 'ai', text: response?.data?.response || 'I am ready to help you with train status, station facilities, local gastronomy, and reservation charts.' }
+          ]);
+        }
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to communicate with RailAI');
-      setMessages((prev) => [
-        ...prev,
-        { sender: 'ai', text: 'Sorry, I encountered an error connecting to my services. Please try again.' }
-      ]);
+      const fallbackText = resolveLocalFallback(textToSend);
+      if (fallbackText) {
+        setMessages((prev) => [...prev, {
+          sender: 'ai',
+          text: fallbackText,
+          toolsUsed: ['Trackside Offline Intelligence & Gastronomy Engine'],
+          confidence: 'HIGH',
+          responseType: 'LOCAL_FALLBACK'
+        }]);
+      } else {
+        setError(err.message || 'Failed to communicate with RailAI');
+        setMessages((prev) => [
+          ...prev,
+          { sender: 'ai', text: 'Sorry, I encountered an error connecting to my services. Please try again or ask about station food, amenities, or train delay causes.' }
+        ]);
+      }
     } finally {
       setLoading(false);
     }

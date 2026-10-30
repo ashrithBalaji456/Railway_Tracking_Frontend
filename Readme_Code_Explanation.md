@@ -2053,3 +2053,59 @@ This section documents the frontend views and components integrated for rail dis
     - First Chart: Prepared 10 hours before departure for trains departing after 2:00 PM or before 5:00 AM; prepared the previous night at 8:00 PM (or 9:00 PM) for trains departing between 5:00 AM and 2:00 PM.
     - Final Chart: Prepared exactly 30 minutes before departure for all trains.
 
+
+### 15.18. Dedicated Station Amenity Photographs, Hyperlocal District Gastronomy & Resilient RailAI Intelligence
+
+* **1. 18 Dedicated Authentic Amenity Photographs (`src/data/stationAmenities.ts`):**
+  - Eliminated all duplicate, blurry, or generic station crowd placeholder images. Sourced and deployed 18 distinct high-definition (170 KB – 863 KB) photographs for each specific station passenger amenity:
+    - `executive_lounge.jpg`: IRCTC Executive Lounge with recliners and airport-style luxury buffet.
+    - `waiting_hall.jpg`: AC & Upper Class waiting halls with ergonomic bench seating.
+    - `ladies_waiting.jpg`: Secured Ladies Waiting Hall & Janani Sewa infant feeding cubicles.
+    - `cloak_room.jpg`: 24-Hour Cloak Room & smart luggage depository with padlocked parcel racks.
+    - `retiring_room.jpg`: IRCTC transit bedrooms and AC dormitory cubicles bookable by PNR.
+    - `escalators_fob.jpg`: Heavy-duty weather-proof bi-directional escalators and FOB glass elevators.
+    - `water_atm.jpg`: Automated RO + UV chilled drinking water vending machines (₹1 to ₹5/L).
+    - `railwire_wifi.jpg`: RailWire optical fiber high-speed Wi-Fi platform infrastructure.
+    - `wheelchair_ramp.jpg`: Divyangjan gentle gradient ramps and wheelchair accessibility paths.
+    - `battery_buggy.jpg`: Battery-operated buggy carts (BOVs) for elderly passengers.
+    - `food_plaza.jpg`: IRCTC Jan Aahaar canteens and multi-cuisine branded food courts.
+    - `medical_booth.jpg`: 24/7 emergency first-aid rooms, oxygen cylinders, and generic pharmacy.
+    - `prepaid_taxi.jpg`: Traffic police authorized pre-paid auto/taxi and app-cab pickup bays.
+    - `atvm_kiosk.jpg`: Touchscreen Automated Ticket Vending Machines & UTS QR payment kiosks.
+    - `rpf_security.jpg`: 24-hour uniformed Railway Protection Force (RPF) and Meri Saheli helpdesk.
+    - `coach_indicator.jpg`: Suspended overhead illuminated electronic coach guidance LED boards.
+    - `water_tap.jpg`: Hygienic stainless-steel continuous potable drinking water fountains.
+    - `platform_shelter.jpg`: Weather-proof insulated platform roof sheds with granite/metal seating.
+  - Mirrored all 18 photos to `Backend/src/main/resources/static/images/amenities/` for offline performance.
+
+* **2. Hyperlocal District & Locality Gastronomy Engine (`src/data/stationGastronomy.ts`):**
+  - **The Locality Problem Solved:** Previously, smaller stations (e.g. Jammikunta `JMKT` in Karimnagar district, Telangana) defaulted to state capital delicacies (Hyderabad Dum Biryani & Irani Chai), which did not reflect the true local cuisine.
+  - **Master 8,542 Stations Metadata Integration:** `allStationsMeta.json` maps `meta[4]` as the official railway district. `getStationGastronomy(code, state, district)` now resolves `resolvedDistrict` from `districtName || meta[4]`.
+  - **`DISTRICT_GASTRONOMY_REGISTRY`:** Added comprehensive district-level culinary mapping:
+    - *Karimnagar, Peddapalli, Jagtial (e.g. Jammikunta):* **Crispy Hot Sesame Sarva Pindi & Sakinalu**, spicy Telangana Mirchi Bajji, and Pachi Pulusu with rice.
+    - *Warangal / Hanumakonda:* Aromatic Bagara Rice with Gongura Pachadi & Natukodi.
+    - *Nizamabad / Adilabad:* Rustic Jowar Bhakri (Jonna Rotte) & Spiced Mirchi Bajji.
+    - *Khammam:* Spicy Godavari River Fish Pulusu & Warm Ghee Bobbattu.
+    - *Mahbubnagar:* Palamuru Earthen Pot Biryani & Country Chicken Pepper Fry.
+    - *Kurnool & Anantapur (Rayalaseema):* Authentic Borugula Uggani with crispy Mirchi Bajji & Ragi Mudda.
+    - *Guntur:* Fiery Guntur Cut Mirchi Bajji stuffed with roasted peanuts & Gongura Rice.
+    - *East Godavari / Kakinada:* Layered Kakinada Gottam Kaja & Atreyapuram Pootharekulu.
+    - *Nagpur & Wardha:* Vidarbha Tarri Poha with black chana gravy & Saoji spices.
+    - *Jalgaon & Bhusawal:* Khandeshi Shev Bhaji & Crispy Raw Banana Chips.
+    - *Kolhapur:* Fiery Kolhapuri Kat Vada, Misal Pav & Pandhra-Tambda Rassa.
+    - *Udupi & Mangalore:* Sweet Mangalore Banana Buns, Fluffy Neer Dosa & Goli Baje.
+    - *Dharwad & Belgaum:* Authentic Babusingh Thakur Dharwad Peda & Belgaum Kunda.
+    - *Madurai:* Multi-layered flaky Madurai Bun Parotta & Cooling Jigarthanda.
+    - *Tirunelveli:* Warm Ghee Iruttu Kadai Wheat Halwa.
+    - *Patna & Gaya:* Charcoal-baked Desi Ghee Litti Chokha & Gossamer Sesame Gaya Tilkut.
+    - *Darjeeling:* Steamed Himalayan Momos & Fiery Dalle Khursani Chili Chutney.
+    - *Varanasi:* Earthen pot Banarasi Tamatar Chaat & Winter Saffron Malaiyyo.
+  - **Tiered Resolution Hierarchy:** Exact station signature -> District/Town specialty -> State specialty -> Universal Trackside Classic (Samosa & Chai).
+
+* **3. Resilient Offline RailAI Intelligence (`src/components/RailAiWidget.tsx`):**
+  - **Unauthenticated Access:** Updated Spring Security `SecurityConfig.java` to permit `/api/v1/railai/**` for guest users exploring stations without login blocks.
+  - **Null Safety:** Handled guest principal in `RailAiController.java` to eliminate NPE.
+  - **Client-Side Intelligence Fallback (`resolveLocalFallback`):** When network issues occur or the Gemini API is offline, RailAI automatically intercepts station food inquiries, extracts the station code (e.g. `JMKT`), queries `getStationGastronomy`, and formats a complete guide without throwing errors or displaying `"Something went wrong"`.
+  - **Official Reservation Charting Rules:** RailAI answers chart preparation inquiries with the exact 10-hour / 8:00 PM / 30-minute Railway Board timings.
+
+
