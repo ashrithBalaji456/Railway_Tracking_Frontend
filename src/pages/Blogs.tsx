@@ -29,6 +29,7 @@ export default function Blogs() {
   const [savedSlugs, setSavedSlugs] = useState<string[]>(getSavedArticleSlugs());
   const [featuredIndex, setFeaturedIndex] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -83,7 +84,6 @@ export default function Blogs() {
     return feat.length >= 4 ? feat.slice(0, 5) : articles.slice(0, 5);
   }, [articles]);
 
-  const currentFeatured = featuredArticles[featuredIndex] || featuredArticles[0];
   const regularArticles = articles;
 
   // Auto-scroll featured stories every 5 seconds (pauses on hover)
@@ -95,14 +95,29 @@ export default function Blogs() {
     return () => clearInterval(timer);
   }, [isPaused, featuredArticles.length]);
 
-  const handlePrevFeatured = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handlePrevFeatured = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setFeaturedIndex(prev => (prev - 1 + featuredArticles.length) % featuredArticles.length);
   };
 
-  const handleNextFeatured = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleNextFeatured = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setFeaturedIndex(prev => (prev + 1) % featuredArticles.length);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null) return;
+    const diffX = e.changedTouches[0].clientX - touchStartX;
+    if (diffX > 50) {
+      handlePrevFeatured();
+    } else if (diffX < -50) {
+      handleNextFeatured();
+    }
+    setTouchStartX(null);
   };
 
   const handleShare = (e: React.MouseEvent, slug: string) => {
@@ -127,8 +142,8 @@ export default function Blogs() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-20 pt-4 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-slate-950 text-slate-100 pb-20 pt-4 px-3 sm:px-6 lg:px-8 xl:px-10">
+      <div className="max-w-[1560px] w-full mx-auto space-y-8">
         
         {/* Header Title & Subtitle */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-800/80 pb-6">
@@ -140,204 +155,248 @@ export default function Blogs() {
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white flex items-center gap-3">
               Stories from the Rails
             </h1>
-            <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-2xl">
+            <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-3xl">
               Immerse yourself in scenic mountain routes, high-speed train engineering, heritage legacies, and insider booking hacks across Indian Railways.
             </p>
           </div>
 
           {/* Quick Counter */}
-          <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-900/80 px-4 py-2.5 rounded-xl border border-slate-800">
+          <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-900/80 px-4 py-2.5 rounded-xl border border-slate-800 shadow-sm self-start md:self-auto">
             <BookOpen className="w-4 h-4 text-emerald-400" />
             <span>Showing <strong className="text-white">{articles.length}</strong> curated articles</span>
           </div>
         </div>
 
-        {/* Top Auto-Scrolling Featured Stories Carousel (Top 5 Flagship Stories) */}
-        {currentFeatured && !searchQuery && selectedCategory === 'All' && (
+        {/* Top Auto-Scrolling Featured Stories Carousel (Smooth Horizontal Sliding Track) */}
+        {featuredArticles.length > 0 && !searchQuery && selectedCategory === 'All' && (
           <div 
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
-            onClick={() => navigate(`/blogs/${currentFeatured.slug}`)}
-            className="group relative cursor-pointer overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl transition-all duration-300 hover:border-emerald-500/50 hover:shadow-emerald-950/30"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            className="group relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl transition-all duration-300 hover:border-emerald-500/40 hover:shadow-emerald-950/30 select-none"
           >
-            <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[460px]">
-              
-              {/* Balanced Image Side (6 cols on lg) */}
-              <div className="lg:col-span-6 relative h-72 sm:h-84 lg:h-full overflow-hidden bg-slate-950">
-                <img 
-                  key={currentFeatured.slug}
-                  src={currentFeatured.coverImage} 
-                  alt={currentFeatured.title} 
-                  referrerPolicy="no-referrer"
-                  className="h-full w-full object-cover transition-all duration-700 ease-out group-hover:scale-105 animate-in fade-in zoom-in-95 duration-500"
-                  style={{ imageRendering: '-webkit-optimize-contrast' }}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg';
-                  }}
-                />
-                
-                {/* Subtle gradient vignette */}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:to-slate-900/60" />
-                
-                {/* Spotlight Badge + Slide Counter */}
-                <div className="absolute top-4 left-4 flex items-center gap-2">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500 text-slate-950 shadow-lg">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>FEATURED STORY</span>
-                  </div>
-                  <div className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-slate-950/80 text-emerald-400 border border-slate-700/60 backdrop-blur-md">
-                    {String(featuredIndex + 1).padStart(2, '0')} / {String(featuredArticles.length).padStart(2, '0')}
-                  </div>
-                </div>
+            {/* Smooth Sliding Track: Translates horizontally without page jumping */}
+            <div 
+              className="flex transition-transform duration-700 ease-out will-change-transform"
+              style={{ transform: `translateX(-${featuredIndex * 100}%)` }}
+            >
+              {featuredArticles.map((art) => {
+                // Savor rich editorial excerpt from story chapters
+                const storyExcerpt = art.sections?.find(s => s.content && s.content.length > 60)?.content?.split('\n\n')[0] || art.subtitle;
 
-                {/* Left & Right Arrow Buttons on Image */}
-                <button
-                  type="button"
-                  onClick={handlePrevFeatured}
-                  title="Previous Featured Story"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/80 hover:bg-emerald-600 text-white flex items-center justify-center border border-slate-700/80 hover:border-emerald-500 transition-all shadow-xl backdrop-blur-md cursor-pointer z-10 opacity-80 group-hover:opacity-100"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleNextFeatured}
-                  title="Next Featured Story"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/80 hover:bg-emerald-600 text-white flex items-center justify-center border border-slate-700/80 hover:border-emerald-500 transition-all shadow-xl backdrop-blur-md cursor-pointer z-10 opacity-80 group-hover:opacity-100"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
+                return (
+                  <div 
+                    key={art.id}
+                    onClick={() => navigate(`/blogs/${art.slug}`)}
+                    className="min-w-full flex-shrink-0 grid grid-cols-1 lg:grid-cols-12 min-h-[440px] max-h-[580px] cursor-pointer"
+                  >
+                    {/* Balanced Landscape Image Column (5 cols on lg) */}
+                    <div className="lg:col-span-5 relative h-64 sm:h-80 lg:h-full lg:max-h-[580px] overflow-hidden bg-slate-950 flex items-center justify-center">
+                      <img 
+                        src={art.coverImage} 
+                        alt={art.title} 
+                        referrerPolicy="no-referrer"
+                        className="h-full w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
+                        style={{ imageRendering: '-webkit-optimize-contrast' }}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg';
+                        }}
+                      />
+                      
+                      {/* Gradient Vignette */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:via-slate-900/20 lg:to-slate-900" />
+                      
+                      {/* Top Badges */}
+                      <div className="absolute top-4 left-4 flex items-center gap-2 z-10">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500 text-slate-950 shadow-lg">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>FEATURED STORY</span>
+                        </div>
+                        <div className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-slate-950/80 text-emerald-400 border border-slate-700/60 backdrop-blur-md">
+                          {String(featuredIndex + 1).padStart(2, '0')} / {String(featuredArticles.length).padStart(2, '0')}
+                        </div>
+                      </div>
 
-              {/* Rich Content Side (6 cols on lg) */}
-              <div className="lg:col-span-6 p-6 sm:p-8 lg:p-10 flex flex-col justify-between bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950">
-                <div className="space-y-4">
-                  
-                  {/* Category, Read Time, and Live Auto-Play Indicator */}
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        {currentFeatured.category}
-                      </span>
-                      <span className="text-xs text-slate-400 flex items-center gap-1 font-medium">
-                        <Clock className="w-3.5 h-3.5" /> {currentFeatured.readTimeMinutes} min read
-                      </span>
+                      {/* Photo Resolution Badge */}
+                      <div className="absolute top-4 right-4 hidden sm:block z-10">
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold font-mono tracking-wider bg-slate-950/80 text-slate-300 border border-slate-700/60 backdrop-blur-md">
+                          HD 1080p
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400 bg-slate-950/60 px-2 py-0.5 rounded-full border border-slate-800">
-                      <span className={`w-1.5 h-1.5 rounded-full ${isPaused ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}`} />
-                      <span>{isPaused ? 'PAUSED' : 'AUTO-SCROLLING'}</span>
-                    </div>
-                  </div>
+                    {/* Rich Information Side (7 cols on lg) */}
+                    <div className="lg:col-span-7 p-6 sm:p-8 lg:p-9 flex flex-col justify-between bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 overflow-hidden">
+                      <div className="space-y-3.5">
+                        
+                        {/* Category, Read Time, and Live Auto-Play Status */}
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              {art.category}
+                            </span>
+                            <span className="text-xs text-slate-400 flex items-center gap-1 font-medium">
+                              <Clock className="w-3.5 h-3.5" /> {art.readTimeMinutes} min read
+                            </span>
+                          </div>
 
-                  {/* Title */}
-                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white group-hover:text-emerald-400 transition-colors leading-tight">
-                    {currentFeatured.title}
-                  </h2>
+                          <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400 bg-slate-950/60 px-2.5 py-1 rounded-full border border-slate-800">
+                            <span className={`w-1.5 h-1.5 rounded-full ${isPaused ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}`} />
+                            <span>{isPaused ? 'PAUSED' : 'AUTO-SCROLLING'}</span>
+                          </div>
+                        </div>
 
-                  {/* Subtitle / Prose */}
-                  <p className="text-sm sm:text-base text-slate-300 line-clamp-3 leading-relaxed">
-                    {currentFeatured.subtitle}
-                  </p>
+                        {/* Title */}
+                        <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white group-hover:text-emerald-400 transition-colors leading-snug line-clamp-2">
+                          {art.title}
+                        </h2>
 
-                  {/* Quick Technical / Scenic Highlights Strip */}
-                  {currentFeatured.quickFacts && currentFeatured.quickFacts.length > 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
-                      {currentFeatured.quickFacts.slice(0, 3).map((qf, i) => (
-                        <div key={i} className="px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800/90 shadow-sm">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">
-                            {qf.label}
-                          </span>
-                          <span className="text-xs font-bold text-amber-300 block truncate mt-0.5">
-                            {qf.value}
+                        {/* Subtitle */}
+                        <p className="text-xs sm:text-sm text-slate-300 line-clamp-2 leading-relaxed">
+                          {art.subtitle}
+                        </p>
+
+                        {/* Editorial Story Excerpt Block */}
+                        {storyExcerpt && (
+                          <div className="relative pl-3 border-l-2 border-emerald-500/70 bg-slate-950/50 p-2.5 rounded-r-xl">
+                            <p className="text-[12px] sm:text-xs text-slate-300/90 italic line-clamp-2 leading-relaxed">
+                              "{storyExcerpt}"
+                            </p>
+                          </div>
+                        )}
+
+                        {/* 4 Technical Quick Facts in responsive grid */}
+                        {art.quickFacts && art.quickFacts.length > 0 && (
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5">
+                            {art.quickFacts.slice(0, 4).map((qf, i) => (
+                              <div key={i} className="px-2.5 py-2 rounded-xl bg-slate-950/80 border border-slate-800 shadow-sm">
+                                <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">
+                                  {qf.label}
+                                </span>
+                                <span className="text-xs font-bold text-amber-300 block truncate mt-0.5">
+                                  {qf.value}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Related Flagship Express Trains */}
+                        {art.relatedTrains && art.relatedTrains.length > 0 && (
+                          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                              Express Fleet:
+                            </span>
+                            {art.relatedTrains.slice(0, 2).map((tr, i) => (
+                              <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] bg-slate-800/90 text-emerald-300 border border-emerald-500/20 font-medium whitespace-nowrap">
+                                <span>🚆</span>
+                                <span>{tr.trainName}</span>
+                                <span className="text-slate-400 hidden sm:inline">({tr.route.split('➔')[0].trim()} ➔ {tr.route.split('➔')[1]?.trim()})</span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Tags */}
+                        <div className="flex flex-wrap gap-1 pt-0.5">
+                          {art.tags.slice(0, 5).map((tag, i) => (
+                            <span key={i} className="text-[10px] bg-slate-800/80 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700/50 font-medium">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Footer Bar: Author & Action Buttons */}
+                      <div className="pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-3">
+                        
+                        {/* Author */}
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs">
+                            {art.author.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-slate-200">{art.author}</p>
+                            <p className="text-[10px] text-slate-400">{art.authorRole || art.publishedDate}</p>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                          <button 
+                            type="button"
+                            onClick={(e) => handleToggleSave(e, art)}
+                            className={`p-2 rounded-xl border transition-colors ${
+                              savedSlugs.includes(art.slug)
+                                ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                                : 'bg-slate-800 hover:bg-slate-700 border-slate-700/60 text-slate-300'
+                            }`}
+                            title={savedSlugs.includes(art.slug) ? 'Remove from Saved' : 'Save for Journey'}
+                          >
+                            <Bookmark className={`w-4 h-4 ${savedSlugs.includes(art.slug) ? 'fill-amber-400 text-amber-400' : ''}`} />
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={(e) => handleShare(e, art.slug)}
+                            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                            title="Share Article"
+                          >
+                            {copiedSlug === art.slug ? (
+                              <Check className="w-4 h-4 text-emerald-400" />
+                            ) : (
+                              <Share2 className="w-4 h-4" />
+                            )}
+                          </button>
+                          <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500 group-hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition-all">
+                            <span>Read Story</span>
+                            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                           </span>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      </div>
 
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {currentFeatured.tags.slice(0, 4).map((tag, i) => (
-                      <span key={i} className="text-[11px] bg-slate-800/90 text-slate-300 px-2.5 py-0.5 rounded-lg border border-slate-700/60 font-medium">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Footer Bar & Interactive Carousel Dots */}
-                <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-4">
-                  
-                  {/* Author Meta */}
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs">
-                      {currentFeatured.author.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-200">{currentFeatured.author}</p>
-                      <p className="text-[10px] text-slate-400">{currentFeatured.publishedDate}</p>
                     </div>
                   </div>
+                );
+              })}
+            </div>
 
-                  {/* Action Buttons & Indicator Dots */}
-                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                    
-                    {/* Carousel Navigation Indicator Dots */}
-                    <div className="flex items-center gap-1.5">
-                      {featuredArticles.map((art, idx) => (
-                        <button
-                          key={art.id}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setFeaturedIndex(idx);
-                          }}
-                          title={`Go to story ${idx + 1}: ${art.title}`}
-                          className={`h-2 rounded-full transition-all cursor-pointer ${
-                            featuredIndex === idx
-                              ? 'w-7 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]'
-                              : 'w-2 bg-slate-700 hover:bg-slate-500'
-                          }`}
-                        />
-                      ))}
-                    </div>
+            {/* Left & Right Smooth Floating Arrow Navigation */}
+            <button
+              type="button"
+              onClick={handlePrevFeatured}
+              title="Previous Featured Story"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-slate-950/85 hover:bg-emerald-600 text-white flex items-center justify-center border border-slate-700/90 hover:border-emerald-400 transition-all shadow-2xl backdrop-blur-md cursor-pointer z-20 opacity-80 hover:opacity-100"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleNextFeatured}
+              title="Next Featured Story"
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-slate-950/85 hover:bg-emerald-600 text-white flex items-center justify-center border border-slate-700/90 hover:border-emerald-400 transition-all shadow-2xl backdrop-blur-md cursor-pointer z-20 opacity-80 hover:opacity-100"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
 
-                    <div className="flex items-center gap-1.5">
-                      <button 
-                        type="button"
-                        onClick={(e) => handleToggleSave(e, currentFeatured)}
-                        className={`p-2 rounded-xl border transition-colors ${
-                          savedSlugs.includes(currentFeatured.slug)
-                            ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
-                            : 'bg-slate-800 hover:bg-slate-700 border-slate-700/60 text-slate-300'
-                        }`}
-                        title={savedSlugs.includes(currentFeatured.slug) ? 'Remove from Saved' : 'Save for Journey'}
-                      >
-                        <Bookmark className={`w-4 h-4 ${savedSlugs.includes(currentFeatured.slug) ? 'fill-amber-400 text-amber-400' : ''}`} />
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={(e) => handleShare(e, currentFeatured.slug)}
-                        className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                        title="Share Article"
-                      >
-                        {copiedSlug === currentFeatured.slug ? (
-                          <Check className="w-4 h-4 text-emerald-400" />
-                        ) : (
-                          <Share2 className="w-4 h-4" />
-                        )}
-                      </button>
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 group-hover:bg-emerald-500 text-slate-950 font-bold text-xs transition-all shadow-md shadow-emerald-600/20">
-                        <span>Read</span>
-                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                      </span>
-                    </div>
-
-                  </div>
-                </div>
-
-              </div>
+            {/* Floating Indicator Dots Bar */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-950/80 border border-slate-800/90 backdrop-blur-md z-20 shadow-lg">
+              {featuredArticles.map((art, idx) => (
+                <button
+                  key={art.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFeaturedIndex(idx);
+                  }}
+                  title={`Story ${idx + 1}: ${art.title}`}
+                  className={`h-2 rounded-full transition-all cursor-pointer ${
+                    featuredIndex === idx
+                      ? 'w-7 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]'
+                      : 'w-2 bg-slate-600 hover:bg-slate-400'
+                  }`}
+                />
+              ))}
             </div>
           </div>
         )}
