@@ -16,7 +16,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "The Konkan Railway Odyssey: Waterfalls, Viaducts & Coastal Cliffs",
     "subtitle": "Traversing 760 kilometers through 91 tunnels and 2,000 bridges across the formidable Western Ghats.",
     "category": "Scenic Routes",
-    "coverImage": "/images/blogs/konkan-railway-scenic-odyssey-2.jpg",
+    "coverImage": "/images/blogs/konkan-railway-scenic-odyssey-1.jpg",
     "author": "Dr. E. Sreedharan & RailTrack Editorial",
     "authorRole": "Chief Infrastructure Editor",
     "readTimeMinutes": 10,
