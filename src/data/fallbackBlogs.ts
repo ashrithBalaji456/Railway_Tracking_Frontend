@@ -379,7 +379,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "CSMT Mumbai: The Living Victorian Gothic Legend of Indian Railways",
     "subtitle": "Discover the UNESCO World Heritage terminus where stone gargoyles meet 3 million daily suburban commuters.",
     "category": "Heritage & History",
-    "coverImage": "/images/blogs/csmt-mumbai-unesco-gothic-wonder-2.jpg",
+    "coverImage": "/images/blogs/csmt-mumbai-unesco-gothic-wonder-1.jpg",
     "author": "Heritage Architecture Circle",
     "authorRole": "Urban Rail Conservator",
     "readTimeMinutes": 8,
@@ -440,7 +440,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "/images/blogs/csmt-mumbai-unesco-gothic-wonder-2.jpg",
+        "imageUrl": "/images/blogs/csmt-mumbai-unesco-gothic-wonder-1.jpg",
         "imageCaption": "The world-famous facade of CSMT illuminated in vibrant tricolor lights against the Mumbai night sky.",
         "altText": "Chhatrapati Shivaji Maharaj Terminus illuminated facade"
       },
@@ -501,7 +501,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "Kalka–Shimla Mountain Railway: 102 Tunnels Through Himalayan Pines",
     "subtitle": "Ascend 4,800 feet into the clouds on India's historic 1903 narrow-gauge mountain line.",
     "category": "Scenic Routes",
-    "coverImage": "/images/blogs/kalka-shimla-unesco-toy-train-3.jpg",
+    "coverImage": "/images/blogs/kalka-shimla-unesco-toy-train-1.jpg",
     "author": "Himalayan Mountain Rail Guild",
     "authorRole": "Alpine Railway Historian",
     "readTimeMinutes": 8,
@@ -562,7 +562,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "/images/blogs/kalka-shimla-unesco-toy-train-3.jpg",
+        "imageUrl": "/images/blogs/kalka-shimla-unesco-toy-train-1.jpg",
         "imageCaption": "The red-and-cream Kalka-Shimla toy train winding gracefully across a multi-tier stone arch bridge.",
         "altText": "Kalka Shimla toy train crossing mountain arch bridge"
       },
