@@ -685,7 +685,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       {
         "type": "image",
         "imageUrl": "/images/blogs/nilgiri-mountain-railway-rack-pinion-1.jpg",
-        "imageCaption": "The dual-toothed Abt rack rail mounted between the running rails, engaging the locomotive's motorized cogwheels.",
+        "imageCaption": "The iconic blue-and-cream Nilgiri toy train crossing a historic stone arch viaduct over an emerald mountain stream with steam billowing into the morning sky.",
         "altText": "Abt rack and pinion rail system in the Nilgiris"
       },
       {
@@ -696,7 +696,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       {
         "type": "image",
         "imageUrl": "/images/blogs/nilgiri-mountain-railway-rack-pinion-2.jpg",
-        "imageCaption": "A Swiss-built X-Class steam locomotive pushing blue-and-cream coaches uphill into the clouds.",
+        "imageCaption": "The Swiss-built X-Class steam locomotive with glowing brass headlights pushing blue coaches up the steep mountain incline on the Abt rack system.",
         "altText": "Nilgiri Mountain Railway steam pusher engine"
       },
       {
@@ -707,7 +707,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       {
         "type": "image",
         "imageUrl": "/images/blogs/nilgiri-mountain-railway-rack-pinion-3.jpg",
-        "imageCaption": "The blue and cream heritage coaches winding through rolling tea plantations near Coonoor.",
+        "imageCaption": "The blue-and-cream heritage toy train winding gracefully through sweeping emerald-green tea terraces cascading down the Nilgiri hills near Coonoor.",
         "altText": "Nilgiri toy train traversing tea plantations"
       },
       {
@@ -718,7 +718,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       {
         "type": "image",
         "imageUrl": "/images/blogs/nilgiri-mountain-railway-rack-pinion-4.jpg",
-        "imageCaption": "An X-Class steam engine undergoing precision maintenance inside the historic Coonoor locomotive workshop.",
+        "imageCaption": "Inside the historic 1908 Coonoor steam locomotive workshop shed, with golden morning sunbeams illuminating the brass-trimmed steam engine.",
         "altText": "Coonoor steam locomotive shed"
       },
       {
@@ -729,7 +729,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       {
         "type": "image",
         "imageUrl": "/images/blogs/nilgiri-mountain-railway-rack-pinion-5.jpg",
-        "imageCaption": "The historic Udhagamandalam (Ooty) railway station building framed by Nilgiri eucalyptus groves.",
+        "imageCaption": "The picturesque colonial stone-and-timber Udhagamandalam (Ooty) railway station terminal with the blue toy train berthed along flower-lined platforms.",
         "altText": "Ooty railway station heritage terminal"
       },
       {
