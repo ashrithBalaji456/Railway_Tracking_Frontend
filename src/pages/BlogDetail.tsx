@@ -61,7 +61,7 @@ export default function BlogDetail() {
   const [activeChapterIndex, setActiveChapterIndex] = useState<number>(0);
   const [trackSvgPath, setTrackSvgPath] = useState<string>('');
   const [totalTrackLength, setTotalTrackLength] = useState<number>(0);
-  const [stationLengths, setStationLengths] = useState<number[]>([]);
+  const [trackBounds, setTrackBounds] = useState<{ startY: number; endY: number; endX: number }>({ startY: 0, endY: 2000, endX: 32 });
   const [trainPos, setTrainPos] = useState<{ x: number; y: number; angle: number }>({ x: 32, y: 44, angle: 90 });
   const [trainTravelDist, setTrainTravelDist] = useState<number>(0);
   const trackPathRef = useRef<SVGPathElement>(null);
@@ -270,15 +270,18 @@ export default function BlogDetail() {
       parts.push(`L ${nxt.x} ${nxt.y}`);
     }
 
-    // Extend slightly past last station
+    // Extend past the last station down to the end of the last card
     const sLast = stationsData[stationsData.length - 1];
-    parts.push(`L ${sLast.x} ${sLast.cardBottom}`);
+    // Extend all the way to bottom of the card + 24px buffer
+    const endY = sLast.cardBottom + 24;
+    parts.push(`L ${sLast.x} ${endY}`);
 
     const newPath = parts.join(' ');
     setTrackSvgPath(newPath);
+    setTrackBounds({ startY: s0.y, endY, endX: sLast.x });
   }, [chapters]);
 
-  // 2. Measure exact track distance to each station badge
+  // 2. Measure total track length whenever path updates
   useEffect(() => {
     const pathEl = trackPathRef.current;
     if (!pathEl) return;
@@ -287,40 +290,13 @@ export default function BlogDetail() {
       const totalLen = pathEl.getTotalLength();
       if (totalLen > 0) {
         setTotalTrackLength(totalLen);
-
-        const sLengths: number[] = [];
-        const numSamples = 400;
-        const containerW = storyContainerRef.current?.clientWidth || 800;
-
-        chapters.forEach((ch, idx) => {
-          const el = document.getElementById(ch.id);
-          const isLeft = idx % 2 === 0;
-          const targetY = el ? el.offsetTop + 42 : idx * 600 + 42;
-
-          let bestDist = 0;
-          let minDiff = Infinity;
-          for (let s = 0; s <= numSamples; s++) {
-            const dist = (s / numSamples) * totalLen;
-            const pt = pathEl.getPointAtLength(dist);
-            // Verify side match
-            const correctSide = isLeft ? pt.x < containerW / 2 : pt.x > containerW / 2;
-            const diff = Math.abs(pt.y - targetY);
-            if (correctSide && diff < minDiff) {
-              minDiff = diff;
-              bestDist = dist;
-            }
-          }
-          sLengths.push(bestDist);
-        });
-
-        setStationLengths(sLengths);
       }
     } catch {
       // Path not measured yet
     }
-  }, [trackSvgPath, chapters]);
+  }, [trackSvgPath]);
 
-  // 3. Scroll Progress & Locomotive Position Synchronization
+  // 3. Pixel-Perfect Monotonic Scroll & Locomotive Position Synchronization
   useEffect(() => {
     let ticking = false;
 
@@ -335,77 +311,66 @@ export default function BlogDetail() {
           }
 
           const windowHeight = window.innerHeight;
-          // Natural reading focal plane: 40% down from viewport top
-          const focalY = windowHeight * 0.40;
-
-          // Screen Y positions of station milestone badges
-          const stationScreenYs = chapters.map((ch) => {
-            const el = document.getElementById(ch.id);
-            return el ? el.getBoundingClientRect().top + 42 : 0;
-          });
+          // Natural reading focal plane: 45% down from viewport top
+          const focalY = windowHeight * 0.45;
+          const containerRect = container.getBoundingClientRect();
+          const currentY = focalY - containerRect.top;
 
           const totalLen = pathEl ? pathEl.getTotalLength() : totalTrackLength;
-          let currentTargetDist = 0;
-          let currentActiveIdx = 0;
 
-          if (stationLengths.length >= chapters.length && totalLen > 0) {
-            const s0Y = stationScreenYs[0];
-            const sLastY = stationScreenYs[stationScreenYs.length - 1];
+          if (totalLen > 0 && pathEl) {
+            const { startY, endY } = trackBounds;
 
-            if (focalY <= s0Y) {
-              // Above Station 1
-              currentTargetDist = stationLengths[0];
-              currentActiveIdx = 0;
-            } else if (focalY >= sLastY) {
-              // At or below final station
-              currentTargetDist = stationLengths[stationLengths.length - 1];
-              currentActiveIdx = chapters.length - 1;
+            let targetDist = 0;
+            if (currentY <= startY) {
+              // Above Station 1: Train rests cleanly at Station 1
+              targetDist = Math.min(24, totalLen * 0.01);
+            } else if (currentY >= endY) {
+              // At or below bottom of final card: Train reaches the very end of the line
+              targetDist = totalLen;
             } else {
-              // Find the segment between Station i and Station i+1
-              for (let i = 0; i < stationScreenYs.length - 1; i++) {
-                const curY = stationScreenYs[i];
-                const nxtY = stationScreenYs[i + 1];
-
-                if (focalY >= curY && focalY <= nxtY) {
-                  const segmentH = Math.max(1, nxtY - curY);
-                  const progress = Math.max(0, Math.min(1, (focalY - curY) / segmentH));
-
-                  const distCur = stationLengths[i];
-                  const distNxt = stationLengths[i + 1];
-                  currentTargetDist = distCur + progress * (distNxt - distCur);
-                  currentActiveIdx = progress >= 0.5 ? i + 1 : i;
-                  break;
+              // High-precision 16-step binary search along strictly monotonic Y-axis
+              let low = 0;
+              let high = totalLen;
+              for (let iter = 0; iter < 16; iter++) {
+                const mid = (low + high) * 0.5;
+                const pt = pathEl.getPointAtLength(mid);
+                if (pt.y < currentY) {
+                  low = mid;
+                } else {
+                  high = mid;
                 }
               }
+              targetDist = (low + high) * 0.5;
             }
 
-            setTrainTravelDist(currentTargetDist);
-            setActiveChapterIndex(currentActiveIdx);
+            setTrainTravelDist(targetDist);
 
-            if (pathEl) {
-              const safeDist = Math.max(0, Math.min(totalLen, currentTargetDist));
-              const pt = pathEl.getPointAtLength(safeDist);
-              const ptAhead = pathEl.getPointAtLength(Math.min(totalLen, safeDist + 3));
-              const ptBehind = pathEl.getPointAtLength(Math.max(0, safeDist - 3));
-              const angle = Math.atan2(ptAhead.y - ptBehind.y, ptAhead.x - ptBehind.x) * (180 / Math.PI);
-              setTrainPos({ x: pt.x, y: pt.y, angle });
-            }
-          } else {
-            // Initial fallback while measurements settle
-            chapters.forEach((ch, idx) => {
-              const el = document.getElementById(ch.id);
-              if (el && el.getBoundingClientRect().top <= windowHeight * 0.6) {
-                currentActiveIdx = idx;
-              }
-            });
-            setActiveChapterIndex(currentActiveIdx);
+            const safeDist = Math.max(0, Math.min(totalLen, targetDist));
+            const pt = pathEl.getPointAtLength(safeDist);
+            const ptAhead = pathEl.getPointAtLength(Math.min(totalLen, safeDist + 4));
+            const ptBehind = pathEl.getPointAtLength(Math.max(0, safeDist - 4));
+            const angle = Math.atan2(ptAhead.y - ptBehind.y, ptAhead.x - ptBehind.x) * (180 / Math.PI);
+            setTrainPos({ x: pt.x, y: pt.y, angle });
           }
 
+          // Active Chapter Index: Highlights card when top reaches reading zone
+          let newActiveIdx = 0;
+          chapters.forEach((ch, idx) => {
+            const el = document.getElementById(ch.id);
+            if (el) {
+              const r = el.getBoundingClientRect();
+              if (r.top <= windowHeight * 0.60) {
+                newActiveIdx = idx;
+              }
+            }
+          });
+          setActiveChapterIndex(newActiveIdx);
+
           // Top progress bar ratio
-          const rect = container.getBoundingClientRect();
-          const totalDistance = rect.height - windowHeight * 0.4;
+          const totalDistance = containerRect.height - windowHeight * 0.4;
           if (totalDistance > 0) {
-            const traveled = (windowHeight * 0.5) - rect.top;
+            const traveled = (windowHeight * 0.5) - containerRect.top;
             const ratio = Math.max(0, Math.min(1, traveled / totalDistance));
             setScrollProgress(ratio);
           }
@@ -441,7 +406,7 @@ export default function BlogDetail() {
       window.removeEventListener('resize', computeTrackGeometry);
       if (ro) ro.disconnect();
     };
-  }, [chapters, computeTrackGeometry, stationLengths, totalTrackLength]);
+  }, [chapters, computeTrackGeometry, totalTrackLength, trackBounds]);
 
   const scrollToChapter = (chapterId: string) => {
     const el = document.getElementById(chapterId);
@@ -793,7 +758,7 @@ export default function BlogDetail() {
                   strokeWidth="1"
                 />
 
-                {/* Layer 5: Live Glowing Electric Progress Line (fills up behind the locomotive) */}
+                {/* Layer 5: Live Glowing Electric Progress Line (fills up behind the locomotive with 0 latency) */}
                 <path
                   d={trackSvgPath}
                   fill="none"
@@ -804,7 +769,6 @@ export default function BlogDetail() {
                   strokeDasharray={`${totalTrackLength} ${totalTrackLength}`}
                   strokeDashoffset={Math.max(0, totalTrackLength - trainTravelDist)}
                   filter="url(#switchbackGlowFilter)"
-                  className="transition-all duration-75 ease-out"
                 />
                 <path
                   d={trackSvgPath}
@@ -815,16 +779,33 @@ export default function BlogDetail() {
                   strokeLinejoin="round"
                   strokeDasharray={`${totalTrackLength} ${totalTrackLength}`}
                   strokeDashoffset={Math.max(0, totalTrackLength - trainTravelDist)}
-                  className="transition-all duration-75 ease-out"
                 />
               </>
             )}
           </svg>
 
-          {/* Animated Moving Mountain Locomotive Engine Indicator */}
+          {/* End-of-Line Terminal Railway Buffer Stop Bumper */}
+          {trackSvgPath && trackBounds && (
+            <div 
+              className="absolute -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none flex flex-col items-center"
+              style={{ 
+                left: `${trackBounds.endX}px`, 
+                top: `${trackBounds.endY}px` 
+              }}
+            >
+              <div className="w-10 h-3.5 rounded bg-slate-900 border-2 border-slate-700 shadow-xl flex items-center justify-center">
+                <div className="w-6 h-1 rounded-full bg-amber-400" />
+              </div>
+              <span className="text-[8px] font-mono font-black text-slate-500 uppercase tracking-widest mt-1">
+                TERMINUS
+              </span>
+            </div>
+          )}
+
+          {/* Animated Moving Mountain Locomotive Engine Indicator (Zero CSS latency for buttery 120fps sync) */}
           {trackSvgPath && (
             <div 
-              className="absolute -translate-x-1/2 -translate-y-1/2 transition-transform duration-75 ease-out z-20 pointer-events-none"
+              className="absolute -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none will-change-transform"
               style={{ 
                 left: `${trainPos.x}px`,
                 top: `${trainPos.y}px`,
