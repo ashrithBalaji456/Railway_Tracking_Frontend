@@ -111,10 +111,11 @@ export default function ArticleCommunityTips({ slug }: ArticleCommunityTipsProps
         {
           id: 'seed-1',
           articleSlug: slug,
-          authorName: 'Rohan Shenoy',
-          authorHandle: '@rohan_railfan',
+          authorName: 'Aditya Sharma',
+          authorHandle: '@aditya_rails',
           category: 'SCENIC_SPOT',
-          tipText: 'Sit on the right side of the train when heading towards the hills/coast for unobstructed valley and waterfall views! Book window seats in 2S or 3E.',
+          tipText: 'Sit on the right side window seat while traveling south from Mumbai to Goa for breathtaking coastal valley and waterfall views during monsoon!',
+          photoUrl: '/images/blogs/advice-konkan-window-seat.jpg',
           travelDate: 'October 2026',
           likesCount: 38,
           createdAt: new Date().toISOString()
@@ -122,10 +123,11 @@ export default function ArticleCommunityTips({ slug }: ArticleCommunityTipsProps
         {
           id: 'seed-2',
           articleSlug: slug,
-          authorName: 'Priya Narayanan',
-          authorHandle: '@train_diary_priya',
+          authorName: 'Priya Nair',
+          authorHandle: '@priya_travels',
           category: 'FOOD_TIP',
-          tipText: 'Carry an empty water bottle — all major platform stalls have IRCTC Water ATMs dispensing chilled purified RO water for just ₹5 per liter.',
+          tipText: 'Ratlam Junction sev and Chiplun jackfruit chips from platform vendors are an absolute must-try!',
+          photoUrl: '/images/blogs/advice-konkan-platform-snacks.jpg',
           travelDate: 'September 2026',
           likesCount: 29,
           createdAt: new Date().toISOString()
