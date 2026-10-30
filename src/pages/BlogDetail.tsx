@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -20,7 +20,9 @@ import {
   Award,
   Bookmark,
   Bot,
-  MessageSquare
+  MessageSquare,
+  MapPin,
+  Camera
 } from 'lucide-react';
 import { getBlogBySlug } from '../services/api';
 import type { BlogArticle } from '../types';
@@ -29,6 +31,23 @@ import { isArticleSaved, toggleSaveArticle, getOfflineCachedArticle } from '../u
 import AudioStoryPlayer from '../components/AudioStoryPlayer';
 import ArticleCommunityTips from '../components/ArticleCommunityTips';
 
+interface StoryChapter {
+  id: string;
+  chapterNumber: number;
+  title: string;
+  paragraphs: string[];
+  image?: {
+    url: string;
+    caption?: string;
+    altText?: string;
+  };
+  callout?: {
+    type: 'tip' | 'trivia' | 'quote';
+    title?: string;
+    content: string;
+  };
+}
+
 export default function BlogDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -36,6 +55,11 @@ export default function BlogDetail() {
   const [loading, setLoading] = useState<boolean>(true);
   const [copied, setCopied] = useState<boolean>(false);
   const [isSaved, setIsSaved] = useState<boolean>(false);
+
+  // Animated Scroll Tracking
+  const [scrollProgress, setScrollProgress] = useState<number>(0);
+  const [activeChapterIndex, setActiveChapterIndex] = useState<number>(0);
+  const storyContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -47,6 +71,7 @@ export default function BlogDetail() {
         if (isMounted && res?.data) {
           setArticle(res.data);
           setIsSaved(isArticleSaved(res.data.slug));
+          setLoading(false);
           return;
         }
       } catch (err) {
@@ -78,6 +103,141 @@ export default function BlogDetail() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return () => { isMounted = false; };
   }, [slug]);
+
+  // Group linear sections into rich Chapters for alternating Zig-Zag layout
+  const chapters = useMemo<StoryChapter[]>(() => {
+    if (!article || !article.sections) return [];
+
+    const result: StoryChapter[] = [];
+    let current: StoryChapter | null = null;
+    let chCount = 0;
+
+    for (const sec of article.sections) {
+      if (sec.type === 'heading') {
+        if (current) result.push(current);
+        chCount++;
+        current = {
+          id: `story-chapter-${chCount}`,
+          chapterNumber: chCount,
+          title: sec.title || `Chapter ${chCount}`,
+          paragraphs: sec.content ? [sec.content] : [],
+          image: undefined,
+          callout: undefined
+        };
+      } else if (sec.type === 'paragraph') {
+        if (!current) {
+          chCount++;
+          current = {
+            id: `story-chapter-${chCount}`,
+            chapterNumber: chCount,
+            title: `Introduction`,
+            paragraphs: [],
+            image: undefined,
+            callout: undefined
+          };
+        }
+        if (sec.content) current.paragraphs.push(sec.content);
+      } else if (sec.type === 'image') {
+        if (current && !current.image) {
+          current.image = {
+            url: sec.imageUrl || '',
+            caption: sec.imageCaption,
+            altText: sec.altText
+          };
+        } else if (current) {
+          // If chapter already has an image, push current and start fresh chapter
+          result.push(current);
+          chCount++;
+          current = {
+            id: `story-chapter-${chCount}`,
+            chapterNumber: chCount,
+            title: sec.title || `Visual Chapter ${chCount}`,
+            paragraphs: [],
+            image: {
+              url: sec.imageUrl || '',
+              caption: sec.imageCaption,
+              altText: sec.altText
+            },
+            callout: undefined
+          };
+        } else {
+          chCount++;
+          current = {
+            id: `story-chapter-${chCount}`,
+            chapterNumber: chCount,
+            title: `Visual Chronicle`,
+            paragraphs: [],
+            image: {
+              url: sec.imageUrl || '',
+              caption: sec.imageCaption,
+              altText: sec.altText
+            },
+            callout: undefined
+          };
+        }
+      } else if (sec.type === 'tip' || sec.type === 'trivia' || sec.type === 'quote') {
+        if (current) {
+          current.callout = {
+            type: sec.type,
+            title: sec.title,
+            content: sec.content || ''
+          };
+        }
+      }
+    }
+
+    if (current) result.push(current);
+    return result;
+  }, [article]);
+
+  // Scroll Progress and Active Chapter Observer
+  useEffect(() => {
+    let ticking = false;
+
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const container = storyContainerRef.current;
+          if (container) {
+            const rect = container.getBoundingClientRect();
+            const windowHeight = window.innerHeight;
+            const totalDistance = rect.height - windowHeight * 0.5;
+
+            if (totalDistance > 0) {
+              const traveled = windowHeight * 0.4 - rect.top;
+              const ratio = Math.max(0, Math.min(1, traveled / totalDistance));
+              setScrollProgress(ratio);
+            }
+          }
+
+          // Track active chapter
+          chapters.forEach((ch, idx) => {
+            const el = document.getElementById(ch.id);
+            if (el) {
+              const r = el.getBoundingClientRect();
+              if (r.top <= window.innerHeight * 0.45 && r.bottom >= window.innerHeight * 0.2) {
+                setActiveChapterIndex(idx);
+              }
+            }
+          });
+
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [chapters]);
+
+  const scrollToChapter = (chapterId: string) => {
+    const el = document.getElementById(chapterId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
 
   const handleToggleSave = () => {
     if (!article) return;
@@ -130,7 +290,7 @@ export default function BlogDetail() {
       case 'mastering-irctc-tatkal-booking-rules':
         return [
           'What are the exact Tatkal opening hours for AC and Sleeper tickets?',
-          'Can I get a refund if my Tatkal ticket is waitlisted (WL) after chart preparation?',
+          'When is the 1st and final reservation chart prepared for trains departing after 2 PM?',
           'How to pre-save passenger details in IRCTC Master List before 10 AM?'
         ];
       case 'iconic-station-food-indian-railways':
@@ -204,10 +364,25 @@ export default function BlogDetail() {
   const moreArticles = FALLBACK_BLOGS.filter(a => a.id !== article.id).slice(0, 3);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-24 pt-4 px-4 sm:px-6 lg:px-8">
-      <article className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen bg-slate-950 text-slate-100 pb-24 pt-4 px-4 sm:px-6 lg:px-8 selection:bg-emerald-500/30">
+      
+      {/* Mobile Top Sticky Railway Progress Track */}
+      <div className="lg:hidden sticky top-14 z-30 -mx-4 px-4 py-2 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 flex items-center justify-between gap-3 shadow-lg">
+        <div className="flex items-center gap-2 overflow-hidden">
+          <Train className="w-4 h-4 text-amber-400 shrink-0" />
+          <span className="text-xs font-bold text-slate-200 truncate">
+            {chapters[activeChapterIndex]?.title || article.title}
+          </span>
+        </div>
+        <span className="text-[11px] font-mono font-bold text-emerald-400 shrink-0">
+          Ch {activeChapterIndex + 1}/{chapters.length}
+        </span>
+        <div className="absolute bottom-0 left-0 h-[2.5px] bg-gradient-to-r from-amber-400 via-emerald-400 to-cyan-400 transition-all duration-150" style={{ width: `${Math.round(scrollProgress * 100)}%` }} />
+      </div>
+
+      <article className="max-w-6xl mx-auto space-y-10">
         
-        {/* Top Navigation Bar: Back & Breadcrumb */}
+        {/* Top Navigation Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
           <div className="flex items-center gap-2 text-xs text-slate-400">
             <button 
@@ -254,8 +429,8 @@ export default function BlogDetail() {
           </div>
         </div>
 
-        {/* Article Header Section */}
-        <header className="space-y-4">
+        {/* Article Header */}
+        <header className="space-y-4 max-w-4xl">
           <div className="flex flex-wrap items-center gap-2">
             <span className="px-3 py-1 rounded-md text-xs font-bold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               {article.category}
@@ -278,7 +453,7 @@ export default function BlogDetail() {
 
           {/* Author Badge */}
           <div className="flex items-center gap-3 pt-2">
-            <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-sm">
+            <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-sm shadow-inner">
               {article.author.charAt(0)}
             </div>
             <div>
@@ -288,26 +463,31 @@ export default function BlogDetail() {
           </div>
         </header>
 
-        {/* Main Cover Image */}
-        <div className="relative w-full rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 aspect-[16/9] sm:aspect-[21/9]">
+        {/* Crystal-Clear Enhanced Main Cover Image */}
+        <div className="relative w-full rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 aspect-[16/9] sm:aspect-[21/9] group">
           <img 
             src={article.coverImage} 
             alt={article.title}
             referrerPolicy="no-referrer"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+            style={{ imageRendering: '-webkit-optimize-contrast' }}
             onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5a/Vande_Bharat_Express_around_Mumbai.jpg/960px-Vande_Bharat_Express_around_Mumbai.jpg';
+              (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg';
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
+          <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 flex items-center gap-2 bg-slate-950/80 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 text-xs text-slate-200">
+            <Camera className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="font-medium">Full HD Verified Heritage Photograph</span>
+          </div>
         </div>
 
-        {/* Hands-Free Audio Narration Player */}
+        {/* Audio Narration Player */}
         <AudioStoryPlayer article={article} />
 
         {/* Quick Facts Strip */}
         {article.quickFacts && article.quickFacts.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 sm:p-5 rounded-2xl border border-slate-800 bg-slate-900/60 backdrop-blur-md">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 sm:p-5 rounded-2xl border border-slate-800 bg-slate-900/60 backdrop-blur-md shadow-xl">
             {article.quickFacts.map((fact, idx) => (
               <div key={idx} className="space-y-1">
                 <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
@@ -322,93 +502,270 @@ export default function BlogDetail() {
           </div>
         )}
 
-        {/* Structured Article Body */}
-        <div className="space-y-8 pt-4">
-          {article.sections.map((section, idx) => {
-            switch (section.type) {
-              
-              case 'heading':
-                return (
-                  <div key={idx} className="pt-4 border-t border-slate-800/60 space-y-3">
-                    <h2 className="text-xl sm:text-2xl font-bold text-white pl-3 border-l-4 border-emerald-500">
-                      {section.title}
-                    </h2>
-                    {section.content && (
-                      <p className="text-sm sm:text-base text-slate-300 leading-relaxed whitespace-pre-line">
-                        {section.content}
-                      </p>
-                    )}
+        {/* ========================================================================= */}
+        {/* ZIG-ZAG CHAPTER STORY SECTION WITH SCROLL-FOLLOWING RAILWAY TRACK THREAD */}
+        {/* ========================================================================= */}
+        <div ref={storyContainerRef} className="relative pt-6">
+          
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            {/* Desktop Left Rail Track Navigator Spine */}
+            <aside className="hidden lg:block lg:col-span-1 sticky top-24 self-start py-6">
+              <div className="flex flex-col items-center relative min-h-[500px]">
+                
+                {/* Visual Railway Track Rails */}
+                <div className="absolute top-2 bottom-2 w-4 flex justify-between pointer-events-none">
+                  {/* Left Rail */}
+                  <div className="w-[3px] bg-slate-800 h-full rounded-full" />
+                  {/* Right Rail */}
+                  <div className="w-[3px] bg-slate-800 h-full rounded-full" />
+                </div>
+
+                {/* Live Glowing Railway Fill Track */}
+                <div 
+                  className="absolute top-2 w-[4px] bg-gradient-to-b from-amber-400 via-emerald-400 to-cyan-400 rounded-full shadow-[0_0_12px_rgba(251,191,36,0.6)] transition-all duration-75"
+                  style={{ height: `${Math.round(scrollProgress * 92)}%` }}
+                />
+
+                {/* Animated Moving Locomotive Engine Indicator */}
+                <div 
+                  className="absolute left-1/2 -translate-x-1/2 transition-all duration-150 ease-out z-20 pointer-events-none"
+                  style={{ top: `${Math.round(scrollProgress * 90)}%` }}
+                >
+                  <div className="w-8 h-8 rounded-full bg-slate-900 border-2 border-amber-400 flex items-center justify-center shadow-[0_0_15px_rgba(251,191,36,0.8)] animate-pulse">
+                    <Train className="w-4 h-4 text-amber-300" />
                   </div>
-                );
+                </div>
 
-              case 'paragraph':
-                return (
-                  <p key={idx} className="text-sm sm:text-base text-slate-300 leading-relaxed font-normal">
-                    {section.content}
-                  </p>
-                );
+                {/* Chapter Milestone Station Nodes */}
+                <div className="flex flex-col justify-between h-[480px] w-full z-10">
+                  {chapters.map((ch, idx) => {
+                    const isPassed = scrollProgress * chapters.length >= idx;
+                    const isActive = activeChapterIndex === idx;
 
-              case 'image':
+                    return (
+                      <button
+                        key={ch.id}
+                        onClick={() => scrollToChapter(ch.id)}
+                        title={`Jump to Chapter ${idx + 1}: ${ch.title}`}
+                        className={`group relative flex items-center justify-center cursor-pointer transition-all ${
+                          isActive ? 'scale-125' : 'hover:scale-110'
+                        }`}
+                      >
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black font-mono transition-all duration-300 ${
+                          isActive 
+                            ? 'bg-amber-400 text-slate-950 ring-4 ring-amber-400/30 shadow-[0_0_12px_rgba(251,191,36,0.9)]' 
+                            : isPassed
+                            ? 'bg-emerald-500 text-slate-950 shadow-[0_0_8px_rgba(16,185,129,0.7)]'
+                            : 'bg-slate-900 border-2 border-slate-700 text-slate-400 hover:border-slate-500'
+                        }`}>
+                          {idx + 1}
+                        </div>
+
+                        {/* Hover Tooltip with Chapter Title */}
+                        <div className="absolute left-9 px-2.5 py-1 rounded-md bg-slate-900/95 border border-slate-700 text-[11px] font-semibold text-slate-200 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl z-30">
+                          {ch.title}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+              </div>
+            </aside>
+
+            {/* Chapters Container in Zig-Zag Layout */}
+            <div className="lg:col-span-11 space-y-16">
+              {chapters.map((ch, idx) => {
+                const isEven = idx % 2 === 0;
+
                 return (
-                  <figure key={idx} className="my-6 space-y-2">
-                    <div className="rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 shadow-xl max-h-[480px]">
-                      <img 
-                        src={section.imageUrl} 
-                        alt={section.altText || section.title || 'Railway photograph'} 
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/Dudhsagar_Falls_Triplet.jpg/960px-Dudhsagar_Falls_Triplet.jpg';
-                        }}
-                      />
+                  <section 
+                    key={ch.id} 
+                    id={ch.id}
+                    className="scroll-mt-28 p-6 sm:p-8 rounded-3xl border border-slate-800/80 bg-gradient-to-br from-slate-900/80 via-slate-950/70 to-slate-900/40 backdrop-blur-md shadow-2xl transition-all hover:border-slate-700"
+                  >
+                    
+                    {/* Chapter Header Badge */}
+                    <div className="flex items-center gap-2 mb-6">
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold">
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span>MILESTONE {String(idx + 1).padStart(2, '0')}</span>
+                      </div>
+                      <div className="h-[1px] flex-1 bg-gradient-to-r from-slate-800 to-transparent" />
                     </div>
-                    {section.imageCaption && (
-                      <figcaption className="text-center text-xs text-slate-400 italic px-4">
-                        📸 {section.imageCaption}
-                      </figcaption>
-                    )}
-                  </figure>
-                );
 
-              case 'tip':
-                return (
-                  <div key={idx} className="p-4 sm:p-5 rounded-2xl border border-amber-500/30 bg-amber-500/5 space-y-1.5 shadow-lg shadow-amber-950/10">
-                    <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
-                      <Lightbulb className="w-4 h-4" />
-                      <span>{section.title || 'Pro Traveler Tip'}</span>
+                    {/* Alternating Zig-Zag Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+                      
+                      {/* EVEN CHAPTER: Text on Left (7 cols), Image on Right (5 cols) */}
+                      {isEven ? (
+                        <>
+                          {/* Info Column */}
+                          <div className="md:col-span-7 space-y-4">
+                            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
+                              {ch.title}
+                            </h2>
+
+                            <div className="space-y-4 text-slate-300 text-sm sm:text-base leading-relaxed font-normal">
+                              {ch.paragraphs.map((p, pIdx) => (
+                                <p key={pIdx} className="whitespace-pre-line">
+                                  {p}
+                                </p>
+                              ))}
+                            </div>
+
+                            {/* Callout Box if present */}
+                            {ch.callout && (
+                              <div className={`mt-5 p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed ${
+                                ch.callout.type === 'tip'
+                                  ? 'border-amber-500/30 bg-amber-500/10 text-amber-100'
+                                  : ch.callout.type === 'trivia'
+                                  ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-100'
+                                  : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100 italic'
+                              }`}>
+                                <div className="flex items-center gap-1.5 font-bold mb-1 uppercase tracking-wider text-xs">
+                                  {ch.callout.type === 'tip' ? (
+                                    <>
+                                      <Lightbulb className="w-4 h-4 text-amber-400" />
+                                      <span className="text-amber-400">{ch.callout.title || 'Pro Traveler Tip'}</span>
+                                    </>
+                                  ) : ch.callout.type === 'trivia' ? (
+                                    <>
+                                      <Sparkles className="w-4 h-4 text-indigo-400" />
+                                      <span className="text-indigo-400">{ch.callout.title || 'Did You Know?'}</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Compass className="w-4 h-4 text-emerald-400" />
+                                      <span className="text-emerald-400">{ch.callout.title || 'Heritage Lore'}</span>
+                                    </>
+                                  )}
+                                </div>
+                                <p>{ch.callout.content}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Image Column */}
+                          <div className="md:col-span-5">
+                            {ch.image && (
+                              <div className="space-y-2">
+                                <div className="group relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 shadow-xl aspect-[4/3] max-h-[360px]">
+                                  <img 
+                                    src={ch.image.url} 
+                                    alt={ch.image.altText || ch.title} 
+                                    referrerPolicy="no-referrer"
+                                    loading="lazy"
+                                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                                    style={{ imageRendering: '-webkit-optimize-contrast' }}
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-2.jpg';
+                                    }}
+                                  />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent pointer-events-none" />
+                                  <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-slate-950/70 backdrop-blur-md border border-slate-700/60 text-[10px] font-bold text-emerald-400">
+                                    HD 1080p
+                                  </div>
+                                </div>
+                                {ch.image.caption && (
+                                  <p className="text-center text-xs text-slate-400 italic px-2">
+                                    📸 {ch.image.caption}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        /* ODD CHAPTER: Image on Left (5 cols), Text on Right (7 cols) */
+                        <>
+                          {/* Image Column */}
+                          <div className="md:col-span-5 order-2 md:order-1">
+                            {ch.image && (
+                              <div className="space-y-2">
+                                <div className="group relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 shadow-xl aspect-[4/3] max-h-[360px]">
+                                  <img 
+                                    src={ch.image.url} 
+                                    alt={ch.image.altText || ch.title} 
+                                    referrerPolicy="no-referrer"
+                                    loading="lazy"
+                                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                                    style={{ imageRendering: '-webkit-optimize-contrast' }}
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-3.jpg';
+                                    }}
+                                  />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent pointer-events-none" />
+                                  <div className="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-slate-950/70 backdrop-blur-md border border-slate-700/60 text-[10px] font-bold text-cyan-400">
+                                    HD 1080p
+                                  </div>
+                                </div>
+                                {ch.image.caption && (
+                                  <p className="text-center text-xs text-slate-400 italic px-2">
+                                    📸 {ch.image.caption}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Info Column */}
+                          <div className="md:col-span-7 order-1 md:order-2 space-y-4">
+                            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
+                              {ch.title}
+                            </h2>
+
+                            <div className="space-y-4 text-slate-300 text-sm sm:text-base leading-relaxed font-normal">
+                              {ch.paragraphs.map((p, pIdx) => (
+                                <p key={pIdx} className="whitespace-pre-line">
+                                  {p}
+                                </p>
+                              ))}
+                            </div>
+
+                            {/* Callout Box if present */}
+                            {ch.callout && (
+                              <div className={`mt-5 p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed ${
+                                ch.callout.type === 'tip'
+                                  ? 'border-amber-500/30 bg-amber-500/10 text-amber-100'
+                                  : ch.callout.type === 'trivia'
+                                  ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-100'
+                                  : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100 italic'
+                              }`}>
+                                <div className="flex items-center gap-1.5 font-bold mb-1 uppercase tracking-wider text-xs">
+                                  {ch.callout.type === 'tip' ? (
+                                    <>
+                                      <Lightbulb className="w-4 h-4 text-amber-400" />
+                                      <span className="text-amber-400">{ch.callout.title || 'Pro Traveler Tip'}</span>
+                                    </>
+                                  ) : ch.callout.type === 'trivia' ? (
+                                    <>
+                                      <Sparkles className="w-4 h-4 text-indigo-400" />
+                                      <span className="text-indigo-400">{ch.callout.title || 'Did You Know?'}</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Compass className="w-4 h-4 text-emerald-400" />
+                                      <span className="text-emerald-400">{ch.callout.title || 'Heritage Lore'}</span>
+                                    </>
+                                  )}
+                                </div>
+                                <p>{ch.callout.content}</p>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+
                     </div>
-                    <p className="text-xs sm:text-sm text-amber-100/90 leading-relaxed">
-                      {section.content}
-                    </p>
-                  </div>
+                  </section>
                 );
+              })}
+            </div>
 
-              case 'trivia':
-                return (
-                  <div key={idx} className="p-4 sm:p-5 rounded-2xl border border-indigo-500/30 bg-indigo-500/5 space-y-1.5 shadow-lg shadow-indigo-950/10">
-                    <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider">
-                      <Sparkles className="w-4 h-4" />
-                      <span>{section.title || 'Did You Know?'}</span>
-                    </div>
-                    <p className="text-xs sm:text-sm text-indigo-100/90 leading-relaxed">
-                      {section.content}
-                    </p>
-                  </div>
-                );
+          </div>
 
-              case 'quote':
-                return (
-                  <blockquote key={idx} className="p-5 rounded-2xl border-l-4 border-emerald-400 bg-slate-900/80 italic text-slate-200 text-sm sm:text-base leading-relaxed">
-                    "{section.content}"
-                    {section.title && <cite className="block not-italic text-xs text-slate-400 mt-2 font-semibold">— {section.title}</cite>}
-                  </blockquote>
-                );
-
-              default:
-                return null;
-            }
-          })}
         </div>
 
         {/* Featured Trains in this Article (Interactive Deep Linking) */}
@@ -450,7 +807,7 @@ export default function BlogDetail() {
         )}
 
         {/* Tags Bar */}
-        <div className="pt-4 flex flex-wrap items-center gap-2">
+        <div className="pt-2 flex flex-wrap items-center gap-2">
           <span className="text-xs text-slate-500 font-medium">Topic Tags:</span>
           {article.tags.map((tag, i) => (
             <span 
@@ -524,9 +881,10 @@ export default function BlogDetail() {
                     alt={item.title} 
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    style={{ imageRendering: '-webkit-optimize-contrast' }}
                     loading="lazy"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5a/Vande_Bharat_Express_around_Mumbai.jpg/960px-Vande_Bharat_Express_around_Mumbai.jpg';
+                      (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg';
                     }}
                   />
                   <span className="absolute top-2 left-2 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-950/80 text-emerald-400 backdrop-blur-md">

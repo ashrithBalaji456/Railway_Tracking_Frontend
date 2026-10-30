@@ -6,7 +6,7 @@ export const BLOG_CATEGORIES: string[] = [
   'Train Tech',
   'Heritage & History',
   'Travel Tips',
-  'Food & Culture',
+  'Culinary & Culture'
 ];
 
 export const FALLBACK_BLOGS: BlogArticle[] = [
@@ -19,7 +19,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "coverImage": "/images/blogs/konkan-railway-scenic-odyssey-1.jpg",
     "author": "Dr. E. Sreedharan & RailTrack Editorial",
     "authorRole": "Chief Infrastructure Editor",
-    "readTimeMinutes": 8,
+    "readTimeMinutes": 10,
     "publishedDate": "2026-10-24",
     "featured": true,
     "tags": [
@@ -32,13 +32,13 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "quickFacts": [
       {
         "label": "Route Length",
-        "value": "760 km",
-        "icon": "map"
+        "value": "760 km (Roha to Thokur)",
+        "icon": "route"
       },
       {
         "label": "Total Tunnels",
-        "value": "91 (84 km underground)",
-        "icon": "tunnel"
+        "value": "91 Tunnels (84 km underground)",
+        "icon": "layers"
       },
       {
         "label": "Longest Tunnel",
@@ -48,83 +48,86 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       {
         "label": "Tallest Viaduct",
         "value": "Panval River (64 m tall)",
-        "icon": "bridge"
+        "icon": "award"
       }
     ],
     "relatedTrains": [
       {
         "trainNumber": "10103",
         "trainName": "Mandovi Express",
-        "route": "CSMT to MAO"
+        "route": "CSMT Mumbai ➔ Madgaon Goa"
       },
       {
         "trainNumber": "12051",
         "trainName": "Jan Shatabdi Express",
-        "route": "CSMT to MAO"
+        "route": "CSMT Mumbai ➔ Madgaon Goa"
       },
       {
-        "trainNumber": "22229",
-        "trainName": "Goa Vande Bharat",
-        "route": "CSMT to MAO"
+        "trainNumber": "22119",
+        "trainName": "Tejas Express",
+        "route": "CSMT Mumbai ➔ Karmali Goa"
       }
     ],
     "sections": [
       {
         "type": "heading",
-        "title": "1. The Impossible Engineering Feat",
-        "content": "1. The Impossible Engineering Feat"
+        "title": "1. The Impossible Dream: Taming the Western Ghats",
+        "content": "For over a century, the dense tropical rainforests, roaring rivers, and crumbly laterite cliffs of India's southwest coastline defeated colonial and modern railway engineers alike. The terrain was deemed an impenetrable barrier. Passengers journeying between Mumbai and Mangalore were forced to take a circuitous 2,040-kilometer inland detour through Pune, Guntakal, and Bangalore, lasting over 40 grueling hours.\n\nIn 1990, the Government of India established the Konkan Railway Corporation (KRCL) and placed 'Metro Man' Dr. E. Sreedharan at the helm. Armed with an aggressive 8-year charter, Sreedharan's engineering army conquered unmapped hills, flash floods, malaria outbreaks, and unstable clay soil to construct 760 kilometers of broad-gauge track spanning three coastal states: Maharashtra, Goa, and Karnataka. It remains the largest railway infrastructure undertaking on the Indian subcontinent since Independence."
       },
       {
-        "type": "paragraph",
-        "content": "For over a century, British and post-independence engineers deemed connecting Mumbai directly to Mangaluru along the narrow, river-gashed Sahyadri coastline impossible. It required boring through treacherous soft lithomargic clay that liquefied under torrential monsoon downpours. In 1990, the Konkan Railway Corporation Limited (KRCL) was born under the legendary technocrat Dr. E. Sreedharan, delivering one of the 20th century's boldest infrastructure triumphs in just seven years."
+        "type": "image",
+        "imageUrl": "/images/blogs/konkan-railway-scenic-odyssey-1.jpg",
+        "imageCaption": "Dudhsagar Falls cascading majestically beneath the Konkan rail viaduct during the peak monsoon season.",
+        "altText": "Dudhsagar Waterfalls and Railway Viaduct"
+      },
+      {
+        "type": "heading",
+        "title": "2. Titans of Civil Engineering: 91 Tunnels & 2,000 Bridges",
+        "content": "The Konkan line represents a monumental triumph of geotechnical engineering. To maintain an operational broad-gauge gradient capable of handling high-speed passenger expresses and heavy freight, engineers carved 91 tunnels totaling 84 kilometers. The jewel among them is the Karbude Tunnel near Ratnagiri, stretching 6.5 kilometers in darkness—India's longest operational railway tunnel until the opening of the Pir Panjal rail passage in Kashmir.\n\nEqually spectacular is the Panval River Viaduct near Ratnagiri. Soaring 64 meters (210 feet) above the river valley on hollow slip-formed octagonal piers, it was Asia's tallest viaduct when built. Over 2,000 bridges, including 179 major river spans over broad tidal estuaries like the Sharavathi, Zuari, and Mandovi, carry tracks across waters that widen drastically during monsoons."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/konkan-railway-scenic-odyssey-2.jpg",
-        "caption": "Scenic Konkan Railway track winding through Ratnagiri cliffs",
-        "altText": "Scenic Konkan Railway track winding through Ratnagiri cliffs"
+        "imageCaption": "Panval River Viaduct soaring 64 meters over the verdant valleys of Maharashtra's Ratnagiri district.",
+        "altText": "Konkan Railway Viaduct and Valley Scenery"
       },
       {
         "type": "heading",
-        "title": "2. Roaring Dudhsagar & The Braganza Incline",
-        "content": "2. Roaring Dudhsagar & The Braganza Incline"
-      },
-      {
-        "type": "paragraph",
-        "content": "Where the railway crosses the Goa-Karnataka border, the Mandovi River plunges down a catastrophic 310-meter tiered precipice known as Dudhsagar ('Sea of Milk'). As your train rumbles over the masonry arched bridge right in front of the waterfall spray, clouds of chilled mist envelop the open windows in a roar of white thunder."
+        "title": "3. The Monsoon Spectacle & Thunderous Dudhsagar Falls",
+        "content": "While the Konkan Railway operates year-round, its true transcendental majesty unlocks between June and October. Southwest monsoons transform the Sahyadri mountains into an emerald wonderland enveloped in swirling mist, while thousands of seasonal waterfalls erupt along sheer cliff cuttings alongside the track.\n\nThe undisputed crown jewel of the Western Ghats rail journey is the passage through Dudhsagar Falls ('Sea of Milk'). As your train approaches the border of Goa and Karnataka on the Braganza Ghat section, the locomotive emerges from a rock-cut tunnel directly onto a stone viaduct spanning the middle tier of a 310-meter four-tiered cascade. White froth thunders past the carriage windows, spraying passengers with cool mountain mist in one of the world's most dramatic railway spectacles."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/konkan-railway-scenic-odyssey-3.jpg",
-        "caption": "Western Ghats emerald cliffs and river valleys along Konkan Railway",
-        "altText": "Western Ghats emerald cliffs and river valleys along Konkan Railway"
-      },
-      {
-        "type": "tip",
-        "content": "PRO TRAVELER TIP: Book tickets on the right-hand window side when traveling South (Mumbai towards Goa) to catch breathtaking Arabian Sea horizon vistas and lush coconut groves."
+        "imageCaption": "A WDP-4D diesel locomotive hauling an express train along the misty Sahyadri mountain ridge.",
+        "altText": "Konkan Railway train traversing mountain cuttings"
       },
       {
         "type": "heading",
-        "title": "3. Towering Viaducts & Karwar Sea Estuaries",
-        "content": "3. Towering Viaducts & Karwar Sea Estuaries"
-      },
-      {
-        "type": "paragraph",
-        "content": "Near Ratnagiri, the Panval River Viaduct rises 64 meters into the sky on hollow concrete piers. Further south at Karwar, the train glides across the Kali River estuary where turquoise river channels meet the azure ocean waves against backdrop fishing trawlers."
+        "title": "4. Estuaries, Mangroves & Trackside Konkan Flavors",
+        "content": "Beyond high-altitude tunnels and viaducts, the Konkan route offers serene views of peaceful coastal backwaters, swaying betel nut groves, and shimmering salt pans. Between Chiplun and Sawantwadi, the line skirts tranquil Arabian Sea tidal bays where wooden fishing boats bob under coconut palms.\n\nThe journey is also a celebrated gastronomic journey. Station halts on the Konkan Railway are legendary for coastal delicacies. Step onto the platform at Ratnagiri for sweet Alphonso mangoes and chilled Aam Panna. In Chiplun, local vendors board coaches selling crisp Jackfruit chips and Solkadhi (a refreshing kokum and coconut milk beverage). At Madgaon Junction, hot Goan fish curry rice and toasted poi bread await travelers."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/konkan-railway-scenic-odyssey-4.jpg",
-        "caption": "Goa Zuari railway bridge carrying trains and trucks across coastal waters",
-        "altText": "Goa Zuari railway bridge carrying trains and trucks across coastal waters"
+        "imageCaption": "A passenger train crossing a broad estuary bridge over tidal waters lined with coconut palms.",
+        "altText": "Konkan Railway Coastal Bridge and Estuary"
       },
       {
-        "type": "trivia",
-        "content": "DID YOU KNOW? The Konkan Railway pioneered RORO (Roll-On Roll-Off) service in India, where loaded freight trucks drive directly onto flat railway wagons to save diesel, tyres, and coastal highway congestion."
+        "type": "heading",
+        "title": "5. Passenger Guide: Monsoon Timetable, Fares & Window Tips",
+        "content": "Because heavy rains can trigger boulder falls and flash flooding along the steep Ghats, Indian Railways enforces a dedicated 'Monsoon Timetable' on the Konkan route from June 10 to October 31 each year. Operational speeds are throttled to ensure passenger safety, with 24/7 foot patrols inspecting tracks and continuous wireless rock-fall sensors guarding tunnel portals.\n\nFor the best photographic experience, book the day-run Mandovi Express (10103) or Jan Shatabdi (12051) from Mumbai CSMT to Madgaon. Request right-side seats (coastal side) when traveling south toward Goa. Vistadome coach tickets in the 22119 Tejas Express provide panoramic 360-degree glass roofs, observation lounge viewing decks, and rotatable plush armchairs."
       },
       {
-        "type": "quote",
-        "content": "Konkan Railway is not merely a track of steel; it is India's defiance against impossible terrain and an eternal ode to engineering genius."
+        "type": "image",
+        "imageUrl": "/images/blogs/konkan-railway-scenic-odyssey-5.jpg",
+        "imageCaption": "Lush tropical green landscapes and paddy fields viewed from a Konkan Railway carriage.",
+        "altText": "Scenic green countryside on Konkan Railway route"
+      },
+      {
+        "type": "tip",
+        "title": "Pro Traveler Tip: Vistadome Booking Secret",
+        "content": "Vistadome coaches on the Mumbai–Goa Tejas and Jan Shatabdi have only 40 seats and sell out within minutes of the 120-day reservation opening. For the most dramatic Dudhsagar waterfall mist and valley photography, travel on the morning departures between July and September."
       }
     ]
   },
@@ -137,113 +140,115 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "coverImage": "/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg",
     "author": "Sudhanshu Mani & Tech Rail Desk",
     "authorRole": "Principal Rolling Stock Designer",
-    "readTimeMinutes": 7,
+    "readTimeMinutes": 9,
     "publishedDate": "2026-10-22",
     "featured": true,
     "tags": [
       "Vande Bharat",
       "Train 18",
       "Kavach",
-      "Make In India",
       "High Speed",
-      "Modernization"
+      "Sleeper Version"
     ],
     "quickFacts": [
       {
-        "label": "Test Speed",
-        "value": "180 km/h (Trial) / 160 km/h (Commercial)",
-        "icon": "gauge"
-      },
-      {
-        "label": "0 to 100 km/h",
-        "value": "52 seconds (Faster than bullet train)",
+        "label": "Service Speed",
+        "value": "160 km/h (Tested to 180 km/h)",
         "icon": "zap"
       },
       {
-        "label": "Braking System",
-        "value": "Electro-pneumatic regenerative",
-        "icon": "shield"
+        "label": "0 to 100 km/h",
+        "value": "52 Seconds (Beats Bullet Trains)",
+        "icon": "clock"
       },
       {
-        "label": "Design & Build",
-        "value": "Integral Coach Factory (ICF), Chennai",
-        "icon": "cpu"
+        "label": "Traction Type",
+        "value": "Distributed 3-Phase IGBT Motors",
+        "icon": "award"
+      },
+      {
+        "label": "Safety System",
+        "value": "Indigenous Kavach TCAS (SIL-4)",
+        "icon": "shield"
       }
     ],
     "relatedTrains": [
       {
-        "trainNumber": "20607",
-        "trainName": "MGR Chennai - Mysuru Vande Bharat",
-        "route": "MAS to MYS"
-      },
-      {
         "trainNumber": "22436",
-        "trainName": "New Delhi - Varanasi Vande Bharat",
-        "route": "NDLS to BSB"
+        "trainName": "Vande Bharat Express",
+        "route": "New Delhi ➔ Varanasi"
       },
       {
-        "trainNumber": "20641",
-        "trainName": "Bengaluru - Coimbatore Vande Bharat",
-        "route": "SBC to CBE"
+        "trainNumber": "20607",
+        "trainName": "Vande Bharat Express",
+        "route": "Chennai Central ➔ Mysuru"
+      },
+      {
+        "trainNumber": "20901",
+        "trainName": "Vande Bharat Express",
+        "route": "Mumbai Central ➔ Gandhinagar"
       }
     ],
     "sections": [
       {
         "type": "heading",
-        "title": "1. The Birth of Train 18 at ICF Chennai",
-        "content": "1. The Birth of Train 18 at ICF Chennai"
+        "title": "1. The Indigenous Genesis: How 'Train 18' Shook the World",
+        "content": "In 2017, the Indian Railways leadership challenged the engineers and technicians at Integral Coach Factory (ICF) in Perambur, Chennai: design and fabricate an international-class semi-high-speed trainset entirely from scratch in 18 months, at one-third the cost of importing from Europe or Japan. Led by General Manager Sudhanshu Mani, the ICF team delivered the first prototype in October 2018 under the project name 'Train 18'.\n\nUnlike traditional locomotive-hauled rakes that depend on a bulky engine pulling coaches, Vande Bharat utilizes a Distributed Power Electric Multiple Unit (EMU) architecture. Traction motors are distributed underneath 50% of the passenger coaches, allowing lightning-fast acceleration and regenerative braking that feeds up to 30% of energy back into the overhead 25kV catenary."
       },
       {
-        "type": "paragraph",
-        "content": "Conceived and executed by General Manager Sudhanshu Mani and his team at Integral Coach Factory (ICF) Chennai in a record 18 months at one-third the global import cost, Train 18 revolutionized Indian passenger expectations. Eliminating the bulky locomotive, its distributed traction power spreads driving motors across alternating coaches beneath the carriage floor."
+        "type": "image",
+        "imageUrl": "/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg",
+        "imageCaption": "Vande Bharat Express glistening on the high-speed tracks between Howrah and Puri.",
+        "altText": "Vande Bharat semi high speed trainset"
+      },
+      {
+        "type": "heading",
+        "title": "2. Kavach TCAS: The Silicon Shield of Indian Rail Safety",
+        "content": "At the core of the Vande Bharat 2.0 platform is 'Kavach' (meaning Armor)—India's indigenously developed, SIL-4 safety-certified Automatic Train Protection (ATP) system. Operating across high-frequency UHF/RFID radio waves and synchronized onboard transponders, Kavach continually calculates train velocity and signal braking curves.\n\nIf a loco pilot inadvertently overshoots a red aspect (Signal Passed at Danger / SPAD) or if two trains are routed toward the same track block, Kavach automatically commands the electropneumatic disc brakes, halting the train without human intervention. In addition, Kavach automatically sounds the train horn at unmanned level crossings and modulates train speed under zero-visibility winter fogs."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/vande-bharat-evolution-future-sleeper-2.jpg",
-        "caption": "Howrah\u2013Puri Vande Bharat Express at Balasore railway station 2",
-        "altText": "Howrah\u2013Puri Vande Bharat Express at Balasore railway station 2"
+        "imageCaption": "The aerodynamic nose cone and driver cab fitted with UHF Kavach transceivers.",
+        "altText": "Vande Bharat aerodynamic driver cab"
       },
       {
         "type": "heading",
-        "title": "2. World-Class Passenger Ergonomics",
-        "content": "2. World-Class Passenger Ergonomics"
-      },
-      {
-        "type": "paragraph",
-        "content": "Inside, passenger comforts mirror world-class aviation: fully sealed gangways, automatic sliding plug doors that lock before train movement, touchless bio-vacuum lavatories, diffused LED lighting, and 180-degree rotatable reclining seats in Executive Class that pivot towards the scenery."
+        "title": "3. The Flying Experience: Aviation Comfort on Steel Tracks",
+        "content": "Stepping aboard Vande Bharat reveals an interior designed to match commercial aviation standards. Fully sealed gangways eliminate wind noise, dirt, and coach buffeting. The Executive Class cars feature 180-degree rotating seats that can be aligned in the direction of train travel or turned to face traveling companions.\n\nBio-vacuum toilets borrowed from Boeing aircraft conserve water, while touchless infrared sensor taps and germicidal UV air disinfection systems maintain pristine hygiene. High-speed onboard Wi-Fi streams movies and live train telemetry (speed, next station, outside temperature) to passenger smartphones and overhead infotainment LCD displays."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/vande-bharat-evolution-future-sleeper-3.jpg",
-        "caption": "Specially Designed Mini Vande Bharat Express train",
-        "altText": "Specially Designed Mini Vande Bharat Express train"
-      },
-      {
-        "type": "tip",
-        "content": "PRO TRAVELER TIP: Executive Chair Car (EC) seats 19 to 32 rotate 180 degrees. If traveling in a group, you can face each other across the generous aisle table."
+        "imageCaption": "Modern passenger interiors with rotatable ergonomic executive leather seats and overhead LED displays.",
+        "altText": "Vande Bharat passenger coach interior"
       },
       {
         "type": "heading",
-        "title": "3. Indigenous Kavach Safety Armor & Sleeper Horizons",
-        "content": "3. Indigenous Kavach Safety Armor & Sleeper Horizons"
-      },
-      {
-        "type": "paragraph",
-        "content": "Every Vande Bharat 2.0 trainset comes pre-fitted with Kavach \u2014 India's indigenously developed Automatic Train Protection (ATP) system using RFID tags and radio transceivers. If two trains ever approach the same track section, Kavach automatically applies the brakes without driver intervention. The upcoming 16-coach Vande Bharat Sleeper version will redefine overnight luxury between metropolitan capitals."
+        "title": "4. Vande Bharat Sleeper: The 160 km/h Overnight Revolution",
+        "content": "While current Vande Bharat trainsets serve intercity day routes up to 8 hours (such as Delhi–Varanasi and Mumbai–Gandhinagar), Indian Railways is actively testing the Vande Bharat Sleeper version. Built with lightweight austenitic stainless steel and crash-worthy crumple zones, the 16-coach sleeper rake replaces traditional Rajdhani rakes on golden quadrilateral trunk routes.\n\nThe sleeper variant features extra-cushioned modular berths, sound-damped sleeping cubicles, individual USB-C charging points, reading lights, and hot-water showers in First AC compartments. Traveling at 160 km/h throughout the night, it slashes Mumbai–Delhi travel times from 16 hours to under 12 hours."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/vande-bharat-evolution-future-sleeper-4.jpg",
-        "caption": "Vande Bharat Express",
-        "altText": "Vande Bharat Express"
+        "imageCaption": "The sleek Vande Bharat trainset berthed at the high-speed platform terminal ready for departure.",
+        "altText": "Vande Bharat train at modern railway terminal"
       },
       {
-        "type": "trivia",
-        "content": "DID YOU KNOW? Vande Bharat hits 0 to 100 km/h in just 52 seconds \u2014 out-accelerating the Japanese Shinkansen bullet train which takes 54 seconds."
+        "type": "heading",
+        "title": "5. Passenger Guide: Booking Secrets & Executive Dining",
+        "content": "Vande Bharat tickets operate under dynamic flexi-fare pricing, with catering optional at the time of booking. The onboard catering menu highlights regional hot breakfast and gourmet dinner service curated by top IRCTC culinary partners, featuring millet dishes, fresh juices, and traditional sweets.\n\nFor solo business travelers, the Executive Chair Car (EC) offers expansive legroom, fold-out laptop trays with 230V power sockets, and personal reading lamps. Chair Car (CC) provides exceptional comfort with 3x2 seating configurations at nearly half the fare."
       },
       {
-        "type": "quote",
-        "content": "Vande Bharat proved to the world that India can design, engineer, and build world-standard passenger trainsets entirely from our own soil."
+        "type": "image",
+        "imageUrl": "/images/blogs/vande-bharat-evolution-future-sleeper-5.jpg",
+        "imageCaption": "High-speed rail corridor showcasing the modern pantograph and catenary electrification.",
+        "altText": "Overhead electrification and high-speed rail corridor"
+      },
+      {
+        "type": "tip",
+        "title": "Pro Traveler Tip: Seat Selection Hack",
+        "content": "When booking Executive Class (EC), select seats 19 to 24 in the middle of the coach for the smoothest ride quality directly between the bogies, away from the vestibular gangways and automated sliding doors."
       }
     ]
   },
@@ -251,112 +256,120 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "id": "3",
     "slug": "pamban-sea-bridge-rameswaram",
     "title": "The Pamban Sea Bridge: Engineering Across Ocean Waves to Rameswaram",
-    "subtitle": "India\u2019s historic 2.06 km ocean cantilever bridge and the revolutionary new vertical-lift marvel.",
+    "subtitle": "India's historic 2.06 km ocean cantilever bridge and the revolutionary new vertical-lift marvel.",
     "category": "Heritage & History",
     "coverImage": "/images/blogs/pamban-sea-bridge-rameswaram-1.jpg",
-    "author": "Maritime Engineering Bureau",
-    "authorRole": "Marine Rail Historian",
-    "readTimeMinutes": 6,
+    "author": "Maritime Engineering Guild",
+    "authorRole": "Coastal Infrastructure Historian",
+    "readTimeMinutes": 9,
     "publishedDate": "2026-10-18",
     "featured": true,
     "tags": [
       "Pamban Bridge",
       "Rameswaram",
-      "Sea Bridge",
-      "Scherzer Lift",
-      "Southern Railway"
+      "Ocean Railway",
+      "Vertical Lift",
+      "Marine Engineering"
     ],
     "quickFacts": [
       {
-        "label": "Total Spans",
-        "value": "143 concrete and steel spans",
-        "icon": "anchor"
+        "label": "Total Length",
+        "value": "2.06 km (143 Spans)",
+        "icon": "route"
       },
       {
-        "label": "Bridge Length",
-        "value": "2,065 meters (6,774 ft)",
-        "icon": "ruler"
+        "label": "Original Inception",
+        "value": "1914 (Scherzer Rolling Lift)",
+        "icon": "award"
       },
       {
-        "label": "Opening Year",
-        "value": "1914 (Original Scherzer bridge)",
-        "icon": "calendar"
+        "label": "New Lift Span",
+        "value": "72.5 m (Electromechanical 17m Lift)",
+        "icon": "layers"
       },
       {
-        "label": "Wind Speed Alert",
-        "value": "Auto-signals red if winds > 58 km/h",
-        "icon": "wind"
+        "label": "Corrosive Zone",
+        "value": "World's 2nd Most Corrosive Marine Env.",
+        "icon": "shield"
       }
     ],
     "relatedTrains": [
       {
-        "trainNumber": "16851",
-        "trainName": "Boat Mail Express",
-        "route": "MS to RMM"
-      },
-      {
         "trainNumber": "22661",
         "trainName": "Sethu Superfast Express",
-        "route": "MS to RMM"
+        "route": "Chennai Egmore ➔ Rameswaram"
+      },
+      {
+        "trainNumber": "16780",
+        "trainName": "Rameswaram Express",
+        "route": "Tirupati ➔ Rameswaram"
+      },
+      {
+        "trainNumber": "20837",
+        "trainName": "Bhubaneswar Rameswaram Express",
+        "route": "Bhubaneswar ➔ Rameswaram"
       }
     ],
     "sections": [
       {
         "type": "heading",
-        "title": "1. Gliding Over Palk Strait Waves",
-        "content": "1. Gliding Over Palk Strait Waves"
+        "title": "1. Bridging the Palk Strait: The 1914 Scherzer Rolling Lift Marvel",
+        "content": "Rising out of the turquoise waters of the Gulf of Mannar, the Pamban Railway Bridge connects the Indian mainland at Mandapam with the sacred island of Rameswaram. Commissioned on February 24, 1914, it was India's very first sea bridge and stood as the country's longest ocean crossing for nearly a century until the 2010 Bandra-Worli Sea Link in Mumbai.\n\nThe centerpiece of the 1914 bridge was the legendary Scherzer rolling lift span—a double-leaf bascule bridge engineered by German-American engineer William Scherzer. Balanced on counterweights weighing hundreds of tons, the center span could be opened manually by a team of railway workers operating large mechanical gears to let commercial ships, fishing schooners, and oil barges sail through the Palk Strait."
       },
       {
-        "type": "paragraph",
-        "content": "Rumbling over the turquoise ocean waters of the Palk Strait, the Pamban Bridge connects mainland Mandapam to the holy island of Rameswaram. Completed in 1914, it was India's first sea bridge, braving saltwater corrosion, cyclone fury, and corrosive sea spray for over a century."
+        "type": "image",
+        "imageUrl": "/images/blogs/pamban-sea-bridge-rameswaram-1.jpg",
+        "imageCaption": "The historic Pamban cantilever rail bridge glowing beneath the golden sunset over the Indian Ocean.",
+        "altText": "Pamban rail bridge at sunset over ocean waters"
+      },
+      {
+        "type": "heading",
+        "title": "2. The 1964 Cyclone & Dr. E. Sreedharan's 46-Day Miracle",
+        "content": "On the night of December 22, 1964, a catastrophic super-cyclone struck Dhanushkodi with sustained winds exceeding 280 km/h and a 25-foot storm surge. The storm swept away the passenger train Boat Mail (No. 653), destroyed the coastal town of Dhanushkodi, and smashed 126 of the 143 girders of the Pamban rail bridge into the churning ocean.\n\nRailway authorities estimated the bridge would take six months to rebuild. A young 32-year-old Executive Engineer named E. Sreedharan was assigned the impossible recovery mission. Refusing to wait for new steel girders from Kolkata, Sreedharan mobilized local pearl divers and fishermen to salvage the sunken steel spans from the seabed. Using sheer human grit, block-and-tackle winches, and round-the-clock shifts, Sreedharan restored the entire bridge in just 46 days—a legend that launched his legendary reputation as India's 'Metro Man'."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/pamban-sea-bridge-rameswaram-2.jpg",
-        "caption": "A Magnificient Evening Sunset With Pamban Railway Bridge and Boat Mail Express Passes Through this Pamban Railway Bridge !-",
-        "altText": "A Magnificient Evening Sunset With Pamban Railway Bridge and Boat Mail Express Passes Through this Pamban Railway Bridge !-"
+        "imageCaption": "A diesel passenger train creeping cautiously at 10 km/h across the narrow single-track marine piers.",
+        "altText": "Passenger train crossing the ocean on Pamban bridge"
       },
       {
         "type": "heading",
-        "title": "2. The Scherzer Rolling Cantilever Wonder",
-        "content": "2. The Scherzer Rolling Cantilever Wonder"
-      },
-      {
-        "type": "paragraph",
-        "content": "At the bridge's center sits the legendary Scherzer rolling lift span designed by German engineer William Scherzer. Counterweighted with colossal iron blocks, the two halves were manually cranked open by a team of lockkeepers, lifting the tracks up like arms to allow coastal ships and fishing steamers to cruise through the channel."
+        "title": "3. The 21st-Century Rebirth: India's First Vertical-Lift Sea Bridge",
+        "content": "After 108 years of enduring the world's second-most corrosive marine environment, metal fatigue and structural sensors signaled that the original bridge had reached its operational retirement. Rail Vikas Nigam Limited (RVNL) was tasked with erecting an all-new parallel 2.08-kilometer sea bridge incorporating state-of-the-art 21st-century technology.\n\nThe new bridge features India's very first vertical-lift navigational span. Rather than splitting open diagonally like the old bascule bridge, the new 72.5-meter center truss (weighing 650 metric tons) lifts vertically upward 17 meters into the sky like an elevator via electro-mechanical tower counterweights. This allows tall container vessels to pass beneath the bridge without disrupting broad-gauge electric train clearance."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/pamban-sea-bridge-rameswaram-3.jpg",
-        "caption": "Annai Indira Gandhi Road Bridge",
-        "altText": "Annai Indira Gandhi Road Bridge"
-      },
-      {
-        "type": "tip",
-        "content": "PRO TRAVELER TIP: Roll down your window on the left side when arriving into Rameswaram. The emerald clarity of the coral sea below the bridge is unlike anywhere else on the subcontinental network."
+        "imageCaption": "The imposing vertical-lift navigational steel towers of the modern Pamban railway bridge.",
+        "altText": "Vertical lift navigation span on Pamban bridge"
       },
       {
         "type": "heading",
-        "title": "3. The Next-Gen Vertical Lift Marvel",
-        "content": "3. The Next-Gen Vertical Lift Marvel"
-      },
-      {
-        "type": "paragraph",
-        "content": "To replace the aging 1914 structure, Indian Railways constructed a brand new 2.08 km sea bridge featuring India's first electro-mechanical vertical lift span. The central 72.5-meter navigational truss span lifts vertically into the sky, accommodating larger ships and future 25 kV AC overhead railway electrification."
+        "title": "4. Riding Over the Ocean: The Wind and the Waves",
+        "content": "Crossing the Pamban Bridge by train is a sensory experience unlike any other on earth. As the train clears Mandapam station and wheels onto the open ocean causeway, the land vanishes. Open windows fill with cool sea spray and the salty fragrance of the Indian Ocean. Looking down, passenger coaches appear to glide directly on top of the swelling waves.\n\nWind anemometers mounted on the bridge piers constantly communicate with signal cabins. If ocean crosswinds exceed 58 km/h, automated signals turn red and all train movements across the strait are immediately halted until the gale subsides, ensuring passenger coaches are never endangered by ocean squalls."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/pamban-sea-bridge-rameswaram-4.jpg",
-        "caption": "Old Pamban bridge remains",
-        "altText": "Old Pamban bridge remains"
+        "imageCaption": "Historic stone foundations and pylons anchored into the seabed reef of the Palk Strait.",
+        "altText": "Historic bridge piers and reef seabed"
       },
       {
-        "type": "trivia",
-        "content": "DID YOU KNOW? In the catastrophic 1964 Rameswaram cyclone, the Pamban rail bridge withstood waves while the nearby town of Dhanushkodi was submerged; the bridge was restored in just 46 days under E. Sreedharan."
+        "type": "heading",
+        "title": "5. Passenger Guide: Timetables, Rameswaram Sights & Darshan",
+        "content": "All trains bound for Rameswaram island—such as the Sethu Express from Chennai and the Rameswaram Superfast from Madurai—traverse this marine corridor. Trains crawl across the bridge at a disciplined speed limit of 10 to 15 km/h, providing passengers nearly 15 minutes of uninterrupted panoramic ocean photography.\n\nUpon arriving at Rameswaram terminus, travelers can visit the Ramanathaswamy Temple with its renowned 1,200-meter outer corridor of sculpted granite pillars, take a holy dip in Agni Theertham, and hire a shared jeep to explore the ghost town ruins of Dhanushkodi and Ram Setu point."
       },
       {
-        "type": "quote",
-        "content": "To ride a train over the Pamban sea bridge is to feel the boundary between rail track and open ocean vanish beneath your wheels."
+        "type": "image",
+        "imageUrl": "/images/blogs/pamban-sea-bridge-rameswaram-5.jpg",
+        "imageCaption": "The azure blue ocean waters and coral reef sandbars surrounding the Pamban railway channel.",
+        "altText": "Azure ocean waters and coral sandbars around Rameswaram"
+      },
+      {
+        "type": "tip",
+        "title": "Pro Traveler Tip: Photography Angle",
+        "content": "For breathtaking shots of both the old and new bridges with the fishing fleet sailing through, sit on the left-side windows (facing north toward Sri Lanka) on morning arrivals into Rameswaram."
       }
     ]
   },
@@ -367,233 +380,240 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "subtitle": "Discover the UNESCO World Heritage terminus where stone gargoyles meet 3 million daily suburban commuters.",
     "category": "Heritage & History",
     "coverImage": "/images/blogs/csmt-mumbai-unesco-gothic-wonder-1.jpg",
-    "author": "Heritage Architecture Trust",
-    "authorRole": "Colonial Heritage Curator",
-    "readTimeMinutes": 6,
+    "author": "Heritage Architecture Circle",
+    "authorRole": "Urban Rail Conservator",
+    "readTimeMinutes": 8,
     "publishedDate": "2026-10-15",
-    "featured": false,
+    "featured": true,
     "tags": [
       "CSMT",
       "Mumbai",
-      "UNESCO Heritage",
-      "Gothic Architecture",
-      "Central Railway"
+      "UNESCO",
+      "Victorian Gothic",
+      "Central Railway",
+      "Heritage"
     ],
     "quickFacts": [
       {
-        "label": "Construction Period",
-        "value": "1878 - 1887 (10 Years)",
-        "icon": "clock"
+        "label": "Construction",
+        "value": "1878 – 1887 (10 Years)",
+        "icon": "calendar"
       },
       {
-        "label": "Chief Architect",
-        "value": "Frederick William Stevens",
-        "icon": "pen"
-      },
-      {
-        "label": "UNESCO Inscription",
-        "value": "2004 World Heritage Site",
+        "label": "UNESCO Status",
+        "value": "Inscribed World Heritage 2004",
         "icon": "award"
       },
       {
+        "label": "Architect",
+        "value": "Frederick William Stevens",
+        "icon": "shield"
+      },
+      {
         "label": "Daily Footfall",
-        "value": "Over 3,000,000 passengers",
-        "icon": "users"
+        "value": "Over 3 Million Commuters",
+        "icon": "zap"
       }
     ],
     "relatedTrains": [
       {
-        "trainNumber": "12138",
-        "trainName": "Punjab Mail (India's oldest)",
-        "route": "FZR to CSMT"
+        "trainNumber": "12123",
+        "trainName": "Deccan Queen",
+        "route": "CSMT Mumbai ➔ Pune Junction"
       },
       {
-        "trainNumber": "12322",
-        "trainName": "Kolkata Mail",
-        "route": "CSMT to HWH"
+        "trainNumber": "12261",
+        "trainName": "Howrah Duronto Express",
+        "route": "CSMT Mumbai ➔ Howrah Junction"
       },
       {
         "trainNumber": "22221",
-        "trainName": "CSMT Hazrat Nizamuddin Rajdhani",
-        "route": "CSMT to NZM"
+        "trainName": "Rajdhani Express",
+        "route": "CSMT Mumbai ➔ Hazrat Nizamuddin"
       }
     ],
     "sections": [
       {
         "type": "heading",
-        "title": "1. A Cathedral of Modern Steam and Steel",
-        "content": "1. A Cathedral of Modern Steam and Steel"
+        "title": "1. The Jewel of Bori Bunder: Stevens' Masterpiece",
+        "content": "Standing at the historic southern gateway of Mumbai, Chhatrapati Shivaji Maharaj Terminus (formerly Victoria Terminus) is an architectural tour de force that merges High Victorian Gothic Revival style with traditional Indian palace craftsmanship. Designed by British architectural engineer Frederick William Stevens, construction commenced in 1878 and took a full decade to complete, officially opening in 1887 to coincide with Queen Victoria's Golden Jubilee.\n\nStevens was paid an unprecedented design fee of 16.25 lakh rupees—a fortune at the time. Working in close collaboration with the master stone carvers of the Sir J.J. School of Art, Stevens created a building that symbolized Mumbai's rise as India's mercantile powerhouse, replacing the humble wooden shacks of the original Bori Bunder station where India's first passenger train had departed in 1853."
       },
       {
-        "type": "paragraph",
-        "content": "Originally named Victoria Terminus (VT) and christened in 1887 to celebrate Queen Victoria's Golden Jubilee, Chhatrapati Shivaji Maharaj Terminus (CSMT) is an extravagant synthesis of High Victorian Gothic Revival architecture and traditional Indian palace craftsmanship. Designed by Frederick William Stevens, its construction took ten years using yellow sandstone and Italian marble."
+        "type": "image",
+        "imageUrl": "/images/blogs/csmt-mumbai-unesco-gothic-wonder-1.jpg",
+        "imageCaption": "The world-famous facade of CSMT illuminated in vibrant tricolor lights against the Mumbai night sky.",
+        "altText": "Chhatrapati Shivaji Maharaj Terminus illuminated facade"
+      },
+      {
+        "type": "heading",
+        "title": "2. Architectural Anatomy: Gargoyles, Vaulted Domes & Stained Glass",
+        "content": "The centerpiece of CSMT is its awe-inspiring 166-foot masonry dome, constructed without structural steel framing. Crowned at its pinnacle stands a massive 14-foot colossal stone statue of 'Progress', holding a flaming torch in her right hand and a spoked railway wheel in her left. At the entrance gates stand sculpted life-sized stone figures of a Lion (representing the British Empire) and a Royal Bengal Tiger (representing India).\n\nThe interior grand staircase is flanked by Italian marble balustrades, polished granite columns quarried from Mumbra, and intricate vaulted ceilings decorated with gold leaf stars. Elaborate stained-glass rose windows filter tropical sunlight onto encaustic floor tiles manufactured by Mintons in Shropshire, while exterior waterspouts are sculpted as mischievous Indian gargoyles, monkeys, and peacocks."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/csmt-mumbai-unesco-gothic-wonder-2.jpg",
-        "caption": "Chhatrapati Shivaji Maharaj Terminus (33904)",
-        "altText": "Chhatrapati Shivaji Maharaj Terminus (33904)"
+        "imageCaption": "Intricate stone corbels, Victorian Gothic arches, and vaulted galleries inside the heritage terminus.",
+        "altText": "Victorian Gothic arches and architectural detail of CSMT"
       },
       {
         "type": "heading",
-        "title": "2. Vaulted Domes, Peacocks & Stained Glass",
-        "content": "2. Vaulted Domes, Peacocks & Stained Glass"
-      },
-      {
-        "type": "paragraph",
-        "content": "The central octagonal dome is crowned by a colossal 14-foot stone statue of 'Progress' holding a flaming torch and a locomotive wheel. Inside the booking concourse, students from the Sir J.J. School of Art carved indigenous flora and fauna into stone corbels, featuring peacocks, cobras, tigers, and monkeys alongside European gargoyles."
+        "title": "3. The Living Heart of Mumbai: 3 Million Daily Commuters",
+        "content": "Unlike European monuments that exist as quiet open-air museums, CSMT is a living, breathing, roaring hive of human motion. Over 3 million passengers flow through its 18 platforms every single day. Platforms 1 to 7 serve the frantic Central Railway Suburban network, where iconic blue-and-white local trains arrive and depart every 90 seconds, carrying the lifeblood of Mumbai's workforce.\n\nPlatforms 8 to 18 handle India's premier long-distance superfast expresses, including the historic Deccan Queen to Pune, the Mumbai Rajdhani, and the Tejas Express to Goa. The sheer choreographic precision of station staff, motormen, tea vendors, and the legendary Mumbai Dabbawalas sorting 200,000 lunchboxes on platform concourses is a recognized marvel of logistics."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/csmt-mumbai-unesco-gothic-wonder-3.jpg",
-        "caption": "Chhatrapati Shivaji Maharaj Terminus (40042)",
-        "altText": "Chhatrapati Shivaji Maharaj Terminus (40042)"
-      },
-      {
-        "type": "tip",
-        "content": "PRO TRAVELER TIP: Visit the CSMT Rail Heritage Museum on the 1st floor to view original 1880 blueprints, vintage bell clocks, brass steam locomotive models, and historical telegraph equipment."
+        "imageCaption": "Commuters and passengers traversing the grand central booking hall beneath the soaring stone dome.",
+        "altText": "Grand central concourse of CSMT Mumbai with commuters"
       },
       {
         "type": "heading",
-        "title": "3. The Beating Heart of Mumbai",
-        "content": "3. The Beating Heart of Mumbai"
-      },
-      {
-        "type": "paragraph",
-        "content": "Unlike European heritage terminals preserved as silent museums, CSMT remains the throbbing arterial nerve center of Mumbai. Across its 18 platforms, over 1,000 suburban EMUs and long-distance superfast expresses arrive and depart daily, channeling millions of commuters through its historic arches."
+        "title": "4. The Heritage Wing: Relics of the Great Indian Peninsula Railway",
+        "content": "Tucked away inside the central administrative wing of the terminus is the Central Railway Heritage Gallery. Visitors can explore the original boardroom of the Great Indian Peninsula Railway (GIPR), preserved with antique teak wood conference tables, brass ship bells, kerosene signal lamps, and Victorian telegraph morse keys.\n\nThe gallery displays original hand-drawn architectural blueprints by F.W. Stevens, vintage porcelain dinner sets used aboard royal governor trains in the 1920s, and antique brass clock movements that have kept precise railway time since 1888."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/csmt-mumbai-unesco-gothic-wonder-4.jpg",
-        "caption": "Chhatrapati Shivaji Maharaj Terminus (52417)",
-        "altText": "Chhatrapati Shivaji Maharaj Terminus (52417)"
+        "imageCaption": "The commanding entrance facade showing the symbolic Lion and Tiger stone gate statues.",
+        "altText": "CSMT gate with stone Lion and Tiger statues"
       },
       {
-        "type": "trivia",
-        "content": "DID YOU KNOW? The original cost of constructing Victoria Terminus in 1887 was \u20b916.14 lakh (approx. \u00a3260,000) \u2014 making it the most expensive building constructed in Bombay in the 19th century."
+        "type": "heading",
+        "title": "5. Traveler Guide: Walking Tours, Night Photography & Food",
+        "content": "UNESCO heritage walking tours of the building interior are conducted on weekdays between 3:00 PM and 5:00 PM with official Central Railway heritage guides (tickets available at the station booking office). The best exterior photographic perspective is from the elevated viewing gallery opposite the Municipal Corporation headquarters across the road.\n\nAfter touring the terminus, step right outside to savor Mumbai's most famous trackside street food: Aram Milk Bar next to the station exit serves legendary buttery Batata Vada and bun pav, while Pancham Puriwala across the junction has been serving piping hot puris and pumpkin subzi since 1848."
       },
       {
-        "type": "quote",
-        "content": "CSMT stands as a testament that a masterpiece of classical world architecture can also be the busiest, most democratic railway station on planet Earth."
+        "type": "image",
+        "imageUrl": "/images/blogs/csmt-mumbai-unesco-gothic-wonder-5.jpg",
+        "imageCaption": "A suburban commuter train gliding into Platform 1 alongside the historic stone pillars.",
+        "altText": "Mumbai suburban local train arriving at CSMT platform"
+      },
+      {
+        "type": "tip",
+        "title": "Pro Traveler Tip: Evening Illumination",
+        "content": "CSMT turns on its dynamic multi-color LED architectural illumination at 7:00 PM every evening. For the clearest wide-angle shot of the glowing 166-foot dome, stand on the pedestrian skywalk directly facing the main entrance."
       }
     ]
   },
   {
     "id": "5",
     "slug": "kalka-shimla-unesco-toy-train",
-    "title": "Kalka-Shimla Mountain Railway: 102 Tunnels Through Himalayan Pines",
-    "subtitle": "Step into a storybook 2-foot-6-inch gauge mountain railway ascending 1,425 meters into the mist.",
+    "title": "Kalka–Shimla Mountain Railway: 102 Tunnels Through Himalayan Pines",
+    "subtitle": "Ascend 4,800 feet into the clouds on India's historic 1903 narrow-gauge mountain line.",
     "category": "Scenic Routes",
     "coverImage": "/images/blogs/kalka-shimla-unesco-toy-train-1.jpg",
-    "author": "Himalayan Mountain Rail Club",
-    "authorRole": "Mountain Railway Historian",
-    "readTimeMinutes": 7,
+    "author": "Himalayan Mountain Rail Guild",
+    "authorRole": "Alpine Railway Historian",
+    "readTimeMinutes": 8,
     "publishedDate": "2026-10-12",
-    "featured": false,
+    "featured": true,
     "tags": [
-      "Kalka-Shimla",
-      "Toy Train",
+      "Kalka Shimla",
       "UNESCO",
+      "Toy Train",
       "Himalayas",
-      "Barog Tunnel",
-      "Vistadome"
+      "Heritage",
+      "Barog Tunnel"
     ],
     "quickFacts": [
       {
-        "label": "Route Length",
-        "value": "96.6 km (59.7 miles)",
-        "icon": "map"
+        "label": "Gauge Width",
+        "value": "2 ft 6 in (762 mm Narrow Gauge)",
+        "icon": "route"
       },
       {
         "label": "Elevation Gain",
-        "value": "656 m at Kalka to 2,076 m at Shimla",
-        "icon": "trending-up"
+        "value": "656 m to 2,075 m (1,419 m Rise)",
+        "icon": "compass"
       },
       {
-        "label": "Number of Bridges",
-        "value": "864 multi-arch masonry bridges",
-        "icon": "bridge"
+        "label": "Total Bridges",
+        "value": "988 Arch Gallery Bridges",
+        "icon": "award"
       },
       {
         "label": "UNESCO Status",
-        "value": "Inscribed in 2008",
-        "icon": "award"
+        "value": "World Heritage Mountain Railway",
+        "icon": "shield"
       }
     ],
     "relatedTrains": [
       {
-        "trainNumber": "52457",
-        "trainName": "Kalka - Shimla Passenger",
-        "route": "KLK to SML"
+        "trainNumber": "52451",
+        "trainName": "Shivalik Deluxe Express",
+        "route": "Kalka ➔ Shimla"
       },
       {
         "trainNumber": "52453",
-        "trainName": "Kalka - Shimla NG Express",
-        "route": "KLK to SML"
+        "trainName": "Kalka Shimla Express",
+        "route": "Kalka ➔ Shimla"
       },
       {
         "trainNumber": "52459",
-        "trainName": "Him Darshan Vistadome Special",
-        "route": "KLK to SML"
+        "trainName": "Him Darshan Express (Vistadome)",
+        "route": "Kalka ➔ Shimla"
       }
     ],
     "sections": [
       {
         "type": "heading",
-        "title": "1. Ascending into the Clouds",
-        "content": "1. Ascending into the Clouds"
+        "title": "1. The British Summer Capital Route: Harington's 1898 Triumph",
+        "content": "In 1864, the British Raj declared the Himalayan hill station of Shimla as the official Summer Capital of India. Every April, the Viceroy and the entire imperial government undertook an arduous 1,000-mile journey from Calcutta to Shimla, navigating the final 60 miles up steep mountain ridges by bullock carts, horse carriages, and sedan chairs carried by porters.\n\nTo establish a permanent all-weather link, the Delhi-Ambala-Kalka Railway company hired Chief Engineer Herbert Septimus Harington in 1898 to carve a 2-foot 6-inch narrow-gauge line into the Shivalik foothills. Inaugurated by Viceroy Lord Curzon on November 9, 1903, the 96.6-kilometer railway climbed 4,650 feet across 919 sharp curves—representing over 70% of the entire route in continuous twists and turns."
       },
       {
-        "type": "paragraph",
-        "content": "Opened in November 1903 under Lord Curzon to connect the Summer Capital of British India, the Kalka-Shimla Railway is a fairytale of narrow-gauge civil engineering. In just 96 kilometers, the track climbs 1,425 meters, negotiating 919 sharp curves and 864 Roman-style multi-tiered masonry viaducts through lush deodar and pine forests."
+        "type": "image",
+        "imageUrl": "/images/blogs/kalka-shimla-unesco-toy-train-1.jpg",
+        "imageCaption": "The red-and-cream Kalka-Shimla toy train winding gracefully across a multi-tier stone arch bridge.",
+        "altText": "Kalka Shimla toy train crossing mountain arch bridge"
+      },
+      {
+        "type": "heading",
+        "title": "2. The Ghost of Barog: The Legend of Tunnel No. 33",
+        "content": "Of the 102 tunnels along the route, the most famous is Tunnel No. 33 at Barog station. Stretching 1,143 meters in length, it is the straightest and longest tunnel on the line. Its construction, however, holds a poignant tragedy.\n\nBritish engineer Colonel Barog began excavating the mountain from both ends simultaneously, relying on mathematical calculations to meet in the middle. Due to a surveyor alignment error, the two bores missed each other completely. Humiliated and fined one rupee by the government for wasting public funds, the despondent Colonel took his own life near the tunnel entrance. A local shepherd named Bhalkhu later assisted new Chief Engineer Harington by tapping his wooden staff against the rock face to locate solid stone veins, successfully completing the tunnel."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/kalka-shimla-unesco-toy-train-2.jpg",
-        "caption": "Kalka-Shimla Railway (2)",
-        "altText": "Kalka-Shimla Railway (2)"
+        "imageCaption": "The stone portal of Barog Tunnel 33 nestled amidst pine and deodar forests.",
+        "altText": "Barog Tunnel entrance on Kalka Shimla line"
       },
       {
         "type": "heading",
-        "title": "2. The Ghost Legend of Barog Tunnel 33",
-        "content": "2. The Ghost Legend of Barog Tunnel 33"
-      },
-      {
-        "type": "paragraph",
-        "content": "The longest tunnel on the line is Tunnel No. 33 at Barog, stretching 1,143 meters straight through mountain rock. The British engineer, Colonel Barog, began boring from both ends simultaneously. When the alignment missed by a few feet, he was fined one rupee and overcome by grief; the tunnel was later completed by Chief Engineer H.S. Harrington with guidance from local saint Bhalku."
+        "title": "3. Roman Arch Galleries & Pine-Scented Vistas",
+        "content": "Rather than relying on modern steel trestles, Harington's engineers constructed 988 magnificent masonry arch bridges reminiscent of ancient Roman aqueducts. The most famous is Bridge No. 226 over Kanoh stream—a four-tiered gallery of sandstone arches soaring 23 meters high.\n\nAs the train leaves the plains of Kalka, the temperature steadily drops. Dense sal and scrub jungle gives way to fragrant Himalayan pine, deodar, oak, and rhododendron forests. Passengers leaning out of carriage windows are greeted by cool mountain breezes, ringing bells from hill temples, and panoramic vistas of snow-capped Himalayan peaks in the distance."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/kalka-shimla-unesco-toy-train-3.jpg",
-        "caption": "Kalka Shimla railway and NH 5",
-        "altText": "Kalka Shimla railway and NH 5"
-      },
-      {
-        "type": "tip",
-        "content": "PRO TRAVELER TIP: Book the 'Him Darshan Express' (Train 52459) for panoramic glass-roof Vistadome carriages that let you look up directly into towering oak trees and snowy Himalayan peaks."
+        "imageCaption": "The narrow-gauge track hugging sheer mountain precipices overlooking the Shivalik valley.",
+        "altText": "Kalka Shimla tracks along high mountain ridge"
       },
       {
         "type": "heading",
-        "title": "3. Roman Viaducts and Crisp Mountain Air",
-        "content": "3. Roman Viaducts and Crisp Mountain Air"
-      },
-      {
-        "type": "paragraph",
-        "content": "Traveling at an unhurried 22 km/h, the toy train allows passengers to breathe clean cedar air, hear chirping mountain birds, and purchase steaming hot chai and fresh roasted pakoras during brief station pauses at Dharampur and Solan."
+        "title": "4. The Heritage Fleet: Shivalik Deluxe & Him Darshan Vistadome",
+        "content": "Indian Railways operates a bespoke collection of vintage and modern tourist rakes on the Kalka-Shimla line. The flagship is the Shivalik Deluxe Express (52451), featuring plush reversible sofa chairs, wall-to-wall carpeting, wood-paneled walls, and complimentary hot morning breakfast and tea served at your seat.\n\nIn 2019, the railway introduced the Him Darshan Express (52459), equipped with all-glass Vistadome observation cars. With transparent panoramic roofs, large glass side windows, and roller blinds, passengers enjoy an unobstructed 360-degree vista of passing mountain cliffs, pine trees, and winter snowfall."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/kalka-shimla-unesco-toy-train-4.jpg",
-        "caption": "Kalka to shimla railway path",
-        "altText": "Kalka to shimla railway path"
+        "imageCaption": "The toy train slowing to a halt at a quaint colonial wooden railway station platform.",
+        "altText": "Heritage wooden platform on Kalka Shimla railway"
       },
       {
-        "type": "trivia",
-        "content": "DID YOU KNOW? Local mystic Bhalku helped align the Kalka-Shimla railway line by tapping the mountainsides with a solid wooden staff to listen to the rock density."
+        "type": "heading",
+        "title": "5. Passenger Guide: Booking Windows, Halts & Winter Snow",
+        "content": "The journey from Kalka to Shimla takes approximately 5 hours and 20 minutes across 18 stations. At Barog station, all express trains halt for 10 minutes, allowing passengers to step onto the quaint wooden platform for hot masala chai, vegetable cutlets, and fresh gulab jamuns from the heritage railway refreshment room.\n\nTickets can be booked 120 days in advance on IRCTC. Morning departures from Kalka connect seamlessly with the overnight Kalka Shatabdi and Howrah-Kalka Mail from New Delhi. Between December and February, the route transforms into a real-life winter wonderland as heavy snow coats the pine trees and railway tracks."
       },
       {
-        "type": "quote",
-        "content": "There are fast trains that take you across destinations, and then there is the Kalka-Shimla toy train that takes you back in time."
+        "type": "image",
+        "imageUrl": "/images/blogs/kalka-shimla-unesco-toy-train-5.jpg",
+        "imageCaption": "Snow-covered deodar trees framing the narrow-gauge railway during the winter season.",
+        "altText": "Snow covered winter tracks on Kalka Shimla railway"
+      },
+      {
+        "type": "tip",
+        "title": "Pro Traveler Tip: Window Seat Direction",
+        "content": "When traveling uphill from Kalka to Shimla, always reserve seats on the RIGHT side of the carriage for uninterrupted panoramic valley views and stone aqueduct photography."
       }
     ]
   },
@@ -601,113 +621,121 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "id": "6",
     "slug": "nilgiri-mountain-railway-rack-pinion",
     "title": "Nilgiri Mountain Railway: Blue Mountain Steam on Asia's Steepest Rack Track",
-    "subtitle": "Discover the century-old Swiss Abt rack-and-pinion system pushing heritage coaches up into the clouds of Ooty.",
+    "subtitle": "Discover the 1908 UNESCO meter-gauge line where Swiss steam locomotives push carriages up a 1 in 12.28 gradient.",
     "category": "Scenic Routes",
     "coverImage": "/images/blogs/nilgiri-mountain-railway-rack-pinion-1.jpg",
     "author": "Southern Mountain Rail Guild",
     "authorRole": "Senior Locomotive Engineer",
-    "readTimeMinutes": 7,
-    "publishedDate": "2026-10-09",
-    "featured": false,
+    "readTimeMinutes": 8,
+    "publishedDate": "2026-10-10",
+    "featured": true,
     "tags": [
-      "Nilgiri",
-      "Ooty",
+      "Nilgiri Railway",
       "Toy Train",
-      "Abt Rack Pinion",
+      "Ooty",
+      "Rack and Pinion",
       "UNESCO",
       "Steam Loco"
     ],
     "quickFacts": [
       {
         "label": "Steepest Gradient",
-        "value": "1 in 12.28 (8.15% incline)",
-        "icon": "trending-up"
+        "value": "1 in 12.28 (8.15% Incline)",
+        "icon": "award"
       },
       {
-        "label": "Traction System",
-        "value": "Abt Rack & Pinion alternate teeth",
-        "icon": "cog"
+        "label": "Rack System",
+        "value": "Swiss Abt Double-Toothed Rack",
+        "icon": "layers"
       },
       {
-        "label": "Locomotives",
-        "value": "X-Class oil-fired steam locomotives",
+        "label": "Engine Fleet",
+        "value": "Swiss SLM X-Class Steam Locos",
         "icon": "zap"
       },
       {
-        "label": "UNESCO Status",
-        "value": "Inscribed in 2005 (Extended DHR)",
-        "icon": "award"
+        "label": "UNESCO Year",
+        "value": "Inscribed World Heritage 2005",
+        "icon": "shield"
       }
     ],
     "relatedTrains": [
       {
-        "trainNumber": "06136",
-        "trainName": "Mettupalayam - Udhagamandalam Special",
-        "route": "MTP to UAM"
+        "trainNumber": "56136",
+        "trainName": "Mettupalayam Ooty Passenger",
+        "route": "Mettupalayam ➔ Udhagamandalam"
       },
       {
-        "trainNumber": "06137",
-        "trainName": "Udhagamandalam - Mettupalayam Special",
-        "route": "UAM to MTP"
+        "trainNumber": "56137",
+        "trainName": "Ooty Mettupalayam Passenger",
+        "route": "Udhagamandalam ➔ Mettupalayam"
+      },
+      {
+        "trainNumber": "06171",
+        "trainName": "Nilgiri Summer Special",
+        "route": "Mettupalayam ➔ Coonoor"
       }
     ],
     "sections": [
       {
         "type": "heading",
-        "title": "1. Conquering the Blue Mountains",
-        "content": "1. Conquering the Blue Mountains"
-      },
-      {
-        "type": "paragraph",
-        "content": "Starting at Mettupalayam in the Tamil Nadu plains, the meter-gauge Nilgiri Mountain Railway (NMR) ascends 46 kilometers to Udhagamandalam (Ooty) at an elevation of 2,203 meters. Completed in 1908, it relies on the ingenious Swiss Abt rack-and-pinion system to climb grades of 1 in 12.28, the steepest operational railway gradient in all of Asia."
+        "title": "1. Conquering the Blue Mountains: The Swiss Abt Rack System",
+        "content": "Rising dramatically from the dusty plains of Tamil Nadu into the cool Nilgiri hills, the meter-gauge Nilgiri Mountain Railway (NMR) is a staggering monument to human ingenuity. Completed in 1908 after three decades of failed attempts, the line climbs from Mettupalayam (1,069 ft) to Udhagamandalam / Ooty (7,228 ft) over 46 kilometers.\n\nConventional steel-wheel friction fails on slopes steeper than 1 in 30, as train wheels simply spin out on the rails. To conquer gradients of 1 in 12.28—the steepest operational railway gradient in all of Asia—engineers utilized the Swiss Abt rack-and-pinion system. A dual-toothed cast-steel rack rail is anchored securely between the two running rails along the 19-kilometer stretch between Kallar and Coonoor, perfectly meshing with motorized cogwheels beneath the steam locomotive."
       },
       {
         "type": "image",
-        "imageUrl": "/images/blogs/nilgiri-mountain-railway-rack-pinion-2.jpg",
-        "caption": "Hillgrove Station, Nilgiri Mountain Railways, India",
-        "altText": "Hillgrove Station, Nilgiri Mountain Railways, India"
+        "imageUrl": "/images/blogs/nilgiri-mountain-railway-rack-pinion-1.jpg",
+        "imageCaption": "The dual-toothed Abt rack rail mounted between the running rails, engaging the locomotive's motorized cogwheels.",
+        "altText": "Abt rack and pinion rail system in the Nilgiris"
       },
       {
         "type": "heading",
         "title": "2. The Pusher Steam Engine Phenomenon",
-        "content": "2. The Pusher Steam Engine Phenomenon"
+        "content": "Unlike conventional trains where the locomotive pulls coaches from the front, the Swiss-built X-Class steam engine couples to the REAR of the train at Mettupalayam and pushes the carriages uphill toward Coonoor. This is a critical safety measure: in the unlikely event of a mechanical failure or coupling breakage, the carriages cannot roll backward down the mountain slope.\n\nOn the descent from Coonoor down to Kallar, the engine remains at the front of the train facing downhill, acting as a massive pneumatic counterweight brake. Specialized mechanical brake-rigging is manned by human brakesmen stationed on each carriage platform, who hand-crank screw brakes at whistle commands from the engine pilot."
       },
       {
-        "type": "paragraph",
-        "content": "Unlike conventional trains pulled from the front, the Swiss-built X-Class steam locomotive couples to the rear of the train at Mettupalayam and pushes the carriages uphill towards Coonoor. This ensures that in the unlikely event of a mechanical failure, the carriages cannot roll backward down the mountain slope."
+        "type": "image",
+        "imageUrl": "/images/blogs/nilgiri-mountain-railway-rack-pinion-2.jpg",
+        "imageCaption": "A Swiss-built X-Class steam locomotive pushing blue-and-cream coaches uphill into the clouds.",
+        "altText": "Nilgiri Mountain Railway steam pusher engine"
+      },
+      {
+        "type": "heading",
+        "title": "3. Through Cloud Forests & Tea Plantations to Coonoor",
+        "content": "The 5-hour journey traverses 16 tunnels, 250 bridges, and steep mountain gorges. As the train leaves the humid tropical areca nut and banana plantations of Kallar behind, it ascends into dense Shola cloud forests inhabited by wild elephants, bonnet macaques, and Malabar giant squirrels.\n\nAround Hillgrove station (where the steam engine stops to fill its water tanks), the terrain opens into rolling emerald tea estates carpeted across mountain slopes. The aroma of crushed eucalyptus and fresh tea leaves fills the wooden coaches as the train slowly chugs past waterfalls cascading over black granite boulders."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/nilgiri-mountain-railway-rack-pinion-3.jpg",
-        "caption": "NMR up train at Kateri Road 05-02-28 04",
-        "altText": "NMR up train at Kateri Road 05-02-28 04"
-      },
-      {
-        "type": "tip",
-        "content": "PRO TRAVELER TIP: The stretch between Kallar and Coonoor features 16 tunnels and 250 bridges over foaming mountain waterfalls. Sit on the valley side for breathtaking gorge photography."
+        "imageCaption": "The blue and cream heritage coaches winding through rolling tea plantations near Coonoor.",
+        "altText": "Nilgiri toy train traversing tea plantations"
       },
       {
         "type": "heading",
-        "title": "3. The Romance of Live Steam and Nilgiri Eucalyptus",
-        "content": "3. The Romance of Live Steam and Nilgiri Eucalyptus"
-      },
-      {
-        "type": "paragraph",
-        "content": "As the train negotiates the hairpin curves above Hillgrove station, plumes of fragrant white steam mingle with cool mountain air scented with eucalyptus trees and blossoming wild rhododendrons, creating an unforgettable sensory journey."
+        "title": "4. The Coonoor Shed & UNESCO World Heritage Honor",
+        "content": "At Coonoor station (elevation 5,616 ft), the rack rail section ends. Here, the vintage steam engine uncouples and a specialized YAM-1 diesel locomotive takes over for the gentler 18-kilometer run through Wellington and Aruvankadu to Ooty.\n\nCoonoor is home to the historic NMR Locomotive Shed, where skilled railway craftsmen maintain the world's only remaining operational fleet of coal and furnace-oil-fired X-Class steam engines. In 2005, UNESCO inscribed the Nilgiri Mountain Railway as an extension of the Mountain Railways of India World Heritage site, citing it as an outstanding example of bold engineering solutions in mountainous terrain."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/nilgiri-mountain-railway-rack-pinion-4.jpg",
-        "caption": "Nilgiri - mike",
-        "altText": "Nilgiri - mike"
+        "imageCaption": "An X-Class steam engine undergoing precision maintenance inside the historic Coonoor locomotive workshop.",
+        "altText": "Coonoor steam locomotive shed"
       },
       {
-        "type": "trivia",
-        "content": "DID YOU KNOW? The famous Bollywood song 'Chaiyya Chaiyya' from Dil Se was filmed on the rooftop of this exact Nilgiri Mountain Railway train as it wound past Coonoor."
+        "type": "heading",
+        "title": "5. Passenger Guide: Booking Advice, Seasonality & Ooty Delicacies",
+        "content": "Because only one uphill steam train operates daily from Mettupalayam (Train 56136, departing at 7:10 AM), its four passenger coaches sell out within seconds of the 120-day IRCTC booking window opening. First Class tickets offer cushioned seats and expansive picture windows.\n\nUpon arriving at Ooty terminus, travelers can sample homemade artisanal chocolates, hot Nilgiri tea, and fresh bakery fudge. Between April and June, Southern Railway runs special weekend summer joyride services between Ooty and Coonoor, providing ample opportunities to experience this living engineering treasure."
       },
       {
-        "type": "quote",
-        "content": "The rhythmic chuff of the steam engine gripping the rack rail is the heartbeat of the Nilgiri hills."
+        "type": "image",
+        "imageUrl": "/images/blogs/nilgiri-mountain-railway-rack-pinion-5.jpg",
+        "imageCaption": "The historic Udhagamandalam (Ooty) railway station building framed by Nilgiri eucalyptus groves.",
+        "altText": "Ooty railway station heritage terminal"
+      },
+      {
+        "type": "tip",
+        "title": "Pro Traveler Tip: Water Stop Halts",
+        "content": "The train halts for 10 to 15 minutes at Adderley and Hillgrove stations for the steam engine to take water. Step down onto the wooden platform to photograph the massive leather water crane discharging into the engine's tender!"
       }
     ]
   },
@@ -715,113 +743,121 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "id": "7",
     "slug": "mastering-irctc-tatkal-booking-rules",
     "title": "Mastering the Tatkal Rush: Pro Rules, Timers & Master List Shortcuts",
-    "subtitle": "Everything you need to know about 10:00 AM AC and 11:00 AM Non-AC quotas, payment gateways, and seat confirmation.",
+    "subtitle": "Everything you need to secure confirmed emergency train tickets before slots evaporate in 60 seconds.",
     "category": "Travel Tips",
     "coverImage": "/images/blogs/mastering-irctc-tatkal-booking-rules-1.jpg",
-    "author": "IRCTC Ticketing Strategist",
-    "authorRole": "Ticketing Operations Analyst",
-    "readTimeMinutes": 5,
-    "publishedDate": "2026-10-05",
-    "featured": false,
+    "author": "RailTrack Ticketing Desk",
+    "authorRole": "Ticketing & PRS Systems Analyst",
+    "readTimeMinutes": 7,
+    "publishedDate": "2026-10-08",
+    "featured": true,
     "tags": [
       "Tatkal",
       "IRCTC",
-      "Booking Hacks",
-      "Ticket Rules",
-      "Master List",
-      "Travel Hacks"
+      "Ticket Booking",
+      "Chart Preparation",
+      "Travel Hacks",
+      "PRS"
     ],
     "quickFacts": [
       {
         "label": "AC Tatkal Window",
-        "value": "Opens 10:00 AM (1 day prior)",
+        "value": "10:00 AM (1 Day Prior)",
         "icon": "clock"
       },
       {
-        "label": "Non-AC Tatkal Window",
-        "value": "Opens 11:00 AM (1 day prior)",
+        "label": "Non-AC Window",
+        "value": "11:00 AM (1 Day Prior)",
         "icon": "clock"
       },
       {
-        "label": "Tatkal Charge",
-        "value": "10% to 30% of base fare (capped)",
-        "icon": "credit-card"
+        "label": "1st Chart Timeline",
+        "value": "10 Hrs Prior / 8 PM Night Before",
+        "icon": "shield"
       },
       {
-        "label": "Refund on CNF Tatkal",
-        "value": "Zero refund on confirmed cancellation",
-        "icon": "alert-circle"
+        "label": "Final Chart Prep",
+        "value": "30 Mins Before Departure",
+        "icon": "zap"
       }
     ],
     "relatedTrains": [
       {
-        "trainNumber": "12723",
-        "trainName": "Telangana Superfast Express",
-        "route": "HYB to NDLS"
+        "trainNumber": "12301",
+        "trainName": "Howrah Rajdhani",
+        "route": "Howrah ➔ New Delhi"
       },
       {
-        "trainNumber": "12791",
-        "trainName": "Secunderabad - Danapur Express",
-        "route": "SC to DNR"
+        "trainNumber": "12951",
+        "trainName": "Mumbai Rajdhani",
+        "route": "Mumbai Central ➔ New Delhi"
+      },
+      {
+        "trainNumber": "12621",
+        "trainName": "Tamil Nadu Express",
+        "route": "MGR Chennai Central ➔ New Delhi"
       }
     ],
     "sections": [
       {
         "type": "heading",
-        "title": "1. Understand the T-1 Booking Timeline",
-        "content": "1. Understand the T-1 Booking Timeline"
+        "title": "1. Decoding the Tatkal Ecosystem: Timings & Quotas",
+        "content": "Tatkal (meaning 'Immediately' in Sanskrit) is Indian Railways' dedicated emergency reservation quota, setting aside roughly 10% to 30% of total berth capacity on superfast and mail expresses for short-notice travel. Tatkal booking opens exactly ONE DAY before the train's scheduled departure date from its originating station.\n\nThe system operates on a staggered dual-window schedule: Air-Conditioned classes (1A, 2A, 3A, 3E, CC, EC) open sharply at 10:00 AM IST, while Non-AC classes (Sleeper Class, Second Sitting) open at 11:00 AM IST. Because thousands of travelers compete simultaneously for a limited pool of berths, high-demand routes can exhaust their entire Tatkal quota within 60 to 90 seconds."
       },
       {
-        "type": "paragraph",
-        "content": "Tatkal bookings open exactly one day prior to the train's journey origination date from its starting terminal. For AC classes (2A, 3A, 3E, CC, EC), the booking counter opens online at 10:00 AM IST. For Non-AC classes (Sleeper SL, Second Sitting 2S), the window opens at 11:00 AM IST. Notice: If a train originates on Thursday but reaches your boarding stop on Friday, Tatkal opens on Wednesday based on the train origin date."
+        "type": "image",
+        "imageUrl": "/images/blogs/mastering-irctc-tatkal-booking-rules-1.jpg",
+        "imageCaption": "A bustling Indian Railways platform during morning departure hours with passengers checking reservation charts.",
+        "altText": "Passengers on Indian Railways station platform"
+      },
+      {
+        "type": "heading",
+        "title": "2. The Golden 60 Seconds: Pre-Filling the IRCTC Master List",
+        "content": "The single most common mistake passengers make is typing passenger names, ages, berth preferences, and ID details manually after the clock strikes 10:00 AM. In the high-stakes Tatkal arena, manual typing guarantees failure.\n\nThe secret weapon of seasoned rail travelers is the IRCTC 'Master Passenger List'. At least 30 minutes before booking opens, log in to your IRCTC profile, navigate to 'My Profile' ➔ 'Master List', and save all traveler details. When booking opens, select 'Add from Master List' with a single click, instantly populating all passenger rows in under 2 seconds. Pair this with saved UPI IDs or pre-authenticated payment gateways for frictionless checkout."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/mastering-irctc-tatkal-booking-rules-2.jpg",
-        "caption": "A passenger train on Platform 3 of Patna Junction",
-        "altText": "A passenger train on Platform 3 of Patna Junction"
+        "imageCaption": "Modern high-speed LHB passenger coaches equipped with computerized electronic reservation display screens.",
+        "altText": "LHB coach reservation display board"
       },
       {
         "type": "heading",
-        "title": "2. The Master List Pre-Filling Secret",
-        "content": "2. The Master List Pre-Filling Secret"
-      },
-      {
-        "type": "paragraph",
-        "content": "Never type passenger names, ages, and berth preferences during the Tatkal countdown. Log in to your IRCTC account at 09:45 AM, navigate to 'My Profile' > 'Master List', and save all passenger details beforehand. When the clock strikes 10:00 AM, select your passengers from the pre-filled dropdown in just one second."
+        "title": "3. OFFICIAL RESERVATION CHART PREPARATION RULES",
+        "content": "Understanding the exact official charting timeline is critical for tracking confirmation status, berth allocation, and emergency vacant seats:\n\n• FIRST RESERVATION CHART (Chart 1): In Indian Railways, the first reservation chart is prepared 10 hours before the scheduled departure of the train from its originating station, though the exact time depends on the train's departure window:\n  1. Trains departing after 2:00 PM or before 5:00 AM: The first chart is prepared exactly 10 hours before departure.\n  2. Trains departing between 5:00 AM and 2:00 PM: The first chart is prepared the previous night at 8:00 PM (or 9:00 PM depending on specific zonal railway updates).\n\n• SECOND & FINAL CHART (Chart 2): A second and final reservation chart is prepared exactly 30 minutes before scheduled departure for all trains. This final chart accounts for last-minute cancellations, current counter ticket sales, and Emergency Quota (EQ) releases by railway divisional managers."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/mastering-irctc-tatkal-booking-rules-3.jpg",
-        "caption": "Bongaigaon (BNGN) Passenger",
-        "altText": "Bongaigaon (BNGN) Passenger"
-      },
-      {
-        "type": "tip",
-        "content": "PRO TRAVELER TIP: Always choose UPI AutoPay or IRCTC e-Wallet as your payment mode. Credit/Debit card OTP SMS messages frequently get delayed during morning peak traffic, costing you confirmed seats."
+        "imageCaption": "Passenger checking physical PRS reservation chart pasted onto the platform bulletin board.",
+        "altText": "Station master office and reservation bulletin board"
       },
       {
         "type": "heading",
-        "title": "3. The Golden Cancellation Rule",
-        "content": "3. The Golden Cancellation Rule"
-      },
-      {
-        "type": "paragraph",
-        "content": "No refund is granted on cancellation of confirmed Tatkal tickets. However, if your Tatkal ticket remains on the Waitlist (WL) after final chart preparation, it is automatically cancelled and 100% of the fare is refunded directly to your original payment bank account."
+        "title": "4. Waitlist Rules, Auto-Cancellation & Premium Tatkal",
+        "content": "A critical rule governs online Tatkal bookings: if an e-ticket booked under the Tatkal quota remains on the Waitlist (WL) after final chart preparation, it is automatically cancelled and 100% of the fare is refunded directly to the passenger's bank account. Waitlisted e-ticket holders are strictly prohibited from boarding reserved coaches.\n\nBeware also of 'Premium Tatkal' (PT). Unlike normal Tatkal which has a fixed surcharge (₹100 to ₹500 depending on class), Premium Tatkal employs dynamic airline-style pricing that surges up to 3x the standard fare as tickets sell. Premium Tatkal tickets offer zero cancellation refunds under any circumstances."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/mastering-irctc-tatkal-booking-rules-4.jpg",
-        "caption": "Butibori Railway Platform - panoramio",
-        "altText": "Butibori Railway Platform - panoramio"
+        "imageCaption": "A long-distance express train accelerating out of the junction platform onto trunk lines.",
+        "altText": "Express train departing railway junction"
       },
       {
-        "type": "trivia",
-        "content": "DID YOU KNOW? First AC (1A) and Executive Anubhuti coaches are strictly excluded from Tatkal booking rules by Indian Railways policy."
+        "type": "heading",
+        "title": "5. Step-by-Step Pro Tatkal Checklist",
+        "content": "Follow this battle-tested checklist for maximum booking success:\n\n1. At 9:55 AM (or 10:55 AM): Synchronize your computer or smartphone clock to exact Indian Standard Time (IST) via time.is.\n2. Log in to IRCTC at 9:58 AM. Logging in too early (e.g. 9:45 AM) triggers an automated session timeout during peak rush.\n3. Keep the train number, station code, and class pre-selected in your search query.\n4. When the clock hits 10:00:00 AM, click 'Search Trains' ➔ 'Tatkal' ➔ 'Book Now'.\n5. Select passengers from Master List, enter Captcha quickly, and choose UPI or Netbanking for the highest gateway speed."
       },
       {
-        "type": "quote",
-        "content": "In the Tatkal rush, victory belongs not to the fastest internet connection, but to the passenger with a pre-filled Master List and a fast UPI PIN."
+        "type": "image",
+        "imageUrl": "/images/blogs/mastering-irctc-tatkal-booking-rules-5.jpg",
+        "imageCaption": "A passenger relaxing inside an air-conditioned coach after successfully securing a confirmed berth.",
+        "altText": "Passenger resting in AC train coach"
+      },
+      {
+        "type": "tip",
+        "title": "Pro Traveler Tip: Current Booking Window",
+        "content": "If you miss Tatkal entirely, check 'Current Booking' on IRCTC between 1st chart preparation and 30 minutes before departure. Any berths released from VIP, defense, or foreign tourist quotas become available for booking at normal base fares!"
       }
     ]
   },
@@ -830,238 +866,240 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "slug": "iconic-station-food-indian-railways",
     "title": "Trackside Gastronomy: The Iconic Bites of Indian Railways Platforms",
     "subtitle": "From Ratlam's fiery clove sev and Kharagpur's kulhad chai to Vijayawada's mirchi bajji and hot e-catering.",
-    "category": "Food & Culture",
+    "category": "Culinary & Culture",
     "coverImage": "/images/blogs/iconic-station-food-indian-railways-1.jpg",
-    "author": "Culinary Rail Traveler",
-    "authorRole": "Trackside Food Journalist",
-    "readTimeMinutes": 6,
+    "author": "Culinary Rail Traveler Desk",
+    "authorRole": "Gastronomy & Heritage Writer",
+    "readTimeMinutes": 7,
     "publishedDate": "2026-10-02",
-    "featured": false,
+    "featured": true,
     "tags": [
-      "Station Food",
+      "Railway Food",
+      "Station Delicacies",
       "Ratlam Sev",
-      "Kulhad Chai",
-      "Mirchi Bajji",
-      "IRCTC e-Catering",
-      "Culinary Heritage"
+      "IRCTC eCatering",
+      "Chai Culture"
     ],
     "quickFacts": [
       {
-        "label": "Longest Tea Platform",
-        "value": "Kharagpur Jn (Platform 1)",
-        "icon": "coffee"
+        "label": "Longest Platform Halt",
+        "value": "Ratlam Junction (10–15 Mins)",
+        "icon": "clock"
       },
       {
-        "label": "Famous Sev Capital",
-        "value": "Ratlam Junction, MP",
+        "label": "Signature Tea Hub",
+        "value": "Kharagpur & Varanasi (Clay Kulhad)",
         "icon": "award"
       },
       {
-        "label": "Fiery Snack",
-        "value": "Vijayawada Mirchi Bajji",
-        "icon": "flame"
+        "label": "E-Catering Stations",
+        "value": "Over 350 Live Delivery Stations",
+        "icon": "zap"
       },
       {
-        "label": "e-Catering Coverage",
-        "value": "Over 350 major stations nationwide",
-        "icon": "shopping-bag"
+        "label": "Meals Served Daily",
+        "value": "Over 1.5 Million Meals on Tracks",
+        "icon": "shield"
       }
     ],
     "relatedTrains": [
       {
-        "trainNumber": "12951",
-        "trainName": "Mumbai Tejas Rajdhani",
-        "route": "MMCT to NDLS"
+        "trainNumber": "12952",
+        "trainName": "Mumbai Rajdhani",
+        "route": "New Delhi ➔ Mumbai Central"
       },
       {
-        "trainNumber": "12839",
-        "trainName": "Howrah - Chennai Mail",
-        "route": "HWH to MAS"
+        "trainNumber": "12840",
+        "trainName": "Howrah Mail",
+        "route": "MGR Chennai Central ➔ Howrah"
+      },
+      {
+        "trainNumber": "12626",
+        "trainName": "Kerala Express",
+        "route": "New Delhi ➔ Thiruvananthapuram"
       }
     ],
     "sections": [
       {
         "type": "heading",
-        "title": "1. Ratlam Sev & Poha: The King of Platform Breakfasts",
-        "content": "1. Ratlam Sev & Poha: The King of Platform Breakfasts"
+        "title": "1. The Culinary Map of the Iron Track",
+        "content": "For 170 years, Indian Railways has been as much a gastronomic expedition as a transportation network. Long before highway diners and airport food courts existed, station platforms functioned as vibrant open-air kitchens showcasing regional culinary identity. As a long-distance express halts for ten minutes at a junction, the platform comes alive with the symphony of whistling kettles, sizzling woks, and hawkers calling out hot delicacies in local dialects."
       },
       {
-        "type": "paragraph",
-        "content": "Whenever long-distance trains pull into Ratlam Junction in Madhya Pradesh, passengers rush to the platform stalls. Spiced with pungent clove ('laung') and black pepper, crunchy golden Ratlam Sev poured over warm turmeric poha with fresh lime is the ultimate platform breakfast."
+        "type": "image",
+        "imageUrl": "/images/blogs/iconic-station-food-indian-railways-1.jpg",
+        "imageCaption": "Freshly fried golden vegetable samosas served with tangy mint and tamarind chutneys on a station tray.",
+        "altText": "Golden railway samosas on station platter"
+      },
+      {
+        "type": "heading",
+        "title": "2. The Northern & Central Platform Titans",
+        "content": "At Ratlam Junction in Madhya Pradesh, passengers eagerly wait for the train to screech to a halt. Vendors sprint down the platform holding paper cones of Ratlami Sev—crisp chickpea flour noodles spiced with ground cloves, black pepper, and hing that deliver an unmistakable fiery tingle. Further north at Gwalior, morning travelers reach for steaming Bedai (flaky urad dal puris served with spicy, oil-tinged potato curry and a dollop of fresh yogurt).\n\nIn Bengal, Kharagpur and Howrah stations are celebrated for rich ginger-infused milk chai brewed in earthen terracotta cups known as 'Kulhad'. Drinking from a porous clay cup infuses the hot sweet tea with a rustic earthy fragrance (saunda swad) that paper or glass cups can never replicate."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/iconic-station-food-indian-railways-2.jpg",
-        "caption": "Steaming hot platform samosas with green chutney",
-        "altText": "Steaming hot platform samosas with green chutney"
+        "imageCaption": "Hot ginger-cardamom railway chai poured into rustic handmade terracotta kulhads.",
+        "altText": "Authentic Indian railways kulhad chai"
       },
       {
         "type": "heading",
-        "title": "2. Clay Cup Chai at Kharagpur Junction",
-        "content": "2. Clay Cup Chai at Kharagpur Junction"
-      },
-      {
-        "type": "paragraph",
-        "content": "At Kharagpur in West Bengal, home to one of the world's longest railway platforms, scalding hot ginger-cardamom tea brewed in unglazed earthen clay cups ('kulhads') imparts an earthy aroma that no paper or plastic cup could ever replicate."
+        "title": "3. Southern & Western Station Flavor Legends",
+        "content": "Journey southward on the Grand Trunk or Konkan route to discover an entirely different palette of flavors. At Vijayawada Junction in Andhra Pradesh, crisp-fried Mirchi Bajjis (large banana peppers stuffed with tamarind pulp, dipped in gram flour batter and fried golden) are served topped with chopped raw onions and roasted groundnuts.\n\nAt Kozhikode in Kerala, platform stalls sell legendary banana halwa and tender coconut water. In western India, Surat station is world-famous for steaming Locho (a savory crushed lentil cake drenched in butter, sev, and green garlic chutney), while Pune Junction offers spicy Misal Pav with crunchy farsan and lemon wedges."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/iconic-station-food-indian-railways-3.jpg",
-        "caption": "Hyderabadi Chicken Biryani",
-        "altText": "Hyderabadi Chicken Biryani"
-      },
-      {
-        "type": "tip",
-        "content": "PRO TRAVELER TIP: Order fresh meals from top city restaurants directly to your seat using IRCTC e-Catering with your PNR number, and delivery partners deliver hot food right at your intermediate station halt."
+        "imageCaption": "Authentic Hyderabadi Dum Biryani packed in fragrant foil salvers for train passengers.",
+        "altText": "Hyderabadi Dum Biryani for train passengers"
       },
       {
         "type": "heading",
-        "title": "3. Vijayawada's Mirchi Bajji & Coastal Vada Pav",
-        "content": "3. Vijayawada's Mirchi Bajji & Coastal Vada Pav"
-      },
-      {
-        "type": "paragraph",
-        "content": "At Vijayawada Junction along the Krishna River, stalls fry steaming green chilli fritters ('Mirchi Bajji') stuffed with carom seeds and dipped in chickpea batter. Across the western coastline from CSMT to Kalyan, nothing fuels commuters like the classic Batata Vada Pav with spicy garlic powder."
+        "title": "4. The IRCTC e-Catering & App-Based Revolution",
+        "content": "While grabbing hot platform snacks remains an irreplaceable railway tradition, IRCTC's 'Food on Track' e-catering platform has transformed long-distance dining. Passengers can now order fresh meals from over 2,000 FSSAI-certified restaurant brands—including Haldiram's, Domino's, Bikanervala, and Saravana Bhavan—delivered directly to their coach berth at major junction halts.\n\nOrders can be placed via PNR on the RailTrack app or IRCTC portal up to two hours before arriving at delivery hubs like Itarsi, Nagpur, Bhopal, or Mughalsarai (Pt. Deen Dayal Upadhyaya Junction)."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/iconic-station-food-indian-railways-4.jpg",
-        "caption": "Traditional earthen Kulhad Chai on railway platform",
-        "altText": "Traditional earthen Kulhad Chai on railway platform"
+        "imageCaption": "Spicy Maharashtrian Misal Pav topped with coriander, lemon, and crunchy farsan.",
+        "altText": "Spicy Misal Pav station snack"
+      },
+      {
+        "type": "heading",
+        "title": "5. Foodie's Station Guide: Long Halts & Cleanliness",
+        "content": "To maximize your culinary adventure, check your train's schedule for stations with halts of 10 minutes or longer (such as Ratlam, Vadodara, Jhansi, or Vijayawada). Always purchase food from Jan Ahaar cafeterias or authorized IRCTC stallholders displaying digital billing machines and FSSAI hygiene ratings.\n\nAlways carry a reusable water bottle or purchase Rail Neer packaged drinking water (with sealed neck tags) at the mandatory government-regulated price of ₹15 per liter."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/iconic-station-food-indian-railways-5.jpg",
-        "caption": "Fluffy turmeric Poha topped with Ratlam sev",
-        "altText": "Fluffy turmeric Poha topped with Ratlam sev"
+        "imageCaption": "Indori Poha garnished with fresh sev, pomegranate seeds, and jeeravan masala.",
+        "altText": "Indori Poha garnished with sev"
       },
       {
-        "type": "trivia",
-        "content": "DID YOU KNOW? Traditional clay kulhad cups are 100% natural, biodegradable, and support local village potters across Uttar Pradesh, Bihar, and Bengal."
-      },
-      {
-        "type": "quote",
-        "content": "The true soul of Indian Railways lives in the whistle of the pressure cooker and the call of 'Garam Chai!' echoing down the platform."
+        "type": "tip",
+        "title": "Pro Traveler Tip: Pre-Order for Night Trains",
+        "content": "Pantry cars generally close dinner service by 9:30 PM. If your train passes a major food hub like Nagpur or Gwalior around 8:00 PM, use e-Catering to order dinner delivered piping hot straight to your seat!"
       }
     ]
   },
   {
     "id": "9",
     "slug": "maharajas-express-world-leading-luxury",
-    "title": "Maharajas' Express: World\u2019s Leading Luxury Train & Royal Palaces on Rails",
+    "title": "Maharajas' Express: World's Leading Luxury Train & Royal Palaces on Rails",
     "subtitle": "Step aboard the half-mile-long royal train that redefined luxury with presidential suites, royal dining cars, and private butler service.",
-    "category": "Train Tech",
+    "category": "Heritage & History",
     "coverImage": "/images/blogs/maharajas-express-world-leading-luxury-1.jpg",
     "author": "Luxury Travel Connoisseur",
-    "authorRole": "Luxury Rail Inspector",
-    "readTimeMinutes": 8,
+    "authorRole": "Royal Rail Heritage Curator",
+    "readTimeMinutes": 9,
     "publishedDate": "2026-10-28",
     "featured": true,
     "tags": [
       "Maharajas Express",
       "Luxury Train",
-      "Palace On Rails",
-      "Presidential Suite",
-      "IRCTC Luxury",
-      "Royal Heritage"
+      "IRCTC",
+      "Royal Palace",
+      "Heritage Tourism"
     ],
     "quickFacts": [
       {
-        "label": "Global Honors",
-        "value": "Voted World's Leading Luxury Train 7 years",
+        "label": "Train Length",
+        "value": "Nearly Half a Mile (23 Carriages)",
+        "icon": "route"
+      },
+      {
+        "label": "Guest Capacity",
+        "value": "Max 88 Exclusive Guests",
+        "icon": "shield"
+      },
+      {
+        "label": "World Travel Awards",
+        "value": "World's Leading Luxury Train (7x Winner)",
         "icon": "award"
       },
       {
-        "label": "Train Length",
-        "value": "Nearly half a mile (23 opulent carriages)",
-        "icon": "ruler"
-      },
-      {
-        "label": "Top Suite",
-        "value": "Navratna Presidential Suite (entire rail coach)",
-        "icon": "crown"
-      },
-      {
-        "label": "Dining Cars",
-        "value": "Rang Mahal & Mayur Mahal (peacock ceiling)",
-        "icon": "utensils"
+        "label": "Presidential Suite",
+        "value": "Full Carriage (Navratna Suite)",
+        "icon": "zap"
       }
     ],
     "relatedTrains": [
       {
-        "trainNumber": "22221",
-        "trainName": "Mumbai CSMT Rajdhani",
-        "route": "CSMT to NZM"
+        "trainNumber": "00001",
+        "trainName": "Maharajas' Express - Heritage of India",
+        "route": "Mumbai ➔ Delhi via Rajasthan"
       },
       {
-        "trainNumber": "12002",
-        "trainName": "Bhopal Shatabdi Express",
-        "route": "NDLS to RKMP"
+        "trainNumber": "00002",
+        "trainName": "Maharajas' Express - Indian Panorama",
+        "route": "Delhi ➔ Varanasi ➔ Delhi"
+      },
+      {
+        "trainNumber": "00003",
+        "trainName": "Maharajas' Express - Treasures of India",
+        "route": "Delhi ➔ Agra ➔ Ranthambore ➔ Jaipur"
       }
     ],
     "sections": [
       {
         "type": "heading",
-        "title": "1. The Sovereign Palace on Wheels",
-        "content": "1. The Sovereign Palace on Wheels"
+        "title": "1. The Sovereign of Luxury Rails: A Rolling Imperial Palace",
+        "content": "Operated by the Indian Railway Catering and Tourism Corporation (IRCTC), the Maharajas' Express is widely recognized as the pinnacle of luxury rail travel on earth. Winning the prestigious 'World's Leading Luxury Train' award at the World Travel Awards for seven consecutive years, this half-mile-long train reinterprets the personal saloons of India's erstwhile royal Maharajas for discerning modern voyagers.\n\nFrom the moment guests arrive at Delhi Safdarjung or Mumbai CSMT—greeted by red carpet walkways, traditional marigold garlands, trumpeting shehnai musicians, and personal royal valets (Khidmatgars)—the journey transports passengers into an era of unmatched grandeur."
       },
       {
-        "type": "paragraph",
-        "content": "Spanning nearly half a mile with 23 burgundy-and-gold carriages, the Maharajas' Express is the world's most awarded luxury train. Operated by IRCTC, it recreates the golden age of Rajput and Mughal emperors, chauffeuring guests through India's most fabled destinations including Agra, Jaipur, Ranthambore, Khajuraho, and Varanasi in supreme royal style."
+        "type": "image",
+        "imageUrl": "/images/blogs/maharajas-express-world-leading-luxury-1.jpg",
+        "imageCaption": "The regal exterior of the Maharajas' Express berthed along a red-carpet platform.",
+        "altText": "Maharajas Express luxury train exterior"
+      },
+      {
+        "type": "heading",
+        "title": "2. The Navratna Suite: A Full Carriage of Royal Splendor",
+        "content": "Accommodations on the Maharajas' Express are divided into Deluxe Cabins, Junior Suites, Suites, and the legendary 'Navratna' Presidential Suite. Occupying an entire dedicated passenger carriage (448 square feet), the Presidential Suite is the largest, most opulent suite on any commercial train in the world.\n\nIt features two master bedrooms with king-sized beds, an expansive living salon with antique silk upholstery, private writing desks, personal mini-bars, and two full en-suite bathrooms equipped with bathtubs, hot showers, and gold-plated fixtures. Every cabin is equipped with pneumatic air suspension, individual climate controls, electronic safe lockers, Wi-Fi, and 24-hour dedicated butler service."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/maharajas-express-world-leading-luxury-2.jpg",
-        "caption": "Luxary ICF Train- Maharajas Express.",
-        "altText": "Luxary ICF Train- Maharajas Express."
+        "imageCaption": "The Navratna Presidential Suite featuring silk draperies, king bed, and private salon.",
+        "altText": "Presidential suite inside Maharajas Express"
       },
       {
         "type": "heading",
-        "title": "2. The Navratna Presidential Suite: An Entire Carriage",
-        "content": "2. The Navratna Presidential Suite: An Entire Carriage"
-      },
-      {
-        "type": "paragraph",
-        "content": "Occupying a full dedicated railway carriage, the Presidential Suite ('Navratna') is the only one of its kind in the world. It features two palatial bedrooms, a private living salon, two full ensuite bathrooms with full-size bathtubs, private butler service, and Wi-Fi, offering complete private luxury at 120 km/h."
+        "title": "3. Royal Gastronomy: Mayur Mahal & Rang Mahal",
+        "content": "Dining aboard the Maharajas' Express is an extraordinary gastronomic affair. The train features two fine-dining restaurant cars: 'Mayur Mahal' (inspired by the peacock with blue and green hand-carved ceilings) and 'Rang Mahal' (draped in hand-painted gold leaf frescoes and ruby curtains).\n\nMeals are served on gold-edged Limoges porcelain plates with bespoke silver cutlery and crystal glassware. Michelin-trained onboard master chefs prepare multi-course meals featuring authentic Awadhi biryanis, Rajasthani Laal Maas, delicate Kashmiri Rogan Josh, as well as continental, Mediterranean, and vegan haute cuisine paired with complimentary international wines."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/maharajas-express-world-leading-luxury-3.jpg",
-        "caption": "Luxary ICF Train- Maharajas Express. 2",
-        "altText": "Luxary ICF Train- Maharajas Express. 2"
-      },
-      {
-        "type": "tip",
-        "content": "PRO TRAVELER TIP: Every guest receives a dedicated personal butler ('Khidmatgar') dressed in traditional royal attire, available 24/7 at the touch of a call button."
+        "imageCaption": "Mayur Mahal restaurant car laid out with fine silver cutlery, crystal goblets, and gold-leaf ceilings.",
+        "altText": "Fine dining Mayur Mahal restaurant car on Maharajas Express"
       },
       {
         "type": "heading",
-        "title": "3. Gourmet Dining at Mayur Mahal & Rang Mahal",
-        "content": "3. Gourmet Dining at Mayur Mahal & Rang Mahal"
-      },
-      {
-        "type": "paragraph",
-        "content": "Dining aboard the Maharajas' Express is a feast for the senses. Two fine-dining restaurants \u2014 'Mayur Mahal' with its peacock-feather ceiling motifs and 'Rang Mahal' with royal hand-painted frescoes \u2014 serve world-class regional delicacies on gold-rimmed Limoges porcelain with fine crystal glassware."
+        "title": "4. Royal Itineraries: Across the Golden Triangle & Beyond",
+        "content": "The Maharajas' Express operates curated 4-day and 7-day itineraries across northwest India. The flagship 7-day 'Heritage of India' journey sweeps from Mumbai through Udaipur, Jodhpur, Bikaner, Jaipur, Ranthambore tiger sanctuary, Fatehpur Sikri, Agra, and Delhi.\n\nAt every destination, passengers are whisked away in luxury air-conditioned coaches for private excursions: champagne breakfasts overlooking the Taj Mahal, polo matches with royal family hosts at City Palace Jaipur, and sunset camel safaris across the Sam sand dunes in the Thar Desert."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/maharajas-express-world-leading-luxury-4.jpg",
-        "caption": "Luxary ICF Train- Maharajas Express. 3",
-        "altText": "Luxary ICF Train- Maharajas Express. 3"
+        "imageCaption": "The Safari Lounge bar car where passengers unwind with premium single malts and games of chess.",
+        "altText": "Safari lounge and bar on Maharajas Express"
+      },
+      {
+        "type": "heading",
+        "title": "5. Connoisseur Guide: Booking Windows, Inclusions & Fares",
+        "content": "The operating season runs from October to April to take advantage of cool winter weather across northern and western India. All itineraries are fully inclusive—covering all gourmet meals, soft drinks, house wines, guided private excursions, monument entry tickets, and porterage.\n\nFares range from approximately $4,500 per person for Deluxe Cabins on shorter circuits to over $24,000 for the Presidential Suite. Early booking is highly recommended at least 6 to 9 months in advance."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/maharajas-express-world-leading-luxury-5.jpg",
-        "caption": "Luxary ICF Train- Maharajas Express. 4",
-        "altText": "Luxary ICF Train- Maharajas Express. 4"
+        "imageCaption": "Uniformed royal stewards greeting arriving passengers with traditional folded-hand Namaste.",
+        "altText": "Uniformed railway stewards on luxury platform"
       },
       {
-        "type": "trivia",
-        "content": "DID YOU KNOW? The Maharajas' Express features advanced pneumatic air-suspension systems specifically calibrated to ensure that not a single drop of wine spills while the train negotiates track crossovers."
-      },
-      {
-        "type": "quote",
-        "content": "To board the Maharajas' Express is not merely to travel across India; it is to reign over it as royalty."
+        "type": "tip",
+        "title": "Pro Traveler Tip: The Safari Bar Car",
+        "content": "Visit 'The Safari Bar' carriage between 6:00 PM and 8:00 PM for complimentary cocktails and live classical sitar recitals as the train sweeps past the twilight desert hills of Rajasthan."
       }
     ]
   },
@@ -1069,21 +1107,20 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "id": "10",
     "slug": "palace-on-wheels-sovereign-desert-odyssey",
     "title": "Palace on Wheels: The Sovereign Desert Odyssey Across Rajasthan",
-    "subtitle": "Discover India\u2019s original royal train that turned the private hunting saloons of Maharajas into a desert cruise.",
+    "subtitle": "Discover India's original royal train that turned the private hunting saloons of Maharajas into a desert cruise.",
     "category": "Heritage & History",
     "coverImage": "/images/blogs/palace-on-wheels-sovereign-desert-odyssey-1.jpg",
     "author": "Rajasthan Heritage Board",
-    "authorRole": "Desert Circuit Historian",
-    "readTimeMinutes": 7,
+    "authorRole": "Desert Tourism Authority",
+    "readTimeMinutes": 8,
     "publishedDate": "2026-10-26",
-    "featured": false,
+    "featured": true,
     "tags": [
       "Palace on Wheels",
       "Rajasthan",
-      "Jaipur",
-      "Udaipur",
-      "Jaisalmer",
-      "Heritage Rails"
+      "Desert Cruise",
+      "Heritage Train",
+      "Royal Tourism"
     ],
     "quickFacts": [
       {
@@ -1092,338 +1129,326 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
         "icon": "calendar"
       },
       {
-        "label": "Coaches Named After",
-        "value": "Former princely states of Rajputana",
-        "icon": "crown"
+        "label": "Saloons Count",
+        "value": "14 Saloons Named After Princely States",
+        "icon": "layers"
       },
       {
-        "label": "Circuit Route",
-        "value": "Delhi - Jaipur - Ranthambore - Udaipur - Jaisalmer",
-        "icon": "map"
+        "label": "Route Circuit",
+        "value": "Delhi ➔ Jaipur ➔ Jaisalmer ➔ Agra",
+        "icon": "route"
       },
       {
-        "label": "Theme",
-        "value": "Royal Rajputana Palaces",
-        "icon": "home"
+        "label": "Global Rank",
+        "value": "Voted 4th Best Luxury Train Globally",
+        "icon": "award"
       }
     ],
     "relatedTrains": [
       {
-        "trainNumber": "12413",
-        "trainName": "Pooja Superfast Express",
-        "route": "AII to JAT"
-      },
-      {
-        "trainNumber": "12981",
-        "trainName": "Chetak Express",
-        "route": "DEE to UDZ"
+        "trainNumber": "00010",
+        "trainName": "Palace on Wheels - Classic Rajasthan",
+        "route": "New Delhi ➔ Jaipur ➔ Sawai Madhopur ➔ Chittorgarh ➔ Udaipur ➔ Jaisalmer ➔ Jodhpur ➔ Bharatpur ➔ Agra ➔ Delhi"
       }
     ],
     "sections": [
       {
         "type": "heading",
-        "title": "1. The Pioneer of Luxury Rail in India",
-        "content": "1. The Pioneer of Luxury Rail in India"
+        "title": "1. The Pioneer of Royal Tourism: Origin of the Desert Cruise",
+        "content": "Launched on Republic Day in 1982 as a joint initiative between Indian Railways and Rajasthan Tourism Development Corporation (RTDC), Palace on Wheels was India's very first heritage luxury train. In its initial iteration, the train was composed of authentic vintage meter-gauge saloons that had once served as the personal hunting carriages and mobile thrones of the Maharajas of Rajputana, the Nizam of Hyderabad, and the Viceroy of British India.\n\nWhile the original wooden saloons were eventually retired to railway museums for preservation, the current broad-gauge train meticulously preserves their architectural DNA: ornate jharokha windows, hand-carved teak wood paneling, Zardozi silk embroidery, and royal coats of arms representing princely states like Alwar, Bharatpur, Bikaner, Bundi, Dholpur, Dungarpur, and Jaipur."
       },
       {
-        "type": "paragraph",
-        "content": "Launched jointly by the Rajasthan Tourism Development Corporation (RTDC) and Indian Railways in 1982, the Palace on Wheels was India's first luxury train. Originally composed of authentic vintage wooden saloons previously owned by the Nizam of Hyderabad, the Maharaja of Jaipur, and the Viceroy of British India, it introduced travelers to the Thar desert like royalty."
+        "type": "image",
+        "imageUrl": "/images/blogs/palace-on-wheels-sovereign-desert-odyssey-1.jpg",
+        "imageCaption": "The warm royal interior of a deluxe stateroom aboard the Palace on Wheels.",
+        "altText": "Deluxe bedroom cabin on Palace on Wheels"
+      },
+      {
+        "type": "heading",
+        "title": "2. The Fortresses of the Thar: A 7-Day Royal Itinerary",
+        "content": "Departing New Delhi Safdarjung on Wednesday evenings, Palace on Wheels embarks on an 8-day circular odyssey across the golden sands of the Thar Desert. The train travels by night while passengers sleep comfortably in air-conditioned cabins, arriving at a new fairy-tale fortress city each morning.\n\nThe itinerary takes guests to the Pink City of Jaipur (Amber Fort elephant rides and Hawa Mahal), the tiger jungles of Ranthambore, the hilltop fortress of Chittorgarh, the romantic lake palaces of Udaipur, the yellow-sandstone fortress of Jaisalmer, the blue city of Jodhpur, the Keoladeo Bird Sanctuary in Bharatpur, and the Taj Mahal in Agra."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/palace-on-wheels-sovereign-desert-odyssey-2.jpg",
-        "caption": "Deluxe 'Ruby' room of Palace on wheels luxury train-India",
-        "altText": "Deluxe 'Ruby' room of Palace on wheels luxury train-India"
+        "imageCaption": "The deluxe 'Ruby' guest suite adorned with Rajasthani silk fabrics and antique wall sconces.",
+        "altText": "Ruby suite with Rajasthani decor on Palace on Wheels"
       },
       {
         "type": "heading",
-        "title": "2. Saloons Named After Princely Dynasties",
-        "content": "2. Saloons Named After Princely Dynasties"
-      },
-      {
-        "type": "paragraph",
-        "content": "Each carriage is named after a legendary princely state \u2014 Alwar, Bharatpur, Bikaner, Bundi, Dholpur, Dungarpur, Jaisalmer, Jaipur, Jhalawar, Jodhpur, Kishangarh, Kota, Sirohi, and Udaipur. Inside, delicate zardozi velvet embroidery, carved Burma teak woodwork, and antique chandeliers evoke the grandeur of desert fortresses."
+        "title": "3. Opulence on the Tracks: Saloons, Spas & Royal Service",
+        "content": "Each of the 14 passenger saloons is named after an erstwhile princely state of Rajasthan and contains four deluxe bedrooms with attached private bathrooms, hot and cold running water, and intercoms. Each coach is attended by two personal 'Khidmatgars' dressed in traditional turbans and royal achkans, attending to every passenger wish.\n\nThe train also features an onboard Ayurvedic Spa saloon offering traditional rejuvenation therapies, a souvenir lounge shop, and an observation bar car stocked with fine wines and liquors."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/palace-on-wheels-sovereign-desert-odyssey-3.jpg",
-        "caption": "Jaisalmer (4445497897)",
-        "altText": "Jaisalmer (4445497897)"
-      },
-      {
-        "type": "tip",
-        "content": "PRO TRAVELER TIP: In Jaisalmer, the itinerary includes an evening camel ride across the Sam Sand Dunes with traditional Kalbelia dance performances under the starlit desert sky."
+        "imageCaption": "The Maharaja dining restaurant car serving royal Rajput feast delicacies.",
+        "altText": "Maharaja dining car on Palace on Wheels"
       },
       {
         "type": "heading",
-        "title": "3. Awaking to a New Fortress Every Dawn",
-        "content": "3. Awaking to a New Fortress Every Dawn"
-      },
-      {
-        "type": "paragraph",
-        "content": "The magic of the Palace on Wheels lies in its nocturnal journey rhythm: while guests dine on Laal Maas and sleep in silk-draped four-poster berths, the train covers hundreds of kilometers through the night. Each morning, passengers wake up to a new fortress city \u2014 from the pink walls of Jaipur to the golden sandstone towers of Jaisalmer and the tranquil Lake Pichola of Udaipur."
+        "title": "4. Gastronomic Feast: The Maharaja & Maharani Restaurants",
+        "content": "Dining aboard Palace on Wheels takes place across two opulent restaurant cars named 'The Maharaja' and 'The Maharani'. The ambiance evokes royal banquet halls with crystal chandeliers, antique brass wall lamps, and rich Rajasthani miniature paintings.\n\nThe onboard culinary team serves lavish spreads of authentic Rajasthani gastronomy: Dal Baati Churma, Gatte ki Subzi, Ker Sangri (desert bean curry), and tender Mutton Laal Maas cooked with Mathania red chilies, alongside international Chinese and Continental menus."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/palace-on-wheels-sovereign-desert-odyssey-4.jpg",
-        "caption": "Maharaja Restaurant on Palace on Wheels Luxury Train India",
-        "altText": "Maharaja Restaurant on Palace on Wheels Luxury Train India"
+        "imageCaption": "Palace on Wheels parked against the golden dunes and sandstone ramparts of Jaisalmer.",
+        "altText": "Palace on Wheels in Jaisalmer desert"
+      },
+      {
+        "type": "heading",
+        "title": "5. Traveler Guide: Booking, Seasons & What to Pack",
+        "content": "The season begins in September and concludes in April. Peak travel months are November through February when desert temperatures are mild and sunny. The tariff covers all meals, accommodation, monument entrance fees, sightseeing tours with English-speaking guides, cultural dance performances, and camel safaris.\n\nAttire is smart casual during daytime excursions, while evening dinners in the royal restaurant cars welcome elegant evening wear or traditional ethnic attire."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/palace-on-wheels-sovereign-desert-odyssey-5.jpg",
-        "caption": "Palace on Wheels- Cabin",
-        "altText": "Palace on Wheels- Cabin"
+        "imageCaption": "The majestic golden sand dunes of the Thar Desert explored during the Jaisalmer camel excursion.",
+        "altText": "Thar desert golden sand dunes"
       },
       {
-        "type": "trivia",
-        "content": "DID YOU KNOW? The original coaches of the Palace on Wheels used in 1982 were actual 19th-century royal heritage cars that had survived in private railway sheds since the pre-independence era."
-      },
-      {
-        "type": "quote",
-        "content": "The Palace on Wheels is a rolling poem written across the golden sands of Rajasthan."
+        "type": "tip",
+        "title": "Pro Traveler Tip: Desert Sunset in Jaisalmer",
+        "content": "The highlight of Day 5 in Jaisalmer is the sunset camel trek across the Sam Sand Dunes, followed by dinner under the stars with Kalbelia folk dancers. Make sure your camera batteries are fully charged!"
       }
     ]
   },
   {
     "id": "11",
     "slug": "darjeeling-himalayan-railway-unesco-toy-train",
-    "title": "Darjeeling Himalayan Railway: The UNESCO Steam Toy Train of the Tea Clouds",
-    "subtitle": "Discover the 2-foot narrow gauge miracle built in 1881 that spirals up to India\u2019s highest station at Ghum.",
+    "title": "Darjeeling Himalayan Railway: The UNESCO Steam Toy Train of the Tea Mist",
+    "subtitle": "Discover the 2-foot narrow-gauge miracle built in 1881 that spirals through tea plantations to Ghoom at 7,407 feet.",
     "category": "Scenic Routes",
     "coverImage": "/images/blogs/darjeeling-himalayan-railway-unesco-toy-train-1.jpg",
-    "author": "Darjeeling Rail Heritage Trust",
-    "authorRole": "Eastern Himalayan Rail Researcher",
+    "author": "Darjeeling Heritage Rail Circle",
+    "authorRole": "Himalayan Narrow Gauge Historian",
     "readTimeMinutes": 8,
     "publishedDate": "2026-10-25",
-    "featured": false,
+    "featured": true,
     "tags": [
       "Darjeeling",
       "Toy Train",
       "UNESCO",
       "Steam Loco",
       "Batasia Loop",
-      "Ghum Station",
       "Himalayas"
     ],
     "quickFacts": [
       {
-        "label": "Gauge",
-        "value": "2 feet (610 mm narrow gauge)",
-        "icon": "ruler"
+        "label": "Gauge Width",
+        "value": "2 ft (610 mm Narrow Gauge)",
+        "icon": "route"
       },
       {
-        "label": "Highest Station",
-        "value": "Ghum (2,258 m / 7,407 ft - India's Highest)",
-        "icon": "mountain"
-      },
-      {
-        "label": "Inaugural Year",
-        "value": "1881 (World's first mountain railway)",
+        "label": "Inaugural Opening",
+        "value": "1881 (First Mountain Railway in India)",
         "icon": "calendar"
       },
       {
-        "label": "UNESCO Inscription",
-        "value": "1999 World Heritage Site",
+        "label": "Highest Station",
+        "value": "Ghoom (7,407 ft / 2,258 m)",
+        "icon": "compass"
+      },
+      {
+        "label": "UNESCO Year",
+        "value": "Inscribed World Heritage 1999",
         "icon": "award"
       }
     ],
     "relatedTrains": [
       {
         "trainNumber": "52541",
-        "trainName": "New Jalpaiguri - Darjeeling Passenger",
-        "route": "NJP to DJ"
+        "trainName": "New Jalpaiguri Darjeeling Passenger",
+        "route": "New Jalpaiguri ➔ Darjeeling"
       },
       {
-        "trainNumber": "52544",
-        "trainName": "Darjeeling - Kurseong NG Passenger",
-        "route": "DJ to KGN"
+        "trainNumber": "52540",
+        "trainName": "Darjeeling Joy Ride (Steam)",
+        "route": "Darjeeling ➔ Ghoom ➔ Darjeeling"
+      },
+      {
+        "trainNumber": "52539",
+        "trainName": "Darjeeling Joy Ride (Diesel)",
+        "route": "Darjeeling ➔ Ghoom ➔ Darjeeling"
       }
     ],
     "sections": [
       {
         "type": "heading",
-        "title": "1. The First Mountain Railway on Earth",
-        "content": "1. The First Mountain Railway on Earth"
+        "title": "1. Franklin Prestage's 1879 Vision: Conquering the Himalayas",
+        "content": "In the late 1870s, the Eastern Bengal Railway agent Franklin Prestage looked up at the towering hills of Darjeeling—renowned worldwide for producing champagne tea—and realized that horse-drawn tongas were wholly inadequate for carrying tea down to Kolkata port. Prestage submitted a bold proposal to build a 2-foot (610 mm) narrow-gauge tramway hugging the existing cart road up the mountain.\n\nApproved in 1879 and opened in July 1881, the Darjeeling Himalayan Railway (DHR) was India's very first mountain railway. It climbed 88 kilometers from New Jalpaiguri (394 ft above sea level) into the clouds, terminating at Darjeeling (6,812 ft). In 1999, it became only the second railway in the world to be awarded UNESCO World Heritage status."
       },
       {
-        "type": "paragraph",
-        "content": "Conceived in 1878 by Franklin Prestage, the Darjeeling Himalayan Railway (DHR) was the world's first hill passenger railway. Winding 88 kilometers from New Jalpaiguri in the Bengal plains to Darjeeling at 2,050 meters, it overcame impossible mountain terrain without building expensive tunnels, using loops and 'Z-reverses' that follow the contours of the hill ridges."
+        "type": "image",
+        "imageUrl": "/images/blogs/darjeeling-himalayan-railway-unesco-toy-train-1.jpg",
+        "imageCaption": "A vintage B-Class steam engine billowing white smoke as it ascends past Darjeeling tea gardens.",
+        "altText": "Darjeeling toy train steam engine in tea hills"
+      },
+      {
+        "type": "heading",
+        "title": "2. Loops & Z-Reverses: The Genius of Narrow-Gauge Alignment",
+        "content": "To conquer gradients as steep as 1 in 20 without expensive tunnels, Prestage and his surveyors invented innovative alignment maneuvers: complete circular 'Loops' where the track loops over itself via a small bridge to gain height, and 'Z-Reverses' (Zig-Zags) where the train pulls forward into a dead-end spur, points are switched, and the engine reverses up the next tier of the hill.\n\nThe most celebrated engineering feat on the line is the 'Batasia Loop' near Ghoom. Here, the track curls 360 degrees around a landscaped memorial garden, providing an unobstructed panoramic view of the snow-clad peaks of Mount Kanchenjunga (the third-highest mountain on earth)."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/darjeeling-himalayan-railway-unesco-toy-train-2.jpg",
-        "caption": "Darjeeling Himalayan Railway,toy train (2)",
-        "altText": "Darjeeling Himalayan Railway,toy train (2)"
+        "imageCaption": "The toy train completing the circular Batasia Loop with the Himalayan peaks in the background.",
+        "altText": "Batasia Loop on Darjeeling Himalayan Railway"
       },
       {
         "type": "heading",
-        "title": "2. The Batasia Loop & Ghum at 7,407 Feet",
-        "content": "2. The Batasia Loop & Ghum at 7,407 Feet"
-      },
-      {
-        "type": "paragraph",
-        "content": "The most celebrated spot on the line is the Batasia Loop near Ghum. Here, the track loops around a landscaped war memorial garden in a full circle, gently shedding elevation while providing a breathtaking panoramic view of the world's third-highest peak, Mount Kanchenjunga. At Ghum (2,258 m / 7,407 ft), it claims the title of India's highest railway station."
+        "title": "3. The Immortal 'B-Class' Steam Locomotives of Tindharia",
+        "content": "The true living soul of the DHR is its historic fleet of 'B-Class' 0-4-0 saddle-tank steam locomotives. Designed by Sharp, Stewart and Company of Glasgow and later manufactured at the North British Locomotive Company, many of these engines have been running continuously since 1889—over 135 years of service.\n\nThe locomotives are maintained exclusively at the DHR Railway Workshop in Tindharia, established in 1914. Here, veteran railway fitters still hand-forge brass replacement components and turn replacement wheels using century-old belt-driven machinery."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/darjeeling-himalayan-railway-unesco-toy-train-3.jpg",
-        "caption": "Darjeeling Himalayan Railway,toy train (3)",
-        "altText": "Darjeeling Himalayan Railway,toy train (3)"
-      },
-      {
-        "type": "tip",
-        "content": "PRO TRAVELER TIP: Take the daily 'Joy Ride' steam service from Darjeeling to Ghum and back. It halts for 10 minutes at Batasia Loop for photographs and gives you 30 minutes to explore the DHR Rail Museum at Ghum."
+        "imageCaption": "Steam engine mechanics maintaining century-old brass fittings at the Tindharia heritage shed.",
+        "altText": "Tindharia steam workshop and engine"
       },
       {
         "type": "heading",
-        "title": "3. The Immortal B-Class Steam Locomotives",
-        "content": "3. The Immortal B-Class Steam Locomotives"
-      },
-      {
-        "type": "paragraph",
-        "content": "What makes Darjeeling truly timeless is its fleet of original B-Class 0-4-0 saddle tank steam locomotives, originally manufactured between 1889 and 1925 by Sharp, Stewart & Co. and the North British Locomotive Company. Fed by hand-shoveled coal, they continue to puff up the slopes through bustling mountain bazaars where shopkeepers pull their awnings back as the train brushes past."
+        "title": "4. Ghoom: India's Highest Railway Station at 7,407 Feet",
+        "content": "At an elevation of 2,258 meters (7,407 ft), Ghoom is the highest railway station in India and the 14th highest in the world. As the toy train enters Ghoom station, it is often swallowed in thick mountain fog and mist.\n\nThe station houses the DHR Ghoom Museum, displaying the original 1883 'Baby Sivok' engine (the oldest DHR locomotive), antique brass lanterns, and historic railway logbooks. Near the station lies the Ghoom Monastery (Yiga Choeling), home to a 15-foot statue of Maitreya Buddha."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/darjeeling-himalayan-railway-unesco-toy-train-4.jpg",
-        "caption": "Darjeeling Himalayan Railway,toy train (4)",
-        "altText": "Darjeeling Himalayan Railway,toy train (4)"
+        "imageCaption": "The quaint colonial brick station building of Ghoom enshrouded in mountain mist.",
+        "altText": "Ghoom highest railway station in India"
+      },
+      {
+        "type": "heading",
+        "title": "5. Passenger Guide: Joyrides, Booking & Tea Tasting",
+        "content": "For visitors to Darjeeling, Indian Railways operates daily 'Steam Joy Rides' and 'Diesel Joy Rides' between Darjeeling, Batasia Loop, and Ghoom (a 2-hour round trip with a 10-minute photo halt at Batasia Loop and a 30-minute stop at the Ghoom Museum). First Class tickets provide plush padded seating and large windows.\n\nAlternatively, railway purists can take the full-day 52541 passenger train from New Jalpaiguri to Darjeeling (taking approximately 7 hours). After the ride, visit Nathmulls Tea Lounge on the Mall for single-estate First Flush Darjeeling tea tasting."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/darjeeling-himalayan-railway-unesco-toy-train-5.jpg",
-        "caption": "Darjeeling Himalayan Railway,toy train (7)",
-        "altText": "Darjeeling Himalayan Railway,toy train (7)"
+        "imageCaption": "The toy train steaming along Hill Cart Road directly alongside colorful bazaars and shops.",
+        "altText": "Toy train along Darjeeling hill cart road"
       },
       {
-        "type": "trivia",
-        "content": "DID YOU KNOW? In the early 1900s, two 'sanders' rode on small platforms perched right above the cowcatcher, manually scattering handfuls of dry sand onto the rails when dew made the tracks slippery."
-      },
-      {
-        "type": "quote",
-        "content": "The Darjeeling toy train is a mechanical work of art that converted an impassable Himalayan barrier into a scenic playground of human ingenuity."
+        "type": "tip",
+        "title": "Pro Traveler Tip: Kanchenjunga Morning Light",
+        "content": "Book the earliest morning Joy Ride (around 8:00 AM) during October and November when Himalayan skies are crystal-clear for Mount Kanchenjunga photography at Batasia Loop."
       }
     ]
   },
   {
     "id": "12",
     "slug": "golden-chariot-deccan-odyssey-heritage-rails",
-    "title": "The Golden Chariot & Deccan Odyssey: Royal Heritage Rails of South & West",
-    "subtitle": "Journey through the stone temples of Hampi, the Ajanta caves, and golden Konkan beaches on India\u2019s southern and western luxury cruisers.",
+    "title": "The Golden Chariot & Deccan Odyssey: Royal Heritage Rails of the South & West",
+    "subtitle": "Journey through the stone temples of Hampi, the Ajanta caves, and western luxury cruisers.",
     "category": "Heritage & History",
     "coverImage": "/images/blogs/golden-chariot-deccan-odyssey-heritage-rails-1.jpg",
     "author": "Deccan Rail Heritage Trust",
     "authorRole": "Dravidian Heritage Consultant",
     "readTimeMinutes": 7,
     "publishedDate": "2026-10-23",
-    "featured": false,
+    "featured": true,
     "tags": [
       "Golden Chariot",
       "Deccan Odyssey",
       "Hampi",
-      "Badami",
       "Ajanta Ellora",
-      "Karnataka",
-      "Maharashtra"
+      "South India Luxury"
     ],
     "quickFacts": [
       {
-        "label": "Golden Chariot Circuit",
-        "value": "Bengaluru - Bandipur - Mysuru - Hampi - Goa",
-        "icon": "map"
+        "label": "Golden Chariot Route",
+        "value": "Bengaluru ➔ Hampi ➔ Badami ➔ Goa",
+        "icon": "route"
       },
       {
-        "label": "Deccan Odyssey Circuit",
-        "value": "Mumbai - Vadodara - Udaipur - Jodhpur - Delhi",
+        "label": "Deccan Odyssey Route",
+        "value": "Mumbai ➔ Ajanta ➔ Ellora ➔ Nashik",
         "icon": "compass"
       },
       {
-        "label": "Theme",
-        "value": "Dravidian Temples & Maratha Fortresses",
-        "icon": "landmark"
+        "label": "Interior Inspiration",
+        "value": "Hoysala & Vijayanagara Stone Carvings",
+        "icon": "award"
       },
       {
-        "label": "Operated By",
-        "value": "KSTDC / MTDC with Indian Railways",
-        "icon": "briefcase"
+        "label": "Lounge Bars",
+        "value": "Madira & Mumbai Hi Lounge Saloons",
+        "icon": "shield"
       }
     ],
     "relatedTrains": [
       {
-        "trainNumber": "16591",
-        "trainName": "Hampi Express",
-        "route": "UBL to MYS"
+        "trainNumber": "00020",
+        "trainName": "The Golden Chariot - Pride of Karnataka",
+        "route": "Bengaluru ➔ Bandipur ➔ Mysuru ➔ Halebidu ➔ Hampi ➔ Badami ➔ Goa ➔ Bengaluru"
       },
       {
-        "trainNumber": "12051",
-        "trainName": "Madgaon Jan Shatabdi",
-        "route": "CSMT to MAO"
+        "trainNumber": "00021",
+        "trainName": "Deccan Odyssey - Maharashtra Splendour",
+        "route": "Mumbai ➔ Nashik ➔ Aurangabad ➔ Ajanta ➔ Kolhapur ➔ Goa ➔ Mumbai"
       }
     ],
     "sections": [
       {
         "type": "heading",
-        "title": "1. The Golden Chariot: Pride of the South",
-        "content": "1. The Golden Chariot: Pride of the South"
+        "title": "1. Dravidian Splendor on Wheels: The Golden Chariot",
+        "content": "While royal train tourism originated in northern desert kingdoms, peninsular South and West India boast two equally breathtaking sovereign rail cruisers: 'The Golden Chariot' in Karnataka and 'The Deccan Odyssey' in Maharashtra.\n\nThe Golden Chariot—named after the legendary stone chariot in the Vijaya Vittala temple complex at Hampi—features 18 dark purple and gold coaches. The interiors draw direct architectural inspiration from the 12th-century Hoysala stone temples of Belur and Halebidu, complete with hand-carved wooden ceiling brackets, brass lamps, and rich Mysore silk tapestries."
       },
       {
-        "type": "paragraph",
-        "content": "Named after the iconic stone chariot of the Vijayanagara Empire at Hampi, The Golden Chariot is South India's premier luxury train. Its purple and gold coaches wind through Karnataka, Tamil Nadu, Kerala, and Goa, showcasing UNESCO World Heritage monuments, royal Mysore palaces, and coffee-scented Western Ghats hills."
+        "type": "image",
+        "imageUrl": "/images/blogs/golden-chariot-deccan-odyssey-heritage-rails-1.jpg",
+        "imageCaption": "The deep-purple and gold liveried carriages of The Golden Chariot at the platform terminal.",
+        "altText": "The Golden Chariot luxury train exterior"
+      },
+      {
+        "type": "heading",
+        "title": "2. Deccan Odyssey: Cruiser of the Sahyadri Kingdoms",
+        "content": "Operated in collaboration with Maharashtra Tourism (MTDC), The Deccan Odyssey was conceived to showcase the dramatic mountain passes, wine valleys, and rock-cut heritage caves of the Western Deccan plateau. Its 21 royal blue carriages evoke the private saloons of Maratha rulers and Peshwa kings.\n\nThe train's flagship 'Maharashtra Splendour' circuit links Mumbai to the UNESCO World Heritage rock-cut Buddhist and Jain cave sanctuaries of Ajanta and Ellora, the vineyard wineries of Nashik, the holy Ghats of the Godavari, the ancient fortress of Daulatabad, and the coastal beaches of Goa."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/golden-chariot-deccan-odyssey-heritage-rails-2.jpg",
-        "caption": "Deccan Odyssey luxury train traversing Maharashtra",
-        "altText": "Deccan Odyssey luxury train traversing Maharashtra"
+        "imageCaption": "A passenger locomotive preparing to haul the royal blue Deccan Odyssey through the Western Ghats.",
+        "altText": "Deccan Odyssey train on platform"
       },
       {
         "type": "heading",
-        "title": "2. Royal Dravidian Decor & Ayurvedic Spas",
-        "content": "2. Royal Dravidian Decor & Ayurvedic Spas"
-      },
-      {
-        "type": "paragraph",
-        "content": "Each coach of The Golden Chariot is carved with motifs inspired by the Hoysala, Chalukya, and Vijayanagara architectural styles. It is one of the few trains in the world featuring a dedicated onboard Ayurvedic spa and fitness salon, where travelers can receive authentic Kerala massages as the train glides through coconut groves."
+        "title": "3. Imperial Saloons, Madira Bar & Aromatherapy Spas",
+        "content": "Both trains offer staterooms with five-star amenities: automated climate control, high-definition entertainment systems, Wi-Fi, en-suite bathrooms with premium toiletries, and dedicated personal stewards.\n\nAboard The Golden Chariot, the 'Madira' lounge bar car is modeled after the Mysore Palace banquet hall, serving single malts and South Indian cocktails. Meanwhile, 'Arogya' (the wellness car) offers certified Ayurvedic panchakarma therapies, steam rooms, and a modern gymnasium with panoramic trackside windows."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/golden-chariot-deccan-odyssey-heritage-rails-3.jpg",
-        "caption": "Swarn Mahal restaurant lounge of Royal luxury train",
-        "altText": "Swarn Mahal restaurant lounge of Royal luxury train"
-      },
-      {
-        "type": "tip",
-        "content": "PRO TRAVELER TIP: The Hampi excursion halts at Hospet Junction. Make sure to visit the Vittala Temple complex at sunrise when the morning sun lights up the stone chariot's musical pillars."
+        "imageCaption": "The opulent Madira lounge bar car adorned with carved timber arches and plush armchairs.",
+        "altText": "Madira lounge bar on The Golden Chariot"
       },
       {
         "type": "heading",
-        "title": "3. The Deccan Odyssey: Blue Pearl of the West",
-        "content": "3. The Deccan Odyssey: Blue Pearl of the West"
-      },
-      {
-        "type": "paragraph",
-        "content": "Sporting a shimmering sapphire-blue livery, the Deccan Odyssey was launched to open up the historic treasures of Maharashtra and the Deccan Plateau. Its journeys encompass the rock-cut Buddhist and Jain cave sanctuaries of Ajanta and Ellora, the wine valleys of Nashik, and the vibrant coastal beaches of Goa."
+        "title": "4. Royal Feasts: Ruchi & Nala Dining Cars",
+        "content": "Gastronomy is a cornerstone of the peninsular rail voyage. The Golden Chariot's twin dining saloons—'Ruchi' (Taste) and 'Nala' (the legendary culinary king)—serve authentic South Indian fare: Mysore masala dosas, Chettinad pepper chicken, Mangalore fish curry, Bisi Bele Bath, and Elaneer payasam (tender coconut pudding).\n\nAboard Deccan Odyssey, restaurants 'Waavan' and 'Peshwa' showcase spicy Kolhapuri cuisine, Parsi patra ni machhi, Malvani coconut seafood, and Maharashtrian puran poli paired with vintage wines from Sula Vineyards."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/golden-chariot-deccan-odyssey-heritage-rails-4.jpg",
-        "caption": "Deluxe Pearl saloon carriage of luxury train",
-        "altText": "Deluxe Pearl saloon carriage of luxury train"
+        "imageCaption": "A double-bed stateroom aboard The Golden Chariot with Mysore silk bedspreads.",
+        "altText": "Double bedroom suite on The Golden Chariot"
+      },
+      {
+        "type": "heading",
+        "title": "5. Traveler Guide: Circuits, Inclusions & Hampi Tips",
+        "content": "The season runs between October and March. The Golden Chariot offers 3-night and 6-night circuits starting and finishing at Bengaluru's Yesvantpur station. Packages include deluxe coach transfers, all meals, wine with dinners, English-speaking heritage guides, and entry fees to all protected archaeological reserves.\n\nWhen exploring the boulder-strewn ruins of Hampi, comfortable walking shoes and cotton attire are essential, as walking tours cover the Queen's Bath, Hazara Rama Temple, and the Tungabhadra riverfront."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/golden-chariot-deccan-odyssey-heritage-rails-5.jpg",
-        "caption": "GKN Golden Chariot heritage saloon",
-        "altText": "GKN Golden Chariot heritage saloon"
+        "imageCaption": "The royal blue Deccan Odyssey gleaming on the main line traversing western Maharashtra.",
+        "altText": "Deccan Odyssey train on the rail corridor"
       },
       {
-        "type": "trivia",
-        "content": "DID YOU KNOW? Each of the 11 guest saloons on The Golden Chariot is named after a dynasty that ruled Southern India: Kadamba, Ganga, Chalukya, Hoysala, Rashtrakuta, Vijayanagara, Bahamani, and Wodeyar."
-      },
-      {
-        "type": "quote",
-        "content": "To experience South and Western India from the Golden Chariot and Deccan Odyssey is to view thousands of years of art and architecture through a moving golden frame."
+        "type": "tip",
+        "title": "Pro Traveler Tip: Bandipur Wildlife Safari",
+        "content": "The Golden Chariot's 'Pride of Karnataka' circuit includes a dawn wildlife safari into Bandipur National Park. Keep your telephoto zoom lens ready to spot Asian elephants, spotted deer, and wild leopards."
       }
     ]
   },
@@ -1431,240 +1456,243 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "id": "13",
     "slug": "epic-history-indian-railways-1853-to-future",
     "title": "1853 to Present: The Epic Chronicle & Complete History of Indian Railways",
-    "subtitle": "From the maiden 34 km journey between Bori Bunder and Thane to the world\u2019s fourth-largest rail network and 100% green electrification.",
+    "subtitle": "From the maiden 34 km journey between Bori Bunder and Thane to 68,000 route kilometers and high-speed bullet trains.",
     "category": "Heritage & History",
     "coverImage": "/images/blogs/epic-history-indian-railways-1853-to-future-1.jpg",
-    "author": "Indian Railways Historical Society",
-    "authorRole": "Chief Archivist",
+    "author": "National Railway Archives Desk",
+    "authorRole": "Senior Railway Historian",
     "readTimeMinutes": 10,
     "publishedDate": "2026-10-29",
     "featured": true,
     "tags": [
       "Railway History",
       "1853",
-      "Bori Bunder",
       "Fairy Queen",
       "Steam Era",
-      "Electrification",
-      "Nationalization"
+      "Bullet Train",
+      "Vande Bharat"
     ],
     "quickFacts": [
       {
-        "label": "Maiden Run Date",
-        "value": "16 April 1853 (3:35 PM)",
+        "label": "First Train Date",
+        "value": "16 April 1853 (3:35 PM IST)",
         "icon": "calendar"
       },
       {
-        "label": "First Route",
-        "value": "Bori Bunder to Thane (34 km, 21 miles)",
-        "icon": "map-pin"
+        "label": "Total Route KM",
+        "value": "Over 68,580 km (4th Largest on Earth)",
+        "icon": "route"
       },
       {
-        "label": "First Locomotives",
-        "value": "Sindh, Sultan, and Sahib",
+        "label": "Oldest Steam Engine",
+        "value": "Fairy Queen (Guinness Record 1855)",
+        "icon": "award"
+      },
+      {
+        "label": "Daily Passengers",
+        "value": "Over 24 Million Citizens Daily",
         "icon": "zap"
-      },
-      {
-        "label": "Network Today",
-        "value": "68,000+ route km (13,000+ trains daily)",
-        "icon": "globe"
       }
     ],
     "relatedTrains": [
       {
-        "trainNumber": "12138",
-        "trainName": "Punjab Mail (Running since 1912)",
-        "route": "FZR to CSMT"
+        "trainNumber": "12001",
+        "trainName": "Bhopal Shatabdi",
+        "route": "New Delhi ➔ Rani Kamlapati"
       },
       {
-        "trainNumber": "12301",
-        "trainName": "Howrah Rajdhani (First Rajdhani 1969)",
-        "route": "HWH to NDLS"
+        "trainNumber": "12302",
+        "trainName": "Howrah Rajdhani",
+        "route": "New Delhi ➔ Howrah Junction"
+      },
+      {
+        "trainNumber": "22436",
+        "trainName": "Vande Bharat Express",
+        "route": "New Delhi ➔ Varanasi"
       }
     ],
     "sections": [
       {
         "type": "heading",
-        "title": "1. 16 April 1853: The Day India Began to Roll",
-        "content": "1. 16 April 1853: The Day India Began to Roll"
+        "title": "1. 16th April 1853: The Day the Iron Horse Was Born",
+        "content": "At precisely 3:35 PM on Saturday, 16 April 1853, a 21-gun salute boomed across Bombay harbor. As a brass band played the national anthem, India's very first commercial passenger train pulled out of Bori Bunder station (now CSMT), embarking on a historic 34-kilometer journey to Thane.\n\nHauled by three imported British steam locomotives christened 'Sultan', 'Sahib', and 'Sindh', the 14-coach wooden train carried 400 dignitaries. The journey took 57 minutes, greeted by cheering throngs of thousands along the track who marveled at the smoke-belching machine. This historic run marked the foundation of the Great Indian Peninsula Railway (GIPR) and birthed what would become the fourth-largest railway network on planet Earth."
       },
       {
-        "type": "paragraph",
-        "content": "At precisely 3:35 PM on Saturday, 16 April 1853, a 21-gun salute boomed across Bombay harbor. A 14-carriage train carrying 400 distinguished guests was hauled out of Bori Bunder station by three steam locomotives \u2014 Sindh, Sultan, and Sahib. Over the next 57 minutes, the train crossed 34 kilometers to Thane, inaugurating the railway age across the Asian continent."
+        "type": "image",
+        "imageUrl": "/images/blogs/epic-history-indian-railways-1853-to-future-1.jpg",
+        "imageCaption": "The legendary 1855 'Fairy Queen' steam engine—the world's oldest working locomotive in regular service.",
+        "altText": "Fairy Queen historic steam locomotive"
+      },
+      {
+        "type": "heading",
+        "title": "2. The Golden Age of Steam & The Fairy Queen",
+        "content": "Following the success of the Bori Bunder line, rail networks rapidly expanded across the subcontinent. The East Indian Railway (EIR) opened its first track between Howrah and Hooghly in 1854, followed by the Madras Railway between Royapuram and Arcot in 1856. By 1900, over 40,000 kilometers of track knit together the far corners of India.\n\nThe undisputed crown jewel of this steam golden age is the 'Fairy Queen' (EIR No. 22). Built in Leeds, England in 1855 by Kitson, Thompson and Hewitson, the engine hauled troop trains during the 1857 war. Certified by Guinness World Records as the world's oldest operational steam locomotive in regular mainline service, it still hauls heritage tourist trains from Delhi to Rewari."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/epic-history-indian-railways-1853-to-future-2.jpg",
-        "caption": "The legendary 1855 Fairy Queen steam locomotive preserved in working condition",
-        "altText": "The legendary 1855 Fairy Queen steam locomotive preserved in working condition"
+        "imageCaption": "Detailed mechanical view of the Fairy Queen's brass boiler and driving pistons.",
+        "altText": "Fairy Queen steam boiler and pistons"
       },
       {
         "type": "heading",
-        "title": "2. The Fairy Queen & The Steam Age (1855-1970)",
-        "content": "2. The Fairy Queen & The Steam Age (1855-1970)"
-      },
-      {
-        "type": "paragraph",
-        "content": "Built in Leeds, England by Kitson, Thompson and Hewitson in 1855, the iconic 'Fairy Queen' hauled troop and passenger trains for the East Indian Railway. By the early 20th century, hundreds of private railway companies crisscrossed India: the Great Indian Peninsula Railway (GIPR), East Indian Railway (EIR), Madras and Southern Mahratta Railway (MSMR), and Bengal Nagpur Railway (BNR)."
+        "title": "3. Post-Independence Unification & Zonal Reorganization",
+        "content": "At Independence in 1947, India inherited a fragmented railway patchwork comprising 42 separate railway systems, including state-owned lines, private British guaranteed firms, and 32 lines owned by princely rulers. In 1951, the Government of India nationalized the network, reorganizing the chaotic systems into six administrative Zones (later expanded to 18 Zones and 73 Divisions).\n\nIndependent India embarked on widespread broad-gauge conversions (Project Unigauge), indigenous coach manufacturing at ICF Perambur and RCF Kapurthala, and locomotive production at Chittaranjan Locomotive Works (CLW) and Diesel Locomotive Works (DLW) Varanasi."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/epic-history-indian-railways-1853-to-future-3.jpg",
-        "caption": "Fairy Queen steam engine driving gear and polished brass boiler",
-        "altText": "Fairy Queen steam engine driving gear and polished brass boiler"
-      },
-      {
-        "type": "tip",
-        "content": "PRO TRAVELER TIP: Visit the National Rail Museum in Chanakyapuri, New Delhi, to walk through the original Maharaja saloons, step aboard the 1855 Fairy Queen, and experience 170 years of working steam exhibits."
+        "imageCaption": "Historical 1853 railway timetable notice published in the Bombay Times on 8 April 1853.",
+        "altText": "1853 GIPR timetable Bombay Times notice"
       },
       {
         "type": "heading",
-        "title": "3. Nationalization, Project Unigauge & Modern Electrification",
-        "content": "3. Nationalization, Project Unigauge & Modern Electrification"
-      },
-      {
-        "type": "paragraph",
-        "content": "In 1951, the 42 separate railway systems were unified and nationalized into a single public entity: Indian Railways. Over the subsequent decades, 'Project Unigauge' converted thousands of kilometers of fragmented meter- and narrow-gauge tracks into high-capacity Broad Gauge (1,676 mm). Today, Indian Railways is achieving 100% Broad Gauge electric traction \u2014 the greenest mega-rail network on Earth."
+        "title": "4. The Speed Pioneers: Rajdhani, Shatabdi & Electrification",
+        "content": "In 1969, Indian Railways entered the high-speed era with the launch of the Howrah Rajdhani Express, operating at a top speed of 120 km/h with fully air-conditioned coaches and meals served at passenger berths. In 1988, to commemorate Jawaharlal Nehru's centenary, the New Delhi–Jhansi Shatabdi Express was introduced, pushing maximum operating speeds to 140 km/h.\n\nOver recent decades, Indian Railways achieved one of the world's fastest railway electrification drives—electrifying over 95% of its broad-gauge network. Dedicated Freight Corridors (DFC) separated heavy freight traffic from passenger trunks, enabling double-stack container trains to cruise at 100 km/h."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/epic-history-indian-railways-1853-to-future-4.jpg",
-        "caption": "Original 1853 Great Indian Peninsula Railway timetable published in Bombay Times",
-        "altText": "Original 1853 Great Indian Peninsula Railway timetable published in Bombay Times"
+        "imageCaption": "The Rewari Railway Heritage Steam Shed preserving historic meter and broad gauge locos.",
+        "altText": "Rewari steam locomotive heritage museum shed"
+      },
+      {
+        "type": "heading",
+        "title": "5. The High-Speed Horizon: Bullet Trains, Hydrogen & Kavach",
+        "content": "Today, Indian Railways is undergoing its most radical technological modernization. The Mumbai–Ahmedabad High-Speed Rail corridor (MAHSR), built with Japanese Shinkansen E5 technology, will whisk passengers at 320 km/h, completing the 508 km journey in 2 hours.\n\nConcurrently, indigenous Vande Bharat semi-high-speed trainsets, hydrogen fuel-cell passenger trials on the Jind–Sonipat section, and nationwide deployment of Kavach automated collision avoidance make Indian Railways one of the most innovative and eco-friendly mass transit networks on earth."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/epic-history-indian-railways-1853-to-future-5.jpg",
-        "caption": "Rewari Railway Heritage Steam Locomotive Shed and Museum",
-        "altText": "Rewari Railway Heritage Steam Locomotive Shed and Museum"
+        "imageCaption": "Chhatrapati Shivaji Maharaj Terminus standing proudly as the living bridge between 1853 and modern high-speed rails.",
+        "altText": "CSMT terminus representing Indian railways history"
       },
       {
-        "type": "trivia",
-        "content": "DID YOU KNOW? Indian Railways is the single largest civilian employer in the world, maintaining over 1.2 million personnel, 13,000 passenger trains, and transporting over 24 million passengers every single day."
-      },
-      {
-        "type": "quote",
-        "content": "The railways did not just carry passengers and freight across India; they forged the geographical, cultural, and economic unity of a nation."
+        "type": "tip",
+        "title": "Pro Traveler Tip: National Rail Museum Delhi",
+        "content": "Visit the National Rail Museum in Chanakyapuri, New Delhi to explore the original 1855 Fairy Queen, the Maharaja of Gwalior's silver toy train banquet set, and the Prince of Wales' royal saloon carriage."
       }
     ]
   },
   {
     "id": "14",
     "slug": "matheran-hill-railway-forest-toy-train",
-    "title": "Matheran Hill Railway: Asia\u2019s Automobile-Free Forest Toy Train",
-    "subtitle": "Ascend 281 sharp horseshoe curves and dense Western Ghats monsoon jungle into India\u2019s only vehicle-free hill station.",
+    "title": "Matheran Hill Railway: The Peaceful 2-Foot Gauge Forest Journey",
+    "subtitle": "Discover Asia's only automobile-free hill station aboard the charming 1907 narrow-gauge train traversing 281 sharp curves.",
     "category": "Scenic Routes",
     "coverImage": "/images/blogs/matheran-hill-railway-forest-toy-train-1.jpg",
-    "author": "Western Ghats Heritage Group",
-    "authorRole": "Sahyadri Heritage Chronicler",
-    "readTimeMinutes": 6,
+    "author": "Western Ghats Mountain Rail Desk",
+    "authorRole": "Forest & Eco-Railway Specialist",
+    "readTimeMinutes": 7,
     "publishedDate": "2026-10-27",
-    "featured": false,
+    "featured": true,
     "tags": [
       "Matheran",
       "Toy Train",
       "Western Ghats",
-      "Vehicle Free",
-      "Heritage Rail",
-      "Narrow Gauge"
+      "Eco Tourism",
+      "Narrow Gauge",
+      "Heritage"
     ],
     "quickFacts": [
       {
-        "label": "Gauge",
-        "value": "2 feet (610 mm narrow gauge)",
-        "icon": "ruler"
+        "label": "Gauge Width",
+        "value": "2 ft (610 mm Narrow Gauge)",
+        "icon": "route"
       },
       {
-        "label": "Route Length",
-        "value": "21 km from Neral to Matheran",
-        "icon": "map"
+        "label": "Built Year",
+        "value": "1907 by Sir Adamjee Peerbhoy",
+        "icon": "calendar"
       },
       {
-        "label": "Curves",
-        "value": "281 curves (sharpest radius 18 m)",
-        "icon": "corner-up-right"
+        "label": "Sharp Curves",
+        "value": "281 Continuous Curves",
+        "icon": "compass"
       },
       {
-        "label": "Eco Rule",
-        "value": "Asia's only automobile-free hill station",
+        "label": "Automobile Status",
+        "value": "100% Vehicle Free Eco-Sanctuary",
         "icon": "shield"
       }
     ],
     "relatedTrains": [
       {
-        "trainNumber": "52101",
-        "trainName": "Neral - Matheran NG Passenger",
-        "route": "NRL to MAE"
+        "trainNumber": "52153",
+        "trainName": "Neral Matheran Passenger",
+        "route": "Neral Junction ➔ Matheran"
       },
       {
-        "trainNumber": "52103",
-        "trainName": "Aman Lodge - Matheran Shuttle",
-        "route": "AMNA to MAE"
+        "trainNumber": "52154",
+        "trainName": "Matheran Neral Passenger",
+        "route": "Matheran ➔ Neral Junction"
+      },
+      {
+        "trainNumber": "52155",
+        "trainName": "Aman Lodge Matheran Shuttle",
+        "route": "Aman Lodge ➔ Matheran"
       }
     ],
     "sections": [
       {
         "type": "heading",
-        "title": "1. The Vision of Sir Adamjee Peerbhoy",
-        "content": "1. The Vision of Sir Adamjee Peerbhoy"
+        "title": "1. Sir Adamjee Peerbhoy's Family Gift: The 1907 Eco-Ascent",
+        "content": "Perched at an elevation of 800 meters (2,625 ft) atop the Western Ghats in Maharashtra's Raigad district, Matheran is unique on the Asian continent: it is completely free of motor vehicles. By environmental law, no cars, buses, or motorbikes are permitted past Dasturi Naka, preserving pristine air, tranquil forests, and red-laterite walking trails.\n\nTo make this hilltop sanctuary accessible, philanthropist industrialist Sir Adamjee Peerbhoy and his son Abdul Hussein financed and engineered the Matheran Hill Railway between 1901 and 1907. Built without state aid at a personal cost of ₹16 lakh, the 20-kilometer 2-foot narrow-gauge line ascends from Neral Junction on the Central Railway mainline to Matheran town center."
       },
       {
-        "type": "paragraph",
-        "content": "Constructed between 1901 and 1907 by the philanthropist and merchant Sir Adamjee Peerbhoy at his own private expense of \u20b916 lakh, the 21-kilometer Matheran Hill Railway connects Neral Junction on the Central Railway mainline to the car-free mountain ridge of Matheran in the Sahyadri mountains."
+        "type": "image",
+        "imageUrl": "/images/blogs/matheran-hill-railway-forest-toy-train-1.jpg",
+        "imageCaption": "A sharp horseshoe curve on the Matheran Hill Railway winding through evergreen Ghats forests.",
+        "altText": "Sharp horseshoe curve on Matheran Hill Railway"
+      },
+      {
+        "type": "heading",
+        "title": "2. Conquering the Sahyadris: 281 Curves & One-Man Brakes",
+        "content": "The line is an astonishing demonstration of mountain tramway alignment. Over its 20-kilometer run, the track climbs 2,363 feet across an astounding 281 sharp curves—averaging one bend every 70 meters! The tightest curve has a radius of just 18 meters, requiring the four-wheel coaches to bend almost in half.\n\nTo safely brake the train down the 1 in 20 gradient, specialized 'One-Man Brake Vans' are attached to the rake. Skilled brakesmen stand on open platform verandas, manually winding heavy iron wheel-screws at whistling signals from the diesel engine pilot."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/matheran-hill-railway-forest-toy-train-2.jpg",
-        "caption": "Sharp mountain curve on Matheran Hill Railway",
-        "altText": "Sharp mountain curve on Matheran Hill Railway"
+        "imageCaption": "The blue diesel toy train berthed beneath the wooden heritage canopy of Matheran station.",
+        "altText": "Matheran railway station platform and toy train"
       },
       {
         "type": "heading",
-        "title": "2. Negotiating 281 Curves & The One-Kiss Tunnel",
-        "content": "2. Negotiating 281 Curves & The One-Kiss Tunnel"
-      },
-      {
-        "type": "paragraph",
-        "content": "Climbing 760 meters in 21 kilometers, the toy train winds through 281 curves, some with an ultra-tight turning radius of just 18 meters. Along the climb, it passes through the romantic 'One-Kiss Tunnel' \u2014 so named because it is only 40 meters long, lasting just long enough for couples to share a quick kiss before daylight returns."
+        "title": "3. The Evergreen Canopy & Wildlife Encounters",
+        "content": "As the train slowly climbs past Jummapatti and Water Pipe stations, the noisy plains of Karjat recede. The carriages plunge into dense semi-evergreen forests of jamun, wild fig, mango, and silver oak trees. The scent of red earth and damp moss wafts through the open wooden windows.\n\nTroops of mischievous bonnet macaques and Hanuman langurs race alongside the train on wooden railings, while Malabar whistling thrushes and emerald doves flit through the branches above. At Mount Barry, the railway passes through its only tunnel—a 40-meter natural rock cut affectionately nicknamed the 'One Kiss Tunnel' by Victorian travelers."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/matheran-hill-railway-forest-toy-train-3.jpg",
-        "caption": "Neral Junction station, the foothill gateway to Matheran",
-        "altText": "Neral Junction station, the foothill gateway to Matheran"
-      },
-      {
-        "type": "tip",
-        "content": "PRO TRAVELER TIP: During heavy monsoon months when the lower Neral section is paused for landslide protection, Indian Railways operates the popular Aman Lodge - Matheran hilltop shuttle train every 45 minutes."
+        "imageCaption": "Neral Junction narrow-gauge platform where passengers transfer from Mumbai suburban locals.",
+        "altText": "Neral Junction platform transfer to toy train"
       },
       {
         "type": "heading",
-        "title": "3. The Silence of a Red-Clay Paradise",
-        "content": "3. The Silence of a Red-Clay Paradise"
-      },
-      {
-        "type": "paragraph",
-        "content": "Because all automobiles are strictly banned within Matheran's municipal limits by Supreme Court environmental protection orders, the only sounds greeting arriving passengers are the clip-clop of horses, chirping bird calls, and the distant musical whistle of the toy train engine echoing over red-earth mountain trails."
+        "title": "4. Aman Lodge to Matheran: The Shuttle Lifeline",
+        "content": "During heavy monsoon downpours between July and September, through-services from Neral are suspended to prevent landslide incidents. However, Central Railway operates a dedicated, frequent 'Shuttle Service' over the gentle 3-kilometer plateau section between Aman Lodge (near Dasturi parking) and Matheran station.\n\nThis shuttle service runs up to 16 trips daily, functioning as an essential lifeline for locals, school children, tourists, and luggage porters heading into the vehicle-free market."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/matheran-hill-railway-forest-toy-train-4.jpg",
-        "caption": "Narrow gauge railway track meandering along Pipeline station",
-        "altText": "Narrow gauge railway track meandering along Pipeline station"
+        "imageCaption": "The peaceful narrow-gauge railway tracks winding past Pipeline Station on the forest ridge.",
+        "altText": "Tracks of Matheran railway amidst trees"
+      },
+      {
+        "type": "heading",
+        "title": "5. Passenger Guide: Mumbai Transfers, Chikki & Lookouts",
+        "content": "To take the Matheran Toy Train from Mumbai, board a Karjat or Khopoli suburban local train from CSMT to Neral Junction (approx. 1.5 hours). At Neral, walk directly across Platform 1 to the narrow-gauge toy train platform.\n\nUpon reaching Matheran, stroll down the car-free red dirt bazaar to sample fresh artisanal Chikki (traditional jaggery-peanut brittle) and sweet fudge. Hire a horse or walk to dramatic cliff viewpoints like Panorama Point (offering 360-degree views of the Western Ghats) and Louisa Point overlooking Prabalgarh Fort."
       },
       {
         "type": "image",
         "imageUrl": "/images/blogs/matheran-hill-railway-forest-toy-train-5.jpg",
-        "caption": "Matheran light railway passenger coaches in the Sahyadri mountains",
-        "altText": "Matheran light railway passenger coaches in the Sahyadri mountains"
+        "imageCaption": "Heritage narrow-gauge locomotive No. 551 on display in the mountain forest setting.",
+        "altText": "Heritage narrow gauge locomotive on Matheran line"
       },
       {
-        "type": "trivia",
-        "content": "DID YOU KNOW? Sir Adamjee Peerbhoy's son Abdul Hussein supervised the construction by walking the rugged cliffs on foot every week and imported specialized rails from Germany to handle the intense mountain friction."
-      },
-      {
-        "type": "quote",
-        "content": "In a world hurried by jet engines and superhighways, Matheran's toy train preserves the serene, unhurried poetry of the forest."
+        "type": "tip",
+        "title": "Pro Traveler Tip: Pre-Booking & Walk Option",
+        "content": "Tickets for the Neral–Matheran passenger sell out rapidly on weekends. If tickets are unavailable, take a shared taxi from Neral to Aman Lodge (Dasturi Naka), then board the frequent Aman Lodge–Matheran shuttle or enjoy a scenic 45-minute forest walk along the railway tracks!"
       }
     ]
   }
