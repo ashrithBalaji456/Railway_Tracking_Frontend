@@ -179,7 +179,45 @@ export default function ArticleCommunityTips({ slug }: ArticleCommunityTipsProps
             createdAt: new Date().toISOString()
           }
         ],
-                'pamban-sea-bridge-rameswaram': [
+                        'csmt-mumbai-unesco-gothic-wonder': [
+          {
+            id: 'csmt-tip-1',
+            articleSlug: slug,
+            authorName: 'Rohan Kelkar',
+            authorHandle: '@rohan_bombay',
+            category: 'PHOTOGRAPHY',
+            tipText: 'Book the official Central Railway heritage walking tour on weekdays at 3 PM to enter the restricted upper galleries and marvel at the grand cantilevered staircase and peacock stained glass!',
+            photoUrl: '/images/blogs/advice-csmt-grand-staircase.jpg',
+            travelDate: 'October 2026',
+            likesCount: 48,
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 'csmt-tip-2',
+            articleSlug: slug,
+            authorName: 'Sneha Kulkarni',
+            authorHandle: '@sneha_foodie',
+            category: 'FOOD_TIP',
+            tipText: 'Head straight out of the suburban exit opposite platform 1 to Aram Milk Bar for legendary golden-fried Batata Vada Pav served with spicy garlic chutney and cooling lassi!',
+            photoUrl: '/images/blogs/advice-csmt-aram-vada-pav.jpg',
+            travelDate: 'October 2026',
+            likesCount: 56,
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 'csmt-tip-3',
+            articleSlug: slug,
+            authorName: 'Farhan Merchant',
+            authorHandle: '@farhan_commuter',
+            category: 'GENERAL',
+            tipText: 'Board the fast local train from Platform 4 or 5 during non-peak hours (11:00 AM to 4:00 PM) to comfortably enjoy the cool Arabian sea breeze along the harbor line toward Bandra!',
+            photoUrl: '/images/blogs/advice-csmt-suburban-local.jpg',
+            travelDate: 'October 2026',
+            likesCount: 34,
+            createdAt: new Date().toISOString()
+          }
+        ],
+        'pamban-sea-bridge-rameswaram': [
           {
             id: 'pb-tip-1',
             articleSlug: slug,
