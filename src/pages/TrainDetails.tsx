@@ -2871,7 +2871,11 @@ export default function TrainDetails() {
               <img
                 src={selectedDelicacyModal.imageUrl}
                 alt={selectedDelicacyModal.delicacyTitle}
+                referrerPolicy="no-referrer"
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Vada_Pav-Indian_street_food.JPG/960px-Vada_Pav-Indian_street_food.JPG';
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
               <button

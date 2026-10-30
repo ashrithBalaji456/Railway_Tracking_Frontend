@@ -110,3 +110,4 @@ export function getStationAmenities(category?: string): StationAmenity[] {
   if (!category || category === 'ALL') return STATION_AMENITIES;
   return STATION_AMENITIES.filter(a => a.category === category);
 }
+

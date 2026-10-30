@@ -293,7 +293,11 @@ export default function BlogDetail() {
           <img 
             src={article.coverImage} 
             alt={article.title}
+            referrerPolicy="no-referrer"
             className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5a/Vande_Bharat_Express_around_Mumbai.jpg/960px-Vande_Bharat_Express_around_Mumbai.jpg';
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
         </div>
@@ -351,8 +355,12 @@ export default function BlogDetail() {
                       <img 
                         src={section.imageUrl} 
                         alt={section.altText || section.title || 'Railway photograph'} 
+                        referrerPolicy="no-referrer"
                         className="w-full h-full object-cover"
                         loading="lazy"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/Dudhsagar_Falls_Triplet.jpg/960px-Dudhsagar_Falls_Triplet.jpg';
+                        }}
                       />
                     </div>
                     {section.imageCaption && (
@@ -514,8 +522,12 @@ export default function BlogDetail() {
                   <img 
                     src={item.coverImage} 
                     alt={item.title} 
+                    referrerPolicy="no-referrer"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     loading="lazy"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5a/Vande_Bharat_Express_around_Mumbai.jpg/960px-Vande_Bharat_Express_around_Mumbai.jpg';
+                    }}
                   />
                   <span className="absolute top-2 left-2 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-950/80 text-emerald-400 backdrop-blur-md">
                     {item.category}

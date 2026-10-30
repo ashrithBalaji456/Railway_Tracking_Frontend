@@ -137,7 +137,11 @@ export default function Blogs() {
                 <img 
                   src={featuredArticle.coverImage} 
                   alt={featuredArticle.title} 
+                  referrerPolicy="no-referrer"
                   className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5a/Vande_Bharat_Express_around_Mumbai.jpg/960px-Vande_Bharat_Express_around_Mumbai.jpg';
+                  }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent lg:hidden" />
                 
@@ -320,8 +324,12 @@ export default function Blogs() {
                     <img 
                       src={article.coverImage} 
                       alt={article.title}
+                      referrerPolicy="no-referrer"
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                       loading="lazy"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5a/Vande_Bharat_Express_around_Mumbai.jpg/960px-Vande_Bharat_Express_around_Mumbai.jpg';
+                      }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
                     

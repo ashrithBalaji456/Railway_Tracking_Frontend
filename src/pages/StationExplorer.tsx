@@ -994,8 +994,12 @@ export default function StationExplorer() {
                           <img
                             src={activeFood.imageUrl}
                             alt={activeFood.delicacyTitle}
+                            referrerPolicy="no-referrer"
                             className="w-full h-56 sm:h-64 object-cover group-hover:scale-105 transition-transform duration-500"
                             loading="lazy"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Vada_Pav-Indian_street_food.JPG/960px-Vada_Pav-Indian_street_food.JPG';
+                            }}
                           />
                           <div className="absolute top-3 left-3">
                             <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wide bg-amber-500 text-slate-950 shadow-md">
@@ -1164,8 +1168,12 @@ export default function StationExplorer() {
                           <img
                             src={item.imageUrl}
                             alt={item.title}
+                            referrerPolicy="no-referrer"
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             loading="lazy"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e1/Chhatrapati_Shivaji_Terminus_Building_20.jpg/960px-Chhatrapati_Shivaji_Terminus_Building_20.jpg';
+                            }}
                           />
                           <span className="absolute top-2 left-2 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-950/85 text-emerald-300 border border-emerald-500/30 backdrop-blur-md">
                             {item.emoji} {item.badge}
@@ -1214,7 +1222,11 @@ export default function StationExplorer() {
               <img
                 src={selectedAmenityModal.imageUrl}
                 alt={selectedAmenityModal.title}
+                referrerPolicy="no-referrer"
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e1/Chhatrapati_Shivaji_Terminus_Building_20.jpg/960px-Chhatrapati_Shivaji_Terminus_Building_20.jpg';
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
               <button

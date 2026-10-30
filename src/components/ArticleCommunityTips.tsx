@@ -365,8 +365,12 @@ export default function ArticleCommunityTips({ slug }: ArticleCommunityTipsProps
                       <img
                         src={tip.photoUrl}
                         alt="Passenger Travel Experience"
+                        referrerPolicy="no-referrer"
                         className="w-full h-full object-cover"
                         loading="lazy"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5a/Vande_Bharat_Express_around_Mumbai.jpg/960px-Vande_Bharat_Express_around_Mumbai.jpg';
+                        }}
                       />
                     </div>
                   )}
