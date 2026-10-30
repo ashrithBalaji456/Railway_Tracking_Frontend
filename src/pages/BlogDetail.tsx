@@ -863,8 +863,8 @@ export default function BlogDetail() {
                         CH {String(idx + 1).padStart(2, '0')}
                       </span>
 
-                      {/* Hover Tooltip with Chapter Title (positioned facing inward toward center) */}
-                      <div className={`absolute px-2.5 py-1 rounded-md bg-slate-900/95 border border-slate-700 text-[11px] font-semibold text-slate-200 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl z-30 ${
+                      {/* Hover Tooltip with Chapter Title (Desktop hover only) */}
+                      <div className={`absolute hidden sm:block px-2.5 py-1 rounded-md bg-slate-900/95 border border-slate-700 text-[11px] font-semibold text-slate-200 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl z-30 ${
                         isStationOnLeft ? 'left-12 sm:left-14' : 'right-12 sm:right-14'
                       }`}>
                         Chapter {idx + 1}: {ch.title}
@@ -873,7 +873,7 @@ export default function BlogDetail() {
                   </div>
 
                   {/* Chapter Card Section in Zig-Zag Layout */}
-                  <section className="flex-1 min-w-0 p-5 sm:p-8 rounded-3xl border border-slate-800/80 bg-gradient-to-br from-slate-900/80 via-slate-950/70 to-slate-900/40 backdrop-blur-md shadow-2xl transition-all hover:border-slate-700">
+                  <section className="flex-1 min-w-0 p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-800/80 bg-gradient-to-br from-slate-900/80 via-slate-950/70 to-slate-900/40 backdrop-blur-md shadow-2xl transition-all hover:border-slate-700">
                     
                     {/* Chapter Header Badge */}
                     <div className="flex items-center gap-2 mb-6">

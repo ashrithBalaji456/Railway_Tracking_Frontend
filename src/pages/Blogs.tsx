@@ -183,7 +183,7 @@ export default function Blogs() {
               <div 
                 key={currentFeatured.id}
                 onClick={() => navigate(`/blogs/${currentFeatured.slug}`)}
-                className="w-full grid grid-cols-1 lg:grid-cols-12 min-h-[440px] max-h-[580px] cursor-pointer animate-in fade-in duration-500"
+                className="w-full grid grid-cols-1 lg:grid-cols-12 min-h-0 lg:min-h-[440px] lg:max-h-[580px] cursor-pointer animate-in fade-in duration-500"
               >
                 {/* Balanced Landscape Image Column (5 cols on lg) */}
                 <div className="lg:col-span-5 relative h-64 sm:h-80 lg:h-full lg:max-h-[580px] overflow-hidden bg-slate-950 flex items-center justify-center">
