@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -56,10 +56,15 @@ export default function BlogDetail() {
   const [copied, setCopied] = useState<boolean>(false);
   const [isSaved, setIsSaved] = useState<boolean>(false);
 
-  // Animated Scroll Tracking
+  // Animated Scroll Tracking & Mountain Switchback Railway Track
   const [scrollProgress, setScrollProgress] = useState<number>(0);
   const [activeChapterIndex, setActiveChapterIndex] = useState<number>(0);
-  const [trainTopPx, setTrainTopPx] = useState<number>(44);
+  const [trackSvgPath, setTrackSvgPath] = useState<string>('');
+  const [totalTrackLength, setTotalTrackLength] = useState<number>(0);
+  const [stationLengths, setStationLengths] = useState<number[]>([]);
+  const [trainPos, setTrainPos] = useState<{ x: number; y: number; angle: number }>({ x: 32, y: 44, angle: 90 });
+  const [trainTravelDist, setTrainTravelDist] = useState<number>(0);
+  const trackPathRef = useRef<SVGPathElement>(null);
   const storyContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -191,7 +196,131 @@ export default function BlogDetail() {
     return result;
   }, [article]);
 
-  // Scroll Progress and Active Chapter Observer
+  // 1. Compute Responsive Mountain Switchback Track Path Geometry
+  const computeTrackGeometry = useCallback(() => {
+    const container = storyContainerRef.current;
+    if (!container || chapters.length === 0) return;
+
+    const containerW = container.clientWidth;
+    if (containerW <= 0) return;
+
+    // Station horizontal center position based on responsive column width
+    // Mobile (<640px): w-10 (40px) -> center is 20px
+    // Tablet (sm): w-14 (56px) -> center is 28px
+    // Desktop (lg): w-16 (64px) -> center is 32px
+    const stationOffset = window.innerWidth >= 1024 ? 32 : window.innerWidth >= 640 ? 28 : 20;
+
+    const stationsData: Array<{
+      idx: number;
+      isLeft: boolean;
+      x: number;
+      y: number;
+      cardTop: number;
+      cardBottom: number;
+    }> = [];
+
+    chapters.forEach((ch, idx) => {
+      const el = document.getElementById(ch.id);
+      const isLeft = idx % 2 === 0;
+      const x = isLeft ? stationOffset : containerW - stationOffset;
+
+      if (el) {
+        const cardTop = el.offsetTop;
+        const cardBottom = cardTop + el.offsetHeight;
+        // The station node is at pt-6 (24px) + button radius (18px) = 42px down from cardTop
+        const y = cardTop + 42;
+        stationsData.push({ idx, isLeft, x, y, cardTop, cardBottom });
+      } else {
+        const fallbackTop = idx * 600;
+        stationsData.push({
+          idx,
+          isLeft,
+          x,
+          y: fallbackTop + 42,
+          cardTop: fallbackTop,
+          cardBottom: fallbackTop + 500
+        });
+      }
+    });
+
+    if (stationsData.length === 0) return;
+
+    // Build SVG cubic Bézier track path weaving through the gaps
+    const parts: string[] = [];
+    const s0 = stationsData[0];
+    parts.push(`M ${s0.x} ${Math.max(0, s0.y - 24)}`);
+    parts.push(`L ${s0.x} ${s0.y}`);
+
+    for (let i = 0; i < stationsData.length - 1; i++) {
+      const cur = stationsData[i];
+      const nxt = stationsData[i + 1];
+
+      // Run straight down alongside the current card
+      const yExit = cur.cardBottom;
+      parts.push(`L ${cur.x} ${yExit}`);
+
+      // Smooth S-curve transition through the gap between cards to the next side
+      const yEnter = nxt.cardTop;
+      const gapMidY = yExit + (yEnter - yExit) * 0.5;
+
+      // Cubic Bézier curve with vertical exit and enter tangents
+      parts.push(`C ${cur.x} ${gapMidY}, ${nxt.x} ${gapMidY}, ${nxt.x} ${yEnter}`);
+
+      // Run straight down into next station platform
+      parts.push(`L ${nxt.x} ${nxt.y}`);
+    }
+
+    // Extend slightly past last station
+    const sLast = stationsData[stationsData.length - 1];
+    parts.push(`L ${sLast.x} ${sLast.cardBottom}`);
+
+    const newPath = parts.join(' ');
+    setTrackSvgPath(newPath);
+  }, [chapters]);
+
+  // 2. Measure exact track distance to each station badge
+  useEffect(() => {
+    const pathEl = trackPathRef.current;
+    if (!pathEl) return;
+
+    try {
+      const totalLen = pathEl.getTotalLength();
+      if (totalLen > 0) {
+        setTotalTrackLength(totalLen);
+
+        const sLengths: number[] = [];
+        const numSamples = 400;
+        const containerW = storyContainerRef.current?.clientWidth || 800;
+
+        chapters.forEach((ch, idx) => {
+          const el = document.getElementById(ch.id);
+          const isLeft = idx % 2 === 0;
+          const targetY = el ? el.offsetTop + 42 : idx * 600 + 42;
+
+          let bestDist = 0;
+          let minDiff = Infinity;
+          for (let s = 0; s <= numSamples; s++) {
+            const dist = (s / numSamples) * totalLen;
+            const pt = pathEl.getPointAtLength(dist);
+            // Verify side match
+            const correctSide = isLeft ? pt.x < containerW / 2 : pt.x > containerW / 2;
+            const diff = Math.abs(pt.y - targetY);
+            if (correctSide && diff < minDiff) {
+              minDiff = diff;
+              bestDist = dist;
+            }
+          }
+          sLengths.push(bestDist);
+        });
+
+        setStationLengths(sLengths);
+      }
+    } catch {
+      // Path not measured yet
+    }
+  }, [trackSvgPath, chapters]);
+
+  // 3. Scroll Progress & Locomotive Position Synchronization
   useEffect(() => {
     let ticking = false;
 
@@ -199,52 +328,80 @@ export default function BlogDetail() {
       if (!ticking) {
         window.requestAnimationFrame(() => {
           const container = storyContainerRef.current;
+          const pathEl = trackPathRef.current;
           if (!container || chapters.length === 0) {
             ticking = false;
             return;
           }
 
           const windowHeight = window.innerHeight;
-          // Trigger line: Card highlights IMMEDIATELY when its top enters the top 75% of viewport
-          const triggerLine = windowHeight * 0.75;
+          // Natural reading focal plane: 40% down from viewport top
+          const focalY = windowHeight * 0.40;
 
-          // 1. Determine active chapter: find the latest chapter whose top has crossed into the viewing zone
-          let newActiveIdx = 0;
-          chapters.forEach((ch, idx) => {
+          // Screen Y positions of station milestone badges
+          const stationScreenYs = chapters.map((ch) => {
             const el = document.getElementById(ch.id);
-            if (el) {
-              const r = el.getBoundingClientRect();
-              if (r.top <= triggerLine) {
-                newActiveIdx = idx;
+            return el ? el.getBoundingClientRect().top + 42 : 0;
+          });
+
+          const totalLen = pathEl ? pathEl.getTotalLength() : totalTrackLength;
+          let currentTargetDist = 0;
+          let currentActiveIdx = 0;
+
+          if (stationLengths.length >= chapters.length && totalLen > 0) {
+            const s0Y = stationScreenYs[0];
+            const sLastY = stationScreenYs[stationScreenYs.length - 1];
+
+            if (focalY <= s0Y) {
+              // Above Station 1
+              currentTargetDist = stationLengths[0];
+              currentActiveIdx = 0;
+            } else if (focalY >= sLastY) {
+              // At or below final station
+              currentTargetDist = stationLengths[stationLengths.length - 1];
+              currentActiveIdx = chapters.length - 1;
+            } else {
+              // Find the segment between Station i and Station i+1
+              for (let i = 0; i < stationScreenYs.length - 1; i++) {
+                const curY = stationScreenYs[i];
+                const nxtY = stationScreenYs[i + 1];
+
+                if (focalY >= curY && focalY <= nxtY) {
+                  const segmentH = Math.max(1, nxtY - curY);
+                  const progress = Math.max(0, Math.min(1, (focalY - curY) / segmentH));
+
+                  const distCur = stationLengths[i];
+                  const distNxt = stationLengths[i + 1];
+                  currentTargetDist = distCur + progress * (distNxt - distCur);
+                  currentActiveIdx = progress >= 0.5 ? i + 1 : i;
+                  break;
+                }
               }
             }
-          });
-          setActiveChapterIndex(newActiveIdx);
 
-          // 2. Calculate exact pixel position of the locomotive along the continuous railway track
-          const activeEl = document.getElementById(chapters[newActiveIdx]?.id);
-          if (activeEl) {
-            const activeNodeCenter = activeEl.offsetTop + 44; // pt-6 + button radius
+            setTrainTravelDist(currentTargetDist);
+            setActiveChapterIndex(currentActiveIdx);
 
-            const nextEl = chapters[newActiveIdx + 1] ? document.getElementById(chapters[newActiveIdx + 1].id) : null;
-            if (nextEl) {
-              const nextNodeCenter = nextEl.offsetTop + 44;
-              const rNext = nextEl.getBoundingClientRect();
-              const distanceBetween = Math.max(1, nextNodeCenter - activeNodeCenter);
-              
-              // As next chapter approaches the trigger line from the bottom, smoothly glide the locomotive
-              const approachDistance = windowHeight - triggerLine;
-              const currentOffset = windowHeight - rNext.top;
-              const progressToNext = Math.max(0, Math.min(1, currentOffset / approachDistance));
-              
-              const currentTrainY = activeNodeCenter + (progressToNext * distanceBetween);
-              setTrainTopPx(currentTrainY);
-            } else {
-              setTrainTopPx(activeNodeCenter);
+            if (pathEl) {
+              const safeDist = Math.max(0, Math.min(totalLen, currentTargetDist));
+              const pt = pathEl.getPointAtLength(safeDist);
+              const ptAhead = pathEl.getPointAtLength(Math.min(totalLen, safeDist + 3));
+              const ptBehind = pathEl.getPointAtLength(Math.max(0, safeDist - 3));
+              const angle = Math.atan2(ptAhead.y - ptBehind.y, ptAhead.x - ptBehind.x) * (180 / Math.PI);
+              setTrainPos({ x: pt.x, y: pt.y, angle });
             }
+          } else {
+            // Initial fallback while measurements settle
+            chapters.forEach((ch, idx) => {
+              const el = document.getElementById(ch.id);
+              if (el && el.getBoundingClientRect().top <= windowHeight * 0.6) {
+                currentActiveIdx = idx;
+              }
+            });
+            setActiveChapterIndex(currentActiveIdx);
           }
 
-          // 3. Overall ratio for top mobile progress bar
+          // Top progress bar ratio
           const rect = container.getBoundingClientRect();
           const totalDistance = rect.height - windowHeight * 0.4;
           if (totalDistance > 0) {
@@ -260,13 +417,31 @@ export default function BlogDetail() {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleScroll, { passive: true });
+    window.addEventListener('resize', () => {
+      computeTrackGeometry();
+      handleScroll();
+    }, { passive: true });
+
+    // Initial triggers
+    computeTrackGeometry();
     handleScroll();
+
+    // ResizeObserver watches for dynamic height changes (image rendering)
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && storyContainerRef.current) {
+      ro = new ResizeObserver(() => {
+        computeTrackGeometry();
+        handleScroll();
+      });
+      ro.observe(storyContainerRef.current);
+    }
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
+      window.removeEventListener('resize', computeTrackGeometry);
+      if (ro) ro.disconnect();
     };
-  }, [chapters]);
+  }, [chapters, computeTrackGeometry, stationLengths, totalTrackLength]);
 
   const scrollToChapter = (chapterId: string) => {
     const el = document.getElementById(chapterId);
@@ -539,46 +714,135 @@ export default function BlogDetail() {
         )}
 
         {/* ========================================================================= */}
-        {/* ZIG-ZAG CHAPTER STORY SECTION WITH SCROLL-FOLLOWING RAILWAY TRACK THREAD */}
+        {/* ZIG-ZAG CHAPTER STORY SECTION WITH SWITCHBACK MOUNTAIN RAILWAY TRACK */}
         {/* ========================================================================= */}
         <div ref={storyContainerRef} className="relative pt-6">
           
-          {/* Continuous Railway Track Spine running from Chapter 1 to the last Chapter */}
-          <div className="absolute top-10 bottom-12 left-5 sm:left-7 lg:left-8 -translate-x-1/2 w-6 flex flex-col items-center pointer-events-none z-0">
-            {/* Dual Steel Rails */}
-            <div className="absolute inset-y-0 w-4 flex justify-between">
-              <div className="w-[3px] bg-slate-800 h-full rounded-full" />
-              <div className="w-[3px] bg-slate-800 h-full rounded-full" />
-            </div>
+          {/* Full-Container Continuous Mountain Switchback Railway Track SVG */}
+          <svg 
+            className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-visible"
+            style={{ minHeight: '100%' }}
+          >
+            <defs>
+              {/* Active Glowing Electric Rail Gradient */}
+              <linearGradient id="switchbackRailGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#fbbf24" stopOpacity="1" />
+                <stop offset="50%" stopColor="#34d399" stopOpacity="1" />
+                <stop offset="100%" stopColor="#22d3ee" stopOpacity="1" />
+              </linearGradient>
 
-            {/* Wooden Railway Ties (Sleepers) */}
+              {/* Outer Neon Glow Filter */}
+              <filter id="switchbackGlowFilter" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            {trackSvgPath && (
+              <>
+                {/* Layer 1: Ballast Bed Foundation */}
+                <path
+                  d={trackSvgPath}
+                  fill="none"
+                  stroke="#0f172a"
+                  strokeWidth="28"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="opacity-90"
+                />
+
+                {/* Layer 2: Wooden Railway Sleepers (Ties) spaced along the curves */}
+                <path
+                  d={trackSvgPath}
+                  fill="none"
+                  stroke="#475569"
+                  strokeWidth="20"
+                  strokeDasharray="4 12"
+                  strokeLinecap="butt"
+                  strokeLinejoin="round"
+                  className="opacity-70"
+                />
+
+                {/* Layer 3: Dual Steel Rails (Base 12px with 7px dark center slot) */}
+                <path
+                  d={trackSvgPath}
+                  fill="none"
+                  stroke="#334155"
+                  strokeWidth="12"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d={trackSvgPath}
+                  fill="none"
+                  stroke="#030712"
+                  strokeWidth="7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+
+                {/* Layer 4: Hidden reference path for exact mathematical length & point queries */}
+                <path
+                  ref={trackPathRef}
+                  d={trackSvgPath}
+                  fill="none"
+                  stroke="transparent"
+                  strokeWidth="1"
+                />
+
+                {/* Layer 5: Live Glowing Electric Progress Line (fills up behind the locomotive) */}
+                <path
+                  d={trackSvgPath}
+                  fill="none"
+                  stroke="url(#switchbackRailGlow)"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray={`${totalTrackLength} ${totalTrackLength}`}
+                  strokeDashoffset={Math.max(0, totalTrackLength - trainTravelDist)}
+                  filter="url(#switchbackGlowFilter)"
+                  className="transition-all duration-75 ease-out"
+                />
+                <path
+                  d={trackSvgPath}
+                  fill="none"
+                  stroke="#fef08a"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray={`${totalTrackLength} ${totalTrackLength}`}
+                  strokeDashoffset={Math.max(0, totalTrackLength - trainTravelDist)}
+                  className="transition-all duration-75 ease-out"
+                />
+              </>
+            )}
+          </svg>
+
+          {/* Animated Moving Mountain Locomotive Engine Indicator */}
+          {trackSvgPath && (
             <div 
-              className="absolute inset-y-0 w-5 opacity-40"
-              style={{
-                backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0px, transparent 18px, #475569 18px, #475569 22px)'
+              className="absolute -translate-x-1/2 -translate-y-1/2 transition-transform duration-75 ease-out z-20 pointer-events-none"
+              style={{ 
+                left: `${trainPos.x}px`,
+                top: `${trainPos.y}px`,
+                transform: `translate(-50%, -50%) rotate(${trainPos.angle - 90}deg)`
               }}
-            />
-
-            {/* Live Glowing Track Progress Fill */}
-            <div 
-              className="absolute top-0 w-[4px] bg-gradient-to-b from-amber-400 via-emerald-400 to-cyan-400 rounded-full shadow-[0_0_14px_rgba(251,191,36,0.85)] transition-all duration-75 ease-out"
-              style={{ height: `${Math.max(0, trainTopPx)}px` }}
-            />
-
-            {/* Animated Moving Locomotive Engine Indicator */}
-            <div 
-              className="absolute -translate-x-1/2 left-1/2 -translate-y-1/2 transition-all duration-100 ease-out z-20 pointer-events-none"
-              style={{ top: `${trainTopPx}px` }}
             >
-              <div className="w-8 h-8 rounded-full bg-slate-900 border-2 border-amber-400 flex items-center justify-center shadow-[0_0_18px_rgba(251,191,36,0.95)] animate-pulse">
-                <Train className="w-4 h-4 text-amber-300" />
+              <div className="relative w-10 h-10 rounded-full bg-slate-900 border-2 border-amber-400 flex items-center justify-center shadow-[0_0_24px_rgba(251,191,36,0.95)]">
+                {/* Forward Headlight Beam */}
+                <div className="absolute -top-7 left-1/2 -translate-x-1/2 w-6 h-8 bg-gradient-to-t from-amber-300/60 to-transparent blur-sm rounded-full pointer-events-none" />
+                <Train className="w-5 h-5 text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.9)]" />
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Chapters Container: Each card has its corresponding milestone number directly beside it */}
-          <div className="space-y-12 sm:space-y-16">
+          {/* Chapters Container: Alternating Left & Right Stations with Switchback Track Passing Through Gaps */}
+          <div className="space-y-16 sm:space-y-24">
             {chapters.map((ch, idx) => {
+              const isStationOnLeft = idx % 2 === 0;
               const isEven = idx % 2 === 0;
               const isActive = activeChapterIndex === idx;
               const isPassed = activeChapterIndex > idx;
@@ -587,7 +851,9 @@ export default function BlogDetail() {
                 <div 
                   key={ch.id} 
                   id={ch.id}
-                  className="relative flex items-start gap-3 sm:gap-6 lg:gap-8 scroll-mt-24 group/chapter"
+                  className={`relative flex items-start gap-3 sm:gap-6 lg:gap-8 scroll-mt-24 group/chapter ${
+                    isStationOnLeft ? 'flex-row' : 'flex-row-reverse'
+                  }`}
                 >
                   {/* Milestone Station Node - Perfectly Aligned Beside THIS Card */}
                   <div className="shrink-0 w-10 sm:w-14 lg:w-16 flex flex-col items-center pt-6 z-10">
@@ -616,8 +882,10 @@ export default function BlogDetail() {
                         CH {String(idx + 1).padStart(2, '0')}
                       </span>
 
-                      {/* Hover Tooltip with Chapter Title */}
-                      <div className="absolute left-12 sm:left-14 px-2.5 py-1 rounded-md bg-slate-900/95 border border-slate-700 text-[11px] font-semibold text-slate-200 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl z-30">
+                      {/* Hover Tooltip with Chapter Title (positioned facing inward toward center) */}
+                      <div className={`absolute px-2.5 py-1 rounded-md bg-slate-900/95 border border-slate-700 text-[11px] font-semibold text-slate-200 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl z-30 ${
+                        isStationOnLeft ? 'left-12 sm:left-14' : 'right-12 sm:right-14'
+                      }`}>
                         Chapter {idx + 1}: {ch.title}
                       </div>
                     </button>
