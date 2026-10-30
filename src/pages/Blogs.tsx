@@ -10,7 +10,9 @@ import {
   Share2, 
   SlidersHorizontal,
   Check,
-  Bookmark
+  Bookmark,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { getBlogs, getBlogCategories } from '../services/api';
 import type { BlogArticle } from '../types';
@@ -25,6 +27,8 @@ export default function Blogs() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
   const [savedSlugs, setSavedSlugs] = useState<string[]>(getSavedArticleSlugs());
+  const [featuredIndex, setFeaturedIndex] = useState<number>(0);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -74,8 +78,32 @@ export default function Blogs() {
     };
   }, [selectedCategory, searchQuery, savedSlugs]);
 
-  const featuredArticle = articles.find(a => a.featured) || articles[0];
-  const regularArticles = articles.filter(a => a.id !== featuredArticle?.id);
+  const featuredArticles = React.useMemo(() => {
+    const feat = articles.filter(a => a.featured);
+    return feat.length >= 4 ? feat.slice(0, 5) : articles.slice(0, 5);
+  }, [articles]);
+
+  const currentFeatured = featuredArticles[featuredIndex] || featuredArticles[0];
+  const regularArticles = articles;
+
+  // Auto-scroll featured stories every 5 seconds (pauses on hover)
+  useEffect(() => {
+    if (isPaused || featuredArticles.length <= 1) return;
+    const timer = setInterval(() => {
+      setFeaturedIndex(prev => (prev + 1) % featuredArticles.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [isPaused, featuredArticles.length]);
+
+  const handlePrevFeatured = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFeaturedIndex(prev => (prev - 1 + featuredArticles.length) % featuredArticles.length);
+  };
+
+  const handleNextFeatured = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFeaturedIndex(prev => (prev + 1) % featuredArticles.length);
+  };
 
   const handleShare = (e: React.MouseEvent, slug: string) => {
     e.stopPropagation();
@@ -124,103 +152,188 @@ export default function Blogs() {
           </div>
         </div>
 
-        {/* Featured Story Hero Card */}
-        {featuredArticle && !searchQuery && selectedCategory === 'All' && (
+        {/* Top Auto-Scrolling Featured Stories Carousel (Top 5 Flagship Stories) */}
+        {currentFeatured && !searchQuery && selectedCategory === 'All' && (
           <div 
-            onClick={() => navigate(`/blogs/${featuredArticle.slug}`)}
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+            onClick={() => navigate(`/blogs/${currentFeatured.slug}`)}
             className="group relative cursor-pointer overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl transition-all duration-300 hover:border-emerald-500/50 hover:shadow-emerald-950/30"
           >
-            <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[420px]">
+            <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[460px]">
               
-              {/* Image Side */}
-              <div className="lg:col-span-7 relative h-64 sm:h-80 lg:h-full overflow-hidden">
+              {/* Balanced Image Side (6 cols on lg) */}
+              <div className="lg:col-span-6 relative h-72 sm:h-84 lg:h-full overflow-hidden bg-slate-950">
                 <img 
-                  src={featuredArticle.coverImage} 
-                  alt={featuredArticle.title} 
+                  key={currentFeatured.slug}
+                  src={currentFeatured.coverImage} 
+                  alt={currentFeatured.title} 
                   referrerPolicy="no-referrer"
-                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                  className="h-full w-full object-cover transition-all duration-700 ease-out group-hover:scale-105 animate-in fade-in zoom-in-95 duration-500"
                   style={{ imageRendering: '-webkit-optimize-contrast' }}
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg';
                   }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent lg:hidden" />
                 
-                {/* Spotlight Badge */}
-                <div className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-500 text-slate-950 shadow-lg">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>FEATURED STORY</span>
+                {/* Subtle gradient vignette */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:to-slate-900/60" />
+                
+                {/* Spotlight Badge + Slide Counter */}
+                <div className="absolute top-4 left-4 flex items-center gap-2">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500 text-slate-950 shadow-lg">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>FEATURED STORY</span>
+                  </div>
+                  <div className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-slate-950/80 text-emerald-400 border border-slate-700/60 backdrop-blur-md">
+                    {String(featuredIndex + 1).padStart(2, '0')} / {String(featuredArticles.length).padStart(2, '0')}
+                  </div>
                 </div>
+
+                {/* Left & Right Arrow Buttons on Image */}
+                <button
+                  type="button"
+                  onClick={handlePrevFeatured}
+                  title="Previous Featured Story"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/80 hover:bg-emerald-600 text-white flex items-center justify-center border border-slate-700/80 hover:border-emerald-500 transition-all shadow-xl backdrop-blur-md cursor-pointer z-10 opacity-80 group-hover:opacity-100"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextFeatured}
+                  title="Next Featured Story"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/80 hover:bg-emerald-600 text-white flex items-center justify-center border border-slate-700/80 hover:border-emerald-500 transition-all shadow-xl backdrop-blur-md cursor-pointer z-10 opacity-80 group-hover:opacity-100"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
               </div>
 
-              {/* Text Side */}
-              <div className="lg:col-span-5 p-6 sm:p-8 lg:p-10 flex flex-col justify-between bg-gradient-to-b from-slate-900 to-slate-950">
+              {/* Rich Content Side (6 cols on lg) */}
+              <div className="lg:col-span-6 p-6 sm:p-8 lg:p-10 flex flex-col justify-between bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950">
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      {featuredArticle.category}
-                    </span>
-                    <span className="text-xs text-slate-400 flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" /> {featuredArticle.readTimeMinutes} min read
-                    </span>
+                  
+                  {/* Category, Read Time, and Live Auto-Play Indicator */}
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        {currentFeatured.category}
+                      </span>
+                      <span className="text-xs text-slate-400 flex items-center gap-1 font-medium">
+                        <Clock className="w-3.5 h-3.5" /> {currentFeatured.readTimeMinutes} min read
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400 bg-slate-950/60 px-2 py-0.5 rounded-full border border-slate-800">
+                      <span className={`w-1.5 h-1.5 rounded-full ${isPaused ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}`} />
+                      <span>{isPaused ? 'PAUSED' : 'AUTO-SCROLLING'}</span>
+                    </div>
                   </div>
 
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-white group-hover:text-emerald-400 transition-colors leading-tight">
-                    {featuredArticle.title}
+                  {/* Title */}
+                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white group-hover:text-emerald-400 transition-colors leading-tight">
+                    {currentFeatured.title}
                   </h2>
 
-                  <p className="text-sm text-slate-300 line-clamp-3 leading-relaxed">
-                    {featuredArticle.subtitle}
+                  {/* Subtitle / Prose */}
+                  <p className="text-sm sm:text-base text-slate-300 line-clamp-3 leading-relaxed">
+                    {currentFeatured.subtitle}
                   </p>
 
+                  {/* Quick Technical / Scenic Highlights Strip */}
+                  {currentFeatured.quickFacts && currentFeatured.quickFacts.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+                      {currentFeatured.quickFacts.slice(0, 3).map((qf, i) => (
+                        <div key={i} className="px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800/90 shadow-sm">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">
+                            {qf.label}
+                          </span>
+                          <span className="text-xs font-bold text-amber-300 block truncate mt-0.5">
+                            {qf.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Tags */}
-                  <div className="flex flex-wrap gap-1.5 pt-2">
-                    {featuredArticle.tags.slice(0, 3).map((tag, i) => (
-                      <span key={i} className="text-[11px] bg-slate-800/80 text-slate-400 px-2 py-0.5 rounded-md border border-slate-700/50">
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {currentFeatured.tags.slice(0, 4).map((tag, i) => (
+                      <span key={i} className="text-[11px] bg-slate-800/90 text-slate-300 px-2.5 py-0.5 rounded-lg border border-slate-700/60 font-medium">
                         #{tag}
                       </span>
                     ))}
                   </div>
                 </div>
 
-                {/* Footer Info */}
-                <div className="pt-6 border-t border-slate-800/80 flex items-center justify-between mt-4">
+                {/* Footer Bar & Interactive Carousel Dots */}
+                <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-4">
+                  
+                  {/* Author Meta */}
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs">
-                      {featuredArticle.author.charAt(0)}
+                    <div className="w-9 h-9 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs">
+                      {currentFeatured.author.charAt(0)}
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-200">{featuredArticle.author}</p>
-                      <p className="text-[10px] text-slate-400">{featuredArticle.publishedDate}</p>
+                      <p className="text-xs font-semibold text-slate-200">{currentFeatured.author}</p>
+                      <p className="text-[10px] text-slate-400">{currentFeatured.publishedDate}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={(e) => handleToggleSave(e, featuredArticle)}
-                      className={`p-2 rounded-xl border transition-colors ${
-                        savedSlugs.includes(featuredArticle.slug)
-                          ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
-                          : 'bg-slate-800 hover:bg-slate-700 border-slate-700/60 text-slate-300'
-                      }`}
-                      title={savedSlugs.includes(featuredArticle.slug) ? 'Remove from Saved' : 'Save for Journey'}
-                    >
-                      <Bookmark className={`w-4 h-4 ${savedSlugs.includes(featuredArticle.slug) ? 'fill-amber-400 text-amber-400' : ''}`} />
-                    </button>
-                    <button 
-                      onClick={(e) => handleShare(e, featuredArticle.slug)}
-                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                      title="Share Article"
-                    >
-                      {copiedSlug === featuredArticle.slug ? (
-                        <Check className="w-4 h-4 text-emerald-400" />
-                      ) : (
-                        <Share2 className="w-4 h-4" />
-                      )}
-                    </button>
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-400 group-hover:translate-x-1 transition-transform">
-                      Read Story <ArrowRight className="w-4 h-4" />
-                    </span>
+                  {/* Action Buttons & Indicator Dots */}
+                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                    
+                    {/* Carousel Navigation Indicator Dots */}
+                    <div className="flex items-center gap-1.5">
+                      {featuredArticles.map((art, idx) => (
+                        <button
+                          key={art.id}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFeaturedIndex(idx);
+                          }}
+                          title={`Go to story ${idx + 1}: ${art.title}`}
+                          className={`h-2 rounded-full transition-all cursor-pointer ${
+                            featuredIndex === idx
+                              ? 'w-7 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]'
+                              : 'w-2 bg-slate-700 hover:bg-slate-500'
+                          }`}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button 
+                        type="button"
+                        onClick={(e) => handleToggleSave(e, currentFeatured)}
+                        className={`p-2 rounded-xl border transition-colors ${
+                          savedSlugs.includes(currentFeatured.slug)
+                            ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                            : 'bg-slate-800 hover:bg-slate-700 border-slate-700/60 text-slate-300'
+                        }`}
+                        title={savedSlugs.includes(currentFeatured.slug) ? 'Remove from Saved' : 'Save for Journey'}
+                      >
+                        <Bookmark className={`w-4 h-4 ${savedSlugs.includes(currentFeatured.slug) ? 'fill-amber-400 text-amber-400' : ''}`} />
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={(e) => handleShare(e, currentFeatured.slug)}
+                        className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                        title="Share Article"
+                      >
+                        {copiedSlug === currentFeatured.slug ? (
+                          <Check className="w-4 h-4 text-emerald-400" />
+                        ) : (
+                          <Share2 className="w-4 h-4" />
+                        )}
+                      </button>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 group-hover:bg-emerald-500 text-slate-950 font-bold text-xs transition-all shadow-md shadow-emerald-600/20">
+                        <span>Read</span>
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                      </span>
+                    </div>
+
                   </div>
                 </div>
 
