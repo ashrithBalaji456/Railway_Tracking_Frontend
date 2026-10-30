@@ -563,7 +563,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       {
         "type": "image",
         "imageUrl": "/images/blogs/kalka-shimla-unesco-toy-train-1.jpg",
-        "imageCaption": "The red-and-cream Kalka-Shimla toy train winding gracefully across a multi-tier stone arch bridge.",
+        "imageCaption": "The iconic red-and-cream Kalka–Shimla toy train curving gracefully across the soaring multi-tier stone arch bridge high above the Himalayan valley.",
         "altText": "Kalka Shimla toy train crossing mountain arch bridge"
       },
       {
@@ -574,7 +574,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       {
         "type": "image",
         "imageUrl": "/images/blogs/kalka-shimla-unesco-toy-train-2.jpg",
-        "imageCaption": "The stone portal of Barog Tunnel 33 nestled amidst pine and deodar forests.",
+        "imageCaption": "The heritage locomotive emerging with warm glowing headlights from the rustic stone portal of Barog Tunnel 33 into sunlit pine woods.",
         "altText": "Barog Tunnel entrance on Kalka Shimla line"
       },
       {
@@ -585,7 +585,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       {
         "type": "image",
         "imageUrl": "/images/blogs/kalka-shimla-unesco-toy-train-3.jpg",
-        "imageCaption": "The narrow-gauge track hugging sheer mountain precipices overlooking the Shivalik valley.",
+        "imageCaption": "The narrow-gauge train traversing a breathtaking cliffside ledge high above misty purple Shivalik valleys and Himalayan peaks.",
         "altText": "Kalka Shimla tracks along high mountain ridge"
       },
       {
@@ -596,7 +596,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       {
         "type": "image",
         "imageUrl": "/images/blogs/kalka-shimla-unesco-toy-train-4.jpg",
-        "imageCaption": "The toy train slowing to a halt at a quaint colonial wooden railway station platform.",
+        "imageCaption": "Inside the luxury Him Darshan Vistadome coach with curved panoramic glass ceilings offering 360-degree views of mountain ridges.",
         "altText": "Heritage wooden platform on Kalka Shimla railway"
       },
       {
@@ -607,7 +607,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       {
         "type": "image",
         "imageUrl": "/images/blogs/kalka-shimla-unesco-toy-train-5.jpg",
-        "imageCaption": "Snow-covered deodar trees framing the narrow-gauge railway during the winter season.",
+        "imageCaption": "The vibrant red toy train cutting through fresh, deep powdery snow across mountain curves in Shimla during golden sunset.",
         "altText": "Snow covered winter tracks on Kalka Shimla railway"
       },
       {
