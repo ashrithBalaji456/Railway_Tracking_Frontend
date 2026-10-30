@@ -1954,3 +1954,26 @@ This section documents the frontend views and components integrated for rail dis
   - **Browser Anti-Hotlink Protection (`referrerPolicy="no-referrer"`):**
     * Added `referrerPolicy="no-referrer"` across all `<img>` tags in `Blogs.tsx`, `BlogDetail.tsx`, `TrainDetails.tsx`, `StationExplorer.tsx`, and `ArticleCommunityTips.tsx`.
     * Added graceful `onError` fallback handlers that automatically substitute a verified railway hero image if a user's network or local firewall temporarily blocks third-party CDNs.
+
+
+### 15.14. Permanent Local Asset Bundling & Zero-Network Offline Asset Architecture
+
+* **Root Cause Diagnosis of Wikimedia 429 Rate Limiting:**
+  - Wikimedia Commons actively enforces a strict automated bot and edge hotlinking policy (`HTTP Error 429: Your request does not comply with our robot policy`). When multiple blog cards or route timetable stops load concurrently, browser requests triggered 429 rate limit blocks or failed domain resolution on synthetic prefixes (`thumb.wikimedia.org`).
+  
+* **Permanent Offline & Zero-Network Architecture:**
+  - **Local High-Resolution Asset Bundle (`Frontend/public/images/`):**
+    * All 70 Indian Railways editorial images across all 14 stories are bundled locally into `Frontend/public/images/blogs/` (e.g. `konkan-railway-scenic-odyssey-1.jpg`, `vande-bharat-evolution-future-sleeper-1.jpg`, `pamban-sea-bridge-rameswaram-1.jpg`).
+    * All 11 station gastronomy dishes are bundled locally into `Frontend/public/images/gastronomy/` (Ratlam Sev, Kharagpur Chai, Vijayawada Bajji, Pune Misal, Amritsari Kulcha, etc.).
+    * All 5 station platform amenities are bundled locally into `Frontend/public/images/amenities/` (IRCTC Executive Lounge, Waiting Halls, Cloak Room, Escalators, Water ATMs).
+  - **Zero External Network Dependencies:**
+    * In `src/data/fallbackBlogs.ts`, `src/data/stationGastronomy.ts`, and `src/data/stationAmenities.ts`, all image paths point directly to `/images/blogs/...`, `/images/gastronomy/...`, and `/images/amenities/...`.
+    * Assets load instantly with 0ms network latency directly from Vite's local static server.
+  - **Full Offline Android APK Packaging:**
+    * Ran `npx cap sync android` to copy the entire `dist/images/` tree into `android/app/src/main/assets/public/images/`.
+    * The Android mobile application now displays every single Indian Railways photograph, toy train, luxury express, and culinary dish even when the passenger has no cellular reception or internet connection on moving trains.
+  - **Official Indian Railways 10-Hour Chart Preparation Rules (`PnrStatus.tsx`):**
+    * Clarified and updated the PRS Chart Preparation Timeline according to official CRIS/Ministry of Railways guidelines:
+      1. **Trains departing after 2:00 PM or before 5:00 AM:** First reservation chart is finalized exactly **10 hours** before departure.
+      2. **Trains departing between 5:00 AM and 2:00 PM:** First chart is finalized the previous evening at **8:00 PM** (or 9:00 PM per zonal circulars).
+      3. **Second & Final Chart:** Finalized **30 minutes** before scheduled departure for all trains.

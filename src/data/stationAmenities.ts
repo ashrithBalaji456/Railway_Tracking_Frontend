@@ -24,7 +24,7 @@ export const STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Platform 1 / Main Departure Air Concourse',
     tariffsAndRules: '₹150 to ₹200 for initial 2-hour stay (includes complimentary welcome drink and Wi-Fi). Buffet meals available at printed IRCTC rates. Accessible by presenting confirmed ticket & photo ID.',
     availability: 'Major terminals & junction stations (NDLS, CSMT, BZA, HWH, SBC, ADI, AGC, PNBE, JAT, etc.)',
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cc/Luxary_ICF_Train-_Maharajas_Express..jpg/960px-Luxary_ICF_Train-_Maharajas_Express..jpg'
+    imageUrl: '/images/amenities/executive_lounge.jpg'
   },
   {
     id: 'waiting-halls',
@@ -37,7 +37,7 @@ export const STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Platform 1 Main Entrance & Platform 2/3 Island Concourse',
     tariffsAndRules: 'Complimentary for all passengers holding valid confirmed, RAC, or waitlisted tickets matching the coach class (AC halls for AC ticket holders; General halls for Sleeper/General).',
     availability: 'Available 24/7 across all junction and NSG-1 to NSG-4 railway stations.',
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e1/Chhatrapati_Shivaji_Terminus_Building_20.jpg/960px-Chhatrapati_Shivaji_Terminus_Building_20.jpg'
+    imageUrl: '/images/amenities/waiting_hall.jpg'
   },
   {
     id: 'cloak-room',
@@ -50,7 +50,7 @@ export const STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Station Concourse near Parcel Office / Platform 1 Exit',
     tariffsAndRules: 'Official Indian Railways tariff: ₹20 per bag for first 24 hours, ₹25 per bag for each subsequent 24 hours. IMPORTANT: Every piece of luggage must have its own secure padlock and key.',
     availability: '24/7 service (brief 30-min shift handovers at 06:00, 14:00, 22:00). Valid ticket & ID required.',
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/7/78/Bangalore-City-Stn.jpg/960px-Bangalore-City-Stn.jpg'
+    imageUrl: '/images/amenities/cloak_room.jpg'
   },
   {
     id: 'escalators-elevators',
@@ -63,7 +63,7 @@ export const STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Connecting all platform tracks (Center and ends of platforms)',
     tariffsAndRules: 'Free public amenity. Priority given to senior citizens, pregnant women, and passengers with heavy luggage.',
     availability: 'Operational 24/7 with dedicated railway electrical maintenance staff on-site.',
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/7/74/Platform_1%2C_Howrah_Junction_Railway_Station%2C_India.jpg/960px-Platform_1%2C_Howrah_Junction_Railway_Station%2C_India.jpg'
+    imageUrl: '/images/amenities/escalators_lifts.jpg'
   },
   {
     id: 'water-vending',
@@ -76,7 +76,7 @@ export const STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Installed every 100 meters on all passenger platforms',
     tariffsAndRules: '₹1 for 300ml glass refill, ₹3 for 500ml container, ₹5 for 1000ml (1 liter) refill, and ₹8 for fresh container + 1 liter water.',
     availability: '24/7 automated coin and QR UPI payment dispensing.',
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/1/18/360_at_Secunderabad_Station%2C_Platform_1%2C_Dec_2025.jpg/960px-360_at_Secunderabad_Station%2C_Platform_1%2C_Dec_2025.jpg'
+    imageUrl: '/images/amenities/water_vending.jpg'
   },
   {
     id: 'accessibility',
@@ -89,7 +89,7 @@ export const STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Station Master / Deputy Station Superintendent Office on Platform 1',
     tariffsAndRules: 'Wheelchairs provided free of cost upon submitting a valid ID card or PNR. Battery carts available at nominal booking or complimentary for senior citizens/patients.',
     availability: 'Available 24/7. Advance booking available via Indian Railways 139 helpline or IRCTC portal.',
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/1/18/360_at_Secunderabad_Station%2C_Platform_1%2C_Dec_2025.jpg/960px-360_at_Secunderabad_Station%2C_Platform_1%2C_Dec_2025.jpg'
+    imageUrl: '/images/amenities/waiting_hall.jpg'
   },
   {
     id: 'railwire-wifi',
@@ -102,7 +102,7 @@ export const STATION_AMENITIES: StationAmenity[] = [
     locationOnPlatform: 'Seamless coverage across entire station concourse and all platforms',
     tariffsAndRules: 'First 30 minutes complimentary per mobile device per day (OTP login). High-speed extended packs available starting from ₹10.',
     availability: 'Available 24/7 at all Indian Railways stations.',
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/7/74/Platform_1%2C_Howrah_Junction_Railway_Station%2C_India.jpg/960px-Platform_1%2C_Howrah_Junction_Railway_Station%2C_India.jpg'
+    imageUrl: '/images/amenities/waiting_hall.jpg'
   }
 ];
 

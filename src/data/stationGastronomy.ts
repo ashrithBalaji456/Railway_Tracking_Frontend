@@ -27,7 +27,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platforms 1 & 4 Refreshment Kiosks',
     irctcTip: 'Ask for the extra hot "Laung Sev" sample packet before buying bulk boxes to carry home.',
     mustTryItems: ['Laung Sev Poha', 'Garadu (seasonal)', 'Ratlam Sev Packets'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/Poha.jpg/960px-Poha.jpg',
+    imageUrl: '/images/gastronomy/ratlam_sev.jpg',
     recommendedHaltMin: 10
   },
   {
@@ -42,7 +42,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platform 1 & 2 Center Overbridge Concourse',
     irctcTip: 'Discard clay kulhads into dedicated dry bins — they are 100% biodegradable and eco-friendly.',
     mustTryItems: ['Earthen Kulhad Milk Tea', 'Dim-er Devil (Egg Chop)', 'Singara'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/91/Kulhad_Chai.jpg/960px-Kulhad_Chai.jpg',
+    imageUrl: '/images/gastronomy/kharagpur_chai.jpg',
     recommendedHaltMin: 10
   },
   {
@@ -57,7 +57,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platform 1, 6 & 7 IRCTC Jan Aahaar & Balaji Fast Food',
     irctcTip: 'Grab a bottle of cool Guntur buttermilk right after the mirchi bajji to tame the fiery spice.',
     mustTryItems: ['Guntur Mirchi Bajji', 'Pesarattu Upma', 'Piping Hot Filter Coffee'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Vada_Pav-Indian_street_food.JPG/960px-Vada_Pav-Indian_street_food.JPG',
+    imageUrl: '/images/gastronomy/vijayawada_bajji.jpg',
     recommendedHaltMin: 10
   },
   {
@@ -72,7 +72,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Aahar Stall / Platform 1 near suburban concourse',
     irctcTip: 'Pair it with authentic Solkadhi or Masala Chaas during humid coastal runs.',
     mustTryItems: ['Batata Vada Pav', 'Misal Pav', 'Cutting Ginger Chai'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Vada_Pav-Indian_street_food.JPG/960px-Vada_Pav-Indian_street_food.JPG',
+    imageUrl: '/images/gastronomy/pune_misal_pav.jpg',
     recommendedHaltMin: 5
   },
   {
@@ -87,7 +87,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platform 1 Main Exit Hallway & Concourse Stalls',
     irctcTip: 'Ask for the Badam Kulfi matka cups which stay chilled for up to two hours in air-conditioned coaches.',
     mustTryItems: ['Thaggu Ke Laddu', 'Special Badam Peda', 'Matka Rabdi Kulfi'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/91/Indian_Sweet_Dessert_Peda_in_a_white_bone_china_plate.jpg/960px-Indian_Sweet_Dessert_Peda_in_a_white_bone_china_plate.jpg',
+    imageUrl: '/images/gastronomy/mathura_peda.jpg',
     recommendedHaltMin: 10
   },
   {
@@ -102,7 +102,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platform 1 Rawat / Heritage Sweets Kiosk',
     irctcTip: 'The kachoris are extremely hot inside; poke a hole and let the aromatic steam release before taking your first bite.',
     mustTryItems: ['Pyaaz Kachori', 'Mawa Kachori', 'Dal Baati Churma Meal Tray'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/aa/Samosa_13.jpg/960px-Samosa_13.jpg',
+    imageUrl: '/images/gastronomy/ratlam_sev.jpg',
     recommendedHaltMin: 10
   },
   {
@@ -117,7 +117,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platform 1 Concourse & Food Track Stalls',
     irctcTip: 'Don’t board without trying a sweet Banarasi Meetha Paan packed with gulkand and fennel.',
     mustTryItems: ['Tamatar Chaat in Kulhad', 'Banarasi Meetha Paan', 'Kachori Jalebi'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/91/Kulhad_Chai.jpg/960px-Kulhad_Chai.jpg',
+    imageUrl: '/images/gastronomy/amritsar_kulcha.jpg',
     recommendedHaltMin: 10
   },
   {
@@ -132,7 +132,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Howrah Platform 8 & 9 New Complex Food Plaza',
     irctcTip: 'Grab sealed earthen pots of Mishti Doi from authorized state dairy stalls (Mother Dairy / Haringhata).',
     mustTryItems: ['Baked Mishti Doi', 'Warm Rosogolla', 'Fish Finger Croquettes'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ce/Rasgulla_With_Rabdi.jpg/960px-Rasgulla_With_Rabdi.jpg',
+    imageUrl: '/images/gastronomy/kolkata_jalebi.jpg',
     recommendedHaltMin: 15
   },
   {
@@ -147,7 +147,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platform 1 Grand Concourse & Platform 4 Veg Stalls',
     irctcTip: 'Ask the coffee master for "Strong Meter Coffee" poured high between davarah and tumbler.',
     mustTryItems: ['Medu Vada with Sambar', 'Ghee Podi Idlis', 'Kumbakonam Degree Coffee'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/91/Kulhad_Chai.jpg/960px-Kulhad_Chai.jpg',
+    imageUrl: '/images/gastronomy/kharagpur_chai.jpg',
     recommendedHaltMin: 10
   },
   {
@@ -162,7 +162,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platform 1 IRCTC Food Plaza & Jan Aahaar',
     irctcTip: 'Litti stays fresh without refrigeration for over 48 hours, making it the ideal long-haul travel meal.',
     mustTryItems: ['Sattu Litti with Baingan Chokha', 'Tilkut Sweets', 'Khaja of Silao'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/aa/Samosa_13.jpg/960px-Samosa_13.jpg',
+    imageUrl: '/images/gastronomy/nagpur_tarri_poha.jpg',
     recommendedHaltMin: 10
   },
   {
@@ -177,7 +177,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platform 1 Main Entry Concourse & Refreshment Rooms',
     irctcTip: 'Pick up authentic boxed Mysore Pak certified by traditional sweet houses near Platform 1.',
     mustTryItems: ['Crispy Benne Dosa', 'Traditional Ghee Mysore Pak', 'Filter Coffee'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/91/Indian_Sweet_Dessert_Peda_in_a_white_bone_china_plate.jpg/960px-Indian_Sweet_Dessert_Peda_in_a_white_bone_china_plate.jpg',
+    imageUrl: '/images/gastronomy/barddhaman_mihidana.jpg',
     recommendedHaltMin: 10
   },
   {
@@ -192,7 +192,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platform 1 & 2 Station Stalls (Panchi Petha Authorized Kiosk)',
     irctcTip: 'Look for the green FSSAI and holographic seal on packaged Agra Petha to ensure authentic quality.',
     mustTryItems: ['Angoori Petha', 'Kesar Petha', 'Bedai with Hing Aloo Sabzi'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ce/Rasgulla_With_Rabdi.jpg/960px-Rasgulla_With_Rabdi.jpg',
+    imageUrl: '/images/gastronomy/barddhaman_mihidana.jpg',
     recommendedHaltMin: 10
   },
   {
@@ -207,7 +207,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platform 1 & 10 IRCTC Concourse & Alpha Hotel kiosk',
     irctcTip: 'Pre-order via IRCTC e-catering for freshly packed handi biryani delivered to your coach seat.',
     mustTryItems: ['Chicken Dum Biryani', 'Irani Kadak Chai', 'Osmania Biscuits'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/Hyderabadi_Chicken_Biryani.jpg/960px-Hyderabadi_Chicken_Biryani.jpg',
+    imageUrl: '/images/gastronomy/secunderabad_biryani.jpg',
     recommendedHaltMin: 15
   },
   {
@@ -222,7 +222,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platform 1 Overbridge Exit Stalls',
     irctcTip: 'Chitale Bakarwadi sells out by noon; grab your packets as soon as the train arrives.',
     mustTryItems: ['Puneri Misal Pav', 'Chitale Bandhu Bakarwadi', 'Mango Mastani'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/7/76/Misal_Pav.jpg/960px-Misal_Pav.jpg',
+    imageUrl: '/images/gastronomy/pune_misal_pav.jpg',
     recommendedHaltMin: 10
   },
   {
@@ -237,7 +237,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platform 1 Main Station Front & Concourse',
     irctcTip: 'Crush the hot kulcha between your palms before adding butter for optimal flaky crunch.',
     mustTryItems: ['Aloo Pyaaz Kulcha', 'Pindi Chole', 'Thick Malai Lassi'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0d/Amritsari_Kulcha_served_with_chhole.jpg/960px-Amritsari_Kulcha_served_with_chhole.jpg',
+    imageUrl: '/images/gastronomy/amritsar_kulcha.jpg',
     recommendedHaltMin: 15
   },
   {
@@ -252,7 +252,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platform 1 & 2 Station Tea Carts & Kudumbashree Stalls',
     irctcTip: 'Purchase coconut oil banana chips directly from verified Kudumbashree women self-help kiosks.',
     mustTryItems: ['Hot Pazham Pori', 'Fresh Coconut Oil Banana Chips', 'Spiced Sulaimani Chai'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f0/Banana_chips_%285484706054%29.jpg/960px-Banana_chips_%285484706054%29.jpg',
+    imageUrl: '/images/gastronomy/shoranur_banana_chips.jpg',
     recommendedHaltMin: 5
   },
   {
@@ -267,7 +267,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platform 1 Refreshment Rooms & Food Plaza',
     irctcTip: 'Ask the vendor for "Kam Teekha" (mild spice) if you are sensitive to black-pepper heat.',
     mustTryItems: ['Nagpur Tarri Poha', 'Santra Burfi', 'Roasted Chana'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/Poha.jpg/960px-Poha.jpg',
+    imageUrl: '/images/gastronomy/nagpur_tarri_poha.jpg',
     recommendedHaltMin: 10
   },
   {
@@ -282,7 +282,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platform 1 & Rani Kamlapati World-Class Concourse',
     irctcTip: 'Rani Kamlapati station features airport-style air-conditioned food plazas on the departure air concourse.',
     mustTryItems: ['Poha Jalebi Combo', 'Sulemani Salted Chai', 'Bhopali Biryani'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/91/Jalebi-_Kolkata_-_West_Bengal_-_DSC_0011.jpg/960px-Jalebi-_Kolkata_-_West_Bengal_-_DSC_0011.jpg',
+    imageUrl: '/images/gastronomy/kolkata_jalebi.jpg',
     recommendedHaltMin: 10
   },
   {
@@ -297,7 +297,7 @@ export const STATION_GASTRONOMY: StationDelicacy[] = [
     bestPlatformOrStall: 'Platform 1 Brijwasi Sweets Authorized Counter',
     irctcTip: 'Check the seal on Brijwasi boxes; authentic pedas stay fresh for up to 15 days without refrigeration.',
     mustTryItems: ['Kesar Mathura Peda', 'Makhan Mishri in Clay Cup', 'Bedmi Puri Aloo'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/91/Indian_Sweet_Dessert_Peda_in_a_white_bone_china_plate.jpg/960px-Indian_Sweet_Dessert_Peda_in_a_white_bone_china_plate.jpg',
+    imageUrl: '/images/gastronomy/mathura_peda.jpg',
     recommendedHaltMin: 5
   }
 ];
@@ -360,7 +360,7 @@ export function getStationGastronomy(stationCode?: string, stateName?: string): 
     bestPlatformOrStall: 'Main Platform IRCTC Authorized Refreshment Stalls',
     irctcTip: 'Always check that samosas are served fresh and hot from the wok, and verify the IRCTC printed MRP.',
     mustTryItems: ['Platform Hot Samosa', 'Cardamom Kulhad Tea', 'Fresh Bread Omelette'],
-    imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/aa/Samosa_13.jpg/960px-Samosa_13.jpg',
+    imageUrl: '/images/gastronomy/ratlam_sev.jpg',
     recommendedHaltMin: 5
   };
 }

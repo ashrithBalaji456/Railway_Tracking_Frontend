@@ -16,7 +16,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "The Konkan Railway Odyssey: Waterfalls, Viaducts & Coastal Cliffs",
     "subtitle": "Traversing 760 kilometers through 91 tunnels and 2,000 bridges across the formidable Western Ghats.",
     "category": "Scenic Routes",
-    "coverImage": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/93/DoodhSagar_WaterFall.jpg/960px-DoodhSagar_WaterFall.jpg",
+    "coverImage": "/images/blogs/konkan-railway-scenic-odyssey-1.jpg",
     "author": "Dr. E. Sreedharan & RailTrack Editorial",
     "authorRole": "Chief Infrastructure Editor",
     "readTimeMinutes": 8,
@@ -80,7 +80,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9c/Along_the_Konkan_Railway_track%2C_close_to_Ratnagiri%2C_Maharashtra.jpg/960px-Along_the_Konkan_Railway_track%2C_close_to_Ratnagiri%2C_Maharashtra.jpg",
+        "imageUrl": "/images/blogs/konkan-railway-scenic-odyssey-2.jpg",
         "caption": "Scenic Konkan Railway track winding through Ratnagiri cliffs",
         "altText": "Scenic Konkan Railway track winding through Ratnagiri cliffs"
       },
@@ -95,7 +95,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f3/Konkan_-_Western_Ghats_-_Scenes_from_India%27s_Konkan_Railway_08.JPG/960px-Konkan_-_Western_Ghats_-_Scenes_from_India%27s_Konkan_Railway_08.JPG",
+        "imageUrl": "/images/blogs/konkan-railway-scenic-odyssey-3.jpg",
         "caption": "Western Ghats emerald cliffs and river valleys along Konkan Railway",
         "altText": "Western Ghats emerald cliffs and river valleys along Konkan Railway"
       },
@@ -114,7 +114,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/79/Goa%2C_India._Ferry_boat%2C_railway_carrying_trucks_and_a_road_bridge_..._all_in_one_frame_at_Cortalim_-1.jpg/960px-Goa%2C_India._Ferry_boat%2C_railway_carrying_trucks_and_a_road_bridge_..._all_in_one_frame_at_Cortalim_-1.jpg",
+        "imageUrl": "/images/blogs/konkan-railway-scenic-odyssey-4.jpg",
         "caption": "Goa Zuari railway bridge carrying trains and trucks across coastal waters",
         "altText": "Goa Zuari railway bridge carrying trains and trucks across coastal waters"
       },
@@ -134,7 +134,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "Vande Bharat 2.0 & Beyond: Revolutionizing Indian Rail Mobility",
     "subtitle": "From semi-high speed day flyers with indigenous Kavach protection to aerodynamic 160 km/h overnight sleepers.",
     "category": "Train Tech",
-    "coverImage": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/Howrah%E2%80%93Puri_Vande_Bharat_Express_at_Balasore_railway_station_1.jpg/960px-Howrah%E2%80%93Puri_Vande_Bharat_Express_at_Balasore_railway_station_1.jpg",
+    "coverImage": "/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg",
     "author": "Sudhanshu Mani & Tech Rail Desk",
     "authorRole": "Principal Rolling Stock Designer",
     "readTimeMinutes": 7,
@@ -199,7 +199,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a0/Howrah%E2%80%93Puri_Vande_Bharat_Express_at_Balasore_railway_station_2.jpg/960px-Howrah%E2%80%93Puri_Vande_Bharat_Express_at_Balasore_railway_station_2.jpg",
+        "imageUrl": "/images/blogs/vande-bharat-evolution-future-sleeper-2.jpg",
         "caption": "Howrah\u2013Puri Vande Bharat Express at Balasore railway station 2",
         "altText": "Howrah\u2013Puri Vande Bharat Express at Balasore railway station 2"
       },
@@ -214,7 +214,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/31/Specially_Designed_Mini_Vande_Bharat_Express_train.jpg/960px-Specially_Designed_Mini_Vande_Bharat_Express_train.jpg",
+        "imageUrl": "/images/blogs/vande-bharat-evolution-future-sleeper-3.jpg",
         "caption": "Specially Designed Mini Vande Bharat Express train",
         "altText": "Specially Designed Mini Vande Bharat Express train"
       },
@@ -233,7 +233,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/af/Vande_Bharat_Express.jpg/960px-Vande_Bharat_Express.jpg",
+        "imageUrl": "/images/blogs/vande-bharat-evolution-future-sleeper-4.jpg",
         "caption": "Vande Bharat Express",
         "altText": "Vande Bharat Express"
       },
@@ -253,7 +253,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "The Pamban Sea Bridge: Engineering Across Ocean Waves to Rameswaram",
     "subtitle": "India\u2019s historic 2.06 km ocean cantilever bridge and the revolutionary new vertical-lift marvel.",
     "category": "Heritage & History",
-    "coverImage": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cd/%27Pamban_road_%26_rail_bridge%27.JPG/960px-%27Pamban_road_%26_rail_bridge%27.JPG",
+    "coverImage": "/images/blogs/pamban-sea-bridge-rameswaram-1.jpg",
     "author": "Maritime Engineering Bureau",
     "authorRole": "Marine Rail Historian",
     "readTimeMinutes": 6,
@@ -312,7 +312,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2a/A_Magnificient_Evening_Sunset_With_Pamban_Railway_Bridge_and_Boat_Mail_Express_Passes_Through_this_Pamban_Railway_Bridge_%21-.jpg/960px-A_Magnificient_Evening_Sunset_With_Pamban_Railway_Bridge_and_Boat_Mail_Express_Passes_Through_this_Pamban_Railway_Bridge_%21-.jpg",
+        "imageUrl": "/images/blogs/pamban-sea-bridge-rameswaram-2.jpg",
         "caption": "A Magnificient Evening Sunset With Pamban Railway Bridge and Boat Mail Express Passes Through this Pamban Railway Bridge !-",
         "altText": "A Magnificient Evening Sunset With Pamban Railway Bridge and Boat Mail Express Passes Through this Pamban Railway Bridge !-"
       },
@@ -327,7 +327,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d7/Annai_Indira_Gandhi_Road_Bridge.jpg/960px-Annai_Indira_Gandhi_Road_Bridge.jpg",
+        "imageUrl": "/images/blogs/pamban-sea-bridge-rameswaram-3.jpg",
         "caption": "Annai Indira Gandhi Road Bridge",
         "altText": "Annai Indira Gandhi Road Bridge"
       },
@@ -346,7 +346,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/48/Old_Pamban_bridge_remains.jpg/960px-Old_Pamban_bridge_remains.jpg",
+        "imageUrl": "/images/blogs/pamban-sea-bridge-rameswaram-4.jpg",
         "caption": "Old Pamban bridge remains",
         "altText": "Old Pamban bridge remains"
       },
@@ -366,7 +366,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "CSMT Mumbai: The Living Victorian Gothic Legend of Indian Railways",
     "subtitle": "Discover the UNESCO World Heritage terminus where stone gargoyles meet 3 million daily suburban commuters.",
     "category": "Heritage & History",
-    "coverImage": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/49/Chatrapati_Shivaji_Terminus_Bombay.jpg/960px-Chatrapati_Shivaji_Terminus_Bombay.jpg",
+    "coverImage": "/images/blogs/csmt-mumbai-unesco-gothic-wonder-1.jpg",
     "author": "Heritage Architecture Trust",
     "authorRole": "Colonial Heritage Curator",
     "readTimeMinutes": 6,
@@ -430,7 +430,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2d/Chhatrapati_Shivaji_Maharaj_Terminus_%2833904%29.jpg/960px-Chhatrapati_Shivaji_Maharaj_Terminus_%2833904%29.jpg",
+        "imageUrl": "/images/blogs/csmt-mumbai-unesco-gothic-wonder-2.jpg",
         "caption": "Chhatrapati Shivaji Maharaj Terminus (33904)",
         "altText": "Chhatrapati Shivaji Maharaj Terminus (33904)"
       },
@@ -445,7 +445,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/33/Chhatrapati_Shivaji_Maharaj_Terminus_%2840042%29.jpg/960px-Chhatrapati_Shivaji_Maharaj_Terminus_%2840042%29.jpg",
+        "imageUrl": "/images/blogs/csmt-mumbai-unesco-gothic-wonder-3.jpg",
         "caption": "Chhatrapati Shivaji Maharaj Terminus (40042)",
         "altText": "Chhatrapati Shivaji Maharaj Terminus (40042)"
       },
@@ -464,7 +464,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Chhatrapati_Shivaji_Maharaj_Terminus_%2852417%29.jpg/960px-Chhatrapati_Shivaji_Maharaj_Terminus_%2852417%29.jpg",
+        "imageUrl": "/images/blogs/csmt-mumbai-unesco-gothic-wonder-4.jpg",
         "caption": "Chhatrapati Shivaji Maharaj Terminus (52417)",
         "altText": "Chhatrapati Shivaji Maharaj Terminus (52417)"
       },
@@ -484,7 +484,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "Kalka-Shimla Mountain Railway: 102 Tunnels Through Himalayan Pines",
     "subtitle": "Step into a storybook 2-foot-6-inch gauge mountain railway ascending 1,425 meters into the mist.",
     "category": "Scenic Routes",
-    "coverImage": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/92/Kalka-Shimla_Railway_%281%29.jpg/960px-Kalka-Shimla_Railway_%281%29.jpg",
+    "coverImage": "/images/blogs/kalka-shimla-unesco-toy-train-1.jpg",
     "author": "Himalayan Mountain Rail Club",
     "authorRole": "Mountain Railway Historian",
     "readTimeMinutes": 7,
@@ -549,7 +549,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Kalka-Shimla_Railway_%282%29.jpg/960px-Kalka-Shimla_Railway_%282%29.jpg",
+        "imageUrl": "/images/blogs/kalka-shimla-unesco-toy-train-2.jpg",
         "caption": "Kalka-Shimla Railway (2)",
         "altText": "Kalka-Shimla Railway (2)"
       },
@@ -564,7 +564,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/Kalka_Shimla_railway_and_NH_5.jpg/960px-Kalka_Shimla_railway_and_NH_5.jpg",
+        "imageUrl": "/images/blogs/kalka-shimla-unesco-toy-train-3.jpg",
         "caption": "Kalka Shimla railway and NH 5",
         "altText": "Kalka Shimla railway and NH 5"
       },
@@ -583,7 +583,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a0/Kalka_to_shimla_railway_path.jpg/960px-Kalka_to_shimla_railway_path.jpg",
+        "imageUrl": "/images/blogs/kalka-shimla-unesco-toy-train-4.jpg",
         "caption": "Kalka to shimla railway path",
         "altText": "Kalka to shimla railway path"
       },
@@ -603,7 +603,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "Nilgiri Mountain Railway: Blue Mountain Steam on Asia's Steepest Rack Track",
     "subtitle": "Discover the century-old Swiss Abt rack-and-pinion system pushing heritage coaches up into the clouds of Ooty.",
     "category": "Scenic Routes",
-    "coverImage": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fd/Blue_Mountain_Nilgiri_India_Railway.jpg/960px-Blue_Mountain_Nilgiri_India_Railway.jpg",
+    "coverImage": "/images/blogs/nilgiri-mountain-railway-rack-pinion-1.jpg",
     "author": "Southern Mountain Rail Guild",
     "authorRole": "Senior Locomotive Engineer",
     "readTimeMinutes": 7,
@@ -663,7 +663,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4b/Hillgrove_Station%2C_Nilgiri_Mountain_Railways%2C_India.jpg/960px-Hillgrove_Station%2C_Nilgiri_Mountain_Railways%2C_India.jpg",
+        "imageUrl": "/images/blogs/nilgiri-mountain-railway-rack-pinion-2.jpg",
         "caption": "Hillgrove Station, Nilgiri Mountain Railways, India",
         "altText": "Hillgrove Station, Nilgiri Mountain Railways, India"
       },
@@ -678,7 +678,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2b/NMR_up_train_at_Kateri_Road_05-02-28_04.jpeg/960px-NMR_up_train_at_Kateri_Road_05-02-28_04.jpeg",
+        "imageUrl": "/images/blogs/nilgiri-mountain-railway-rack-pinion-3.jpg",
         "caption": "NMR up train at Kateri Road 05-02-28 04",
         "altText": "NMR up train at Kateri Road 05-02-28 04"
       },
@@ -697,7 +697,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/Nilgiri_-_mike.jpg/960px-Nilgiri_-_mike.jpg",
+        "imageUrl": "/images/blogs/nilgiri-mountain-railway-rack-pinion-4.jpg",
         "caption": "Nilgiri - mike",
         "altText": "Nilgiri - mike"
       },
@@ -717,7 +717,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "Mastering the Tatkal Rush: Pro Rules, Timers & Master List Shortcuts",
     "subtitle": "Everything you need to know about 10:00 AM AC and 11:00 AM Non-AC quotas, payment gateways, and seat confirmation.",
     "category": "Travel Tips",
-    "coverImage": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/43/A_Passenger_train_standing_on_PF_3_of_Patna_Junction.jpg/960px-A_Passenger_train_standing_on_PF_3_of_Patna_Junction.jpg",
+    "coverImage": "/images/blogs/mastering-irctc-tatkal-booking-rules-1.jpg",
     "author": "IRCTC Ticketing Strategist",
     "authorRole": "Ticketing Operations Analyst",
     "readTimeMinutes": 5,
@@ -777,7 +777,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/A_passenger_train_on_Platform_3_of_Patna_Junction.jpg/960px-A_passenger_train_on_Platform_3_of_Patna_Junction.jpg",
+        "imageUrl": "/images/blogs/mastering-irctc-tatkal-booking-rules-2.jpg",
         "caption": "A passenger train on Platform 3 of Patna Junction",
         "altText": "A passenger train on Platform 3 of Patna Junction"
       },
@@ -792,7 +792,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e8/Bongaigaon_%28BNGN%29_Passenger.jpg/960px-Bongaigaon_%28BNGN%29_Passenger.jpg",
+        "imageUrl": "/images/blogs/mastering-irctc-tatkal-booking-rules-3.jpg",
         "caption": "Bongaigaon (BNGN) Passenger",
         "altText": "Bongaigaon (BNGN) Passenger"
       },
@@ -811,7 +811,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/88/Butibori_Railway_Platform_-_panoramio.jpg/960px-Butibori_Railway_Platform_-_panoramio.jpg",
+        "imageUrl": "/images/blogs/mastering-irctc-tatkal-booking-rules-4.jpg",
         "caption": "Butibori Railway Platform - panoramio",
         "altText": "Butibori Railway Platform - panoramio"
       },
@@ -831,7 +831,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "Trackside Gastronomy: The Iconic Bites of Indian Railways Platforms",
     "subtitle": "From Ratlam's fiery clove sev and Kharagpur's kulhad chai to Vijayawada's mirchi bajji and hot e-catering.",
     "category": "Food & Culture",
-    "coverImage": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Vada_Pav-Indian_street_food.JPG/960px-Vada_Pav-Indian_street_food.JPG",
+    "coverImage": "/images/blogs/iconic-station-food-indian-railways-1.jpg",
     "author": "Culinary Rail Traveler",
     "authorRole": "Trackside Food Journalist",
     "readTimeMinutes": 6,
@@ -891,7 +891,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/aa/Samosa_13.jpg/960px-Samosa_13.jpg",
+        "imageUrl": "/images/blogs/iconic-station-food-indian-railways-2.jpg",
         "caption": "Steaming hot platform samosas with green chutney",
         "altText": "Steaming hot platform samosas with green chutney"
       },
@@ -906,7 +906,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/Hyderabadi_Chicken_Biryani.jpg/960px-Hyderabadi_Chicken_Biryani.jpg",
+        "imageUrl": "/images/blogs/iconic-station-food-indian-railways-3.jpg",
         "caption": "Hyderabadi Chicken Biryani",
         "altText": "Hyderabadi Chicken Biryani"
       },
@@ -925,13 +925,13 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/91/Kulhad_Chai.jpg/960px-Kulhad_Chai.jpg",
+        "imageUrl": "/images/blogs/iconic-station-food-indian-railways-4.jpg",
         "caption": "Traditional earthen Kulhad Chai on railway platform",
         "altText": "Traditional earthen Kulhad Chai on railway platform"
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/Poha.jpg/960px-Poha.jpg",
+        "imageUrl": "/images/blogs/iconic-station-food-indian-railways-5.jpg",
         "caption": "Fluffy turmeric Poha topped with Ratlam sev",
         "altText": "Fluffy turmeric Poha topped with Ratlam sev"
       },
@@ -951,7 +951,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "Maharajas' Express: World\u2019s Leading Luxury Train & Royal Palaces on Rails",
     "subtitle": "Step aboard the half-mile-long royal train that redefined luxury with presidential suites, royal dining cars, and private butler service.",
     "category": "Train Tech",
-    "coverImage": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/da/Indische_Luxus_Zugs.jpg/960px-Indische_Luxus_Zugs.jpg",
+    "coverImage": "/images/blogs/maharajas-express-world-leading-luxury-1.jpg",
     "author": "Luxury Travel Connoisseur",
     "authorRole": "Luxury Rail Inspector",
     "readTimeMinutes": 8,
@@ -1011,7 +1011,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cc/Luxary_ICF_Train-_Maharajas_Express..jpg/960px-Luxary_ICF_Train-_Maharajas_Express..jpg",
+        "imageUrl": "/images/blogs/maharajas-express-world-leading-luxury-2.jpg",
         "caption": "Luxary ICF Train- Maharajas Express.",
         "altText": "Luxary ICF Train- Maharajas Express."
       },
@@ -1026,7 +1026,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/76/Luxary_ICF_Train-_Maharajas_Express._2.jpg/960px-Luxary_ICF_Train-_Maharajas_Express._2.jpg",
+        "imageUrl": "/images/blogs/maharajas-express-world-leading-luxury-3.jpg",
         "caption": "Luxary ICF Train- Maharajas Express. 2",
         "altText": "Luxary ICF Train- Maharajas Express. 2"
       },
@@ -1045,13 +1045,13 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/37/Luxary_ICF_Train-_Maharajas_Express._3.jpg/960px-Luxary_ICF_Train-_Maharajas_Express._3.jpg",
+        "imageUrl": "/images/blogs/maharajas-express-world-leading-luxury-4.jpg",
         "caption": "Luxary ICF Train- Maharajas Express. 3",
         "altText": "Luxary ICF Train- Maharajas Express. 3"
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/Luxary_ICF_Train-_Maharajas_Express._4.jpg/960px-Luxary_ICF_Train-_Maharajas_Express._4.jpg",
+        "imageUrl": "/images/blogs/maharajas-express-world-leading-luxury-5.jpg",
         "caption": "Luxary ICF Train- Maharajas Express. 4",
         "altText": "Luxary ICF Train- Maharajas Express. 4"
       },
@@ -1071,7 +1071,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "Palace on Wheels: The Sovereign Desert Odyssey Across Rajasthan",
     "subtitle": "Discover India\u2019s original royal train that turned the private hunting saloons of Maharajas into a desert cruise.",
     "category": "Heritage & History",
-    "coverImage": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3a/Bar_%26_lounge_area_of_Palace_on_Wheels_Luxury_Train_India.jpg/960px-Bar_%26_lounge_area_of_Palace_on_Wheels_Luxury_Train_India.jpg",
+    "coverImage": "/images/blogs/palace-on-wheels-sovereign-desert-odyssey-1.jpg",
     "author": "Rajasthan Heritage Board",
     "authorRole": "Desert Circuit Historian",
     "readTimeMinutes": 7,
@@ -1131,7 +1131,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/Deluxe_%27Ruby%27_room_of_Palace_on_wheels_luxury_train-India.jpg/960px-Deluxe_%27Ruby%27_room_of_Palace_on_wheels_luxury_train-India.jpg",
+        "imageUrl": "/images/blogs/palace-on-wheels-sovereign-desert-odyssey-2.jpg",
         "caption": "Deluxe 'Ruby' room of Palace on wheels luxury train-India",
         "altText": "Deluxe 'Ruby' room of Palace on wheels luxury train-India"
       },
@@ -1146,7 +1146,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/79/Jaisalmer_%284445497897%29.jpg/960px-Jaisalmer_%284445497897%29.jpg",
+        "imageUrl": "/images/blogs/palace-on-wheels-sovereign-desert-odyssey-3.jpg",
         "caption": "Jaisalmer (4445497897)",
         "altText": "Jaisalmer (4445497897)"
       },
@@ -1165,13 +1165,13 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5a/Maharaja_Restaurant_on_Palace_on_Wheels_Luxury_Train_India.jpg/960px-Maharaja_Restaurant_on_Palace_on_Wheels_Luxury_Train_India.jpg",
+        "imageUrl": "/images/blogs/palace-on-wheels-sovereign-desert-odyssey-4.jpg",
         "caption": "Maharaja Restaurant on Palace on Wheels Luxury Train India",
         "altText": "Maharaja Restaurant on Palace on Wheels Luxury Train India"
       },
       {
         "type": "image",
-        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/7/72/Palace_on_Wheels-_Cabin.jpg",
+        "imageUrl": "/images/blogs/palace-on-wheels-sovereign-desert-odyssey-5.jpg",
         "caption": "Palace on Wheels- Cabin",
         "altText": "Palace on Wheels- Cabin"
       },
@@ -1191,7 +1191,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "Darjeeling Himalayan Railway: The UNESCO Steam Toy Train of the Tea Clouds",
     "subtitle": "Discover the 2-foot narrow gauge miracle built in 1881 that spirals up to India\u2019s highest station at Ghum.",
     "category": "Scenic Routes",
-    "coverImage": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/08/Darjeeling_Himalayan_Railway%2Ctoy_train_%281%29.jpg/960px-Darjeeling_Himalayan_Railway%2Ctoy_train_%281%29.jpg",
+    "coverImage": "/images/blogs/darjeeling-himalayan-railway-unesco-toy-train-1.jpg",
     "author": "Darjeeling Rail Heritage Trust",
     "authorRole": "Eastern Himalayan Rail Researcher",
     "readTimeMinutes": 8,
@@ -1252,7 +1252,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/be/Darjeeling_Himalayan_Railway%2Ctoy_train_%282%29.jpg/960px-Darjeeling_Himalayan_Railway%2Ctoy_train_%282%29.jpg",
+        "imageUrl": "/images/blogs/darjeeling-himalayan-railway-unesco-toy-train-2.jpg",
         "caption": "Darjeeling Himalayan Railway,toy train (2)",
         "altText": "Darjeeling Himalayan Railway,toy train (2)"
       },
@@ -1267,7 +1267,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/Darjeeling_Himalayan_Railway%2Ctoy_train_%283%29.jpg/960px-Darjeeling_Himalayan_Railway%2Ctoy_train_%283%29.jpg",
+        "imageUrl": "/images/blogs/darjeeling-himalayan-railway-unesco-toy-train-3.jpg",
         "caption": "Darjeeling Himalayan Railway,toy train (3)",
         "altText": "Darjeeling Himalayan Railway,toy train (3)"
       },
@@ -1286,13 +1286,13 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/Darjeeling_Himalayan_Railway%2Ctoy_train_%284%29.jpg/960px-Darjeeling_Himalayan_Railway%2Ctoy_train_%284%29.jpg",
+        "imageUrl": "/images/blogs/darjeeling-himalayan-railway-unesco-toy-train-4.jpg",
         "caption": "Darjeeling Himalayan Railway,toy train (4)",
         "altText": "Darjeeling Himalayan Railway,toy train (4)"
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9c/Darjeeling_Himalayan_Railway%2Ctoy_train_%287%29.jpg/960px-Darjeeling_Himalayan_Railway%2Ctoy_train_%287%29.jpg",
+        "imageUrl": "/images/blogs/darjeeling-himalayan-railway-unesco-toy-train-5.jpg",
         "caption": "Darjeeling Himalayan Railway,toy train (7)",
         "altText": "Darjeeling Himalayan Railway,toy train (7)"
       },
@@ -1312,7 +1312,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "The Golden Chariot & Deccan Odyssey: Royal Heritage Rails of South & West",
     "subtitle": "Journey through the stone temples of Hampi, the Ajanta caves, and golden Konkan beaches on India\u2019s southern and western luxury cruisers.",
     "category": "Heritage & History",
-    "coverImage": "https://upload.wikimedia.org/wikipedia/commons/a/a4/The_Golden_Chariot_at_platform_%28India%29.jpg",
+    "coverImage": "/images/blogs/golden-chariot-deccan-odyssey-heritage-rails-1.jpg",
     "author": "Deccan Rail Heritage Trust",
     "authorRole": "Dravidian Heritage Consultant",
     "readTimeMinutes": 7,
@@ -1373,7 +1373,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/Deccan-Odyssey.jpg/960px-Deccan-Odyssey.jpg",
+        "imageUrl": "/images/blogs/golden-chariot-deccan-odyssey-heritage-rails-2.jpg",
         "caption": "Deccan Odyssey luxury train traversing Maharashtra",
         "altText": "Deccan Odyssey luxury train traversing Maharashtra"
       },
@@ -1388,7 +1388,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/aa/Royal_Rajasthan_on_Wheels%2C_India%27s_new_luxury_train%2C_Restro_Lounge_Swarn_Mahal.jpg/960px-Royal_Rajasthan_on_Wheels%2C_India%27s_new_luxury_train%2C_Restro_Lounge_Swarn_Mahal.jpg",
+        "imageUrl": "/images/blogs/golden-chariot-deccan-odyssey-heritage-rails-3.jpg",
         "caption": "Swarn Mahal restaurant lounge of Royal luxury train",
         "altText": "Swarn Mahal restaurant lounge of Royal luxury train"
       },
@@ -1407,13 +1407,13 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/53/Royal_Rajasthan_on_Wheels%2C_India%27s_new_luxury_train%2C_deluxe_saloon%2C_Pearl.jpg/960px-Royal_Rajasthan_on_Wheels%2C_India%27s_new_luxury_train%2C_deluxe_saloon%2C_Pearl.jpg",
+        "imageUrl": "/images/blogs/golden-chariot-deccan-odyssey-heritage-rails-4.jpg",
         "caption": "Deluxe Pearl saloon carriage of luxury train",
         "altText": "Deluxe Pearl saloon carriage of luxury train"
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5b/GKN_Golden_Chariot_DSC_0730.JPG/960px-GKN_Golden_Chariot_DSC_0730.JPG",
+        "imageUrl": "/images/blogs/golden-chariot-deccan-odyssey-heritage-rails-5.jpg",
         "caption": "GKN Golden Chariot heritage saloon",
         "altText": "GKN Golden Chariot heritage saloon"
       },
@@ -1433,7 +1433,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "1853 to Present: The Epic Chronicle & Complete History of Indian Railways",
     "subtitle": "From the maiden 34 km journey between Bori Bunder and Thane to the world\u2019s fourth-largest rail network and 100% green electrification.",
     "category": "Heritage & History",
-    "coverImage": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/ff/Chhatrapati_Shivaji_Maharaj_Terminus_-_Mumbai_-_Maharashtra_-_IMG_0703.jpg/960px-Chhatrapati_Shivaji_Maharaj_Terminus_-_Mumbai_-_Maharashtra_-_IMG_0703.jpg",
+    "coverImage": "/images/blogs/epic-history-indian-railways-1853-to-future-1.jpg",
     "author": "Indian Railways Historical Society",
     "authorRole": "Chief Archivist",
     "readTimeMinutes": 10,
@@ -1494,7 +1494,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/36/Fairy_Queen.JPG/960px-Fairy_Queen.JPG",
+        "imageUrl": "/images/blogs/epic-history-indian-railways-1853-to-future-2.jpg",
         "caption": "The legendary 1855 Fairy Queen steam locomotive preserved in working condition",
         "altText": "The legendary 1855 Fairy Queen steam locomotive preserved in working condition"
       },
@@ -1509,7 +1509,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d9/Fairy_Queen_Engine.jpg/960px-Fairy_Queen_Engine.jpg",
+        "imageUrl": "/images/blogs/epic-history-indian-railways-1853-to-future-3.jpg",
         "caption": "Fairy Queen steam engine driving gear and polished brass boiler",
         "altText": "Fairy Queen steam engine driving gear and polished brass boiler"
       },
@@ -1528,13 +1528,13 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/42/Early_GIPR_Railway_Timetable%2C_Bombay_Times_8-4-1853.jpg/960px-Early_GIPR_Railway_Timetable%2C_Bombay_Times_8-4-1853.jpg",
+        "imageUrl": "/images/blogs/epic-history-indian-railways-1853-to-future-4.jpg",
         "caption": "Original 1853 Great Indian Peninsula Railway timetable published in Bombay Times",
         "altText": "Original 1853 Great Indian Peninsula Railway timetable published in Bombay Times"
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1c/Rewari_Railway_Heritage_Museum.JPG/960px-Rewari_Railway_Heritage_Museum.JPG",
+        "imageUrl": "/images/blogs/epic-history-indian-railways-1853-to-future-5.jpg",
         "caption": "Rewari Railway Heritage Steam Locomotive Shed and Museum",
         "altText": "Rewari Railway Heritage Steam Locomotive Shed and Museum"
       },
@@ -1554,7 +1554,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
     "title": "Matheran Hill Railway: Asia\u2019s Automobile-Free Forest Toy Train",
     "subtitle": "Ascend 281 sharp horseshoe curves and dense Western Ghats monsoon jungle into India\u2019s only vehicle-free hill station.",
     "category": "Scenic Routes",
-    "coverImage": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6a/MHR_train_at_Matheran_Station.jpg/960px-MHR_train_at_Matheran_Station.jpg",
+    "coverImage": "/images/blogs/matheran-hill-railway-forest-toy-train-1.jpg",
     "author": "Western Ghats Heritage Group",
     "authorRole": "Sahyadri Heritage Chronicler",
     "readTimeMinutes": 6,
@@ -1614,7 +1614,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/21/Curve_on_Matheran_Hill_railway.JPG/960px-Curve_on_Matheran_Hill_railway.JPG",
+        "imageUrl": "/images/blogs/matheran-hill-railway-forest-toy-train-2.jpg",
         "caption": "Sharp mountain curve on Matheran Hill Railway",
         "altText": "Sharp mountain curve on Matheran Hill Railway"
       },
@@ -1629,7 +1629,7 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/96/Neral_Junction_Railway_Station.JPG/960px-Neral_Junction_Railway_Station.JPG",
+        "imageUrl": "/images/blogs/matheran-hill-railway-forest-toy-train-3.jpg",
         "caption": "Neral Junction station, the foothill gateway to Matheran",
         "altText": "Neral Junction station, the foothill gateway to Matheran"
       },
@@ -1648,13 +1648,13 @@ export const FALLBACK_BLOGS: BlogArticle[] = [
       },
       {
         "type": "image",
-        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f4/I_am_standing_between_the_Railway_track_of_Pipeline_station%2C_at_Matheran_railway.jpg",
+        "imageUrl": "/images/blogs/matheran-hill-railway-forest-toy-train-4.jpg",
         "caption": "Narrow gauge railway track meandering along Pipeline station",
         "altText": "Narrow gauge railway track meandering along Pipeline station"
       },
       {
         "type": "image",
-        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ee/551%2C_Matheran_Hill_Railway_%282533318533%29.jpg",
+        "imageUrl": "/images/blogs/matheran-hill-railway-forest-toy-train-5.jpg",
         "caption": "Matheran light railway passenger coaches in the Sahyadri mountains",
         "altText": "Matheran light railway passenger coaches in the Sahyadri mountains"
       },
