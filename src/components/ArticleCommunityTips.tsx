@@ -179,6 +179,44 @@ export default function ArticleCommunityTips({ slug }: ArticleCommunityTipsProps
             createdAt: new Date().toISOString()
           }
         ],
+                'pamban-sea-bridge-rameswaram': [
+          {
+            id: 'pb-tip-1',
+            articleSlug: slug,
+            authorName: 'R. Senthil Kumar',
+            authorHandle: '@senthil_marine',
+            category: 'SCENIC_SPOT',
+            tipText: 'Reserve left-side window seats when traveling toward Rameswaram Island to watch local fishing boats navigate beneath the open Scherzer lift span amidst turquoise sea waves!',
+            photoUrl: '/images/blogs/advice-pamban-ocean-window.jpg',
+            travelDate: 'October 2026',
+            likesCount: 54,
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 'pb-tip-2',
+            articleSlug: slug,
+            authorName: 'Meenakshi Sundaram',
+            authorHandle: '@meenakshi_travels',
+            category: 'FOOD_TIP',
+            tipText: "At Mandapam and Rameswaram junction stalls, don't miss the freshly steamed hot idli-vada with piping hot sambar, coconut chutney, and cooling nannari sarbath!",
+            photoUrl: '/images/blogs/advice-pamban-station-snacks.jpg',
+            travelDate: 'October 2026',
+            likesCount: 37,
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 'pb-tip-3',
+            articleSlug: slug,
+            authorName: 'Capt. Harish Nair',
+            authorHandle: '@harish_voyages',
+            category: 'PHOTOGRAPHY',
+            tipText: 'Catch the legendary Boat Mail Express during the 5:30 PM golden hour when the train slows to 15 km/h, offering an unforgettable ocean sunset reflecting across the Palk Strait!',
+            photoUrl: '/images/blogs/advice-pamban-sunset-crossing.jpg',
+            travelDate: 'October 2026',
+            likesCount: 49,
+            createdAt: new Date().toISOString()
+          }
+        ],
         'konkan-railway-scenic-odyssey': [
           {
             id: 'kr-tip-1',
@@ -207,7 +245,7 @@ export default function ArticleCommunityTips({ slug }: ArticleCommunityTipsProps
         ]
       };
 
-      const defaultTips = DEFAULT_TIPS_BY_SLUG[slug] || DEFAULT_TIPS_BY_SLUG['konkan-railway-scenic-odyssey'];
+      const defaultTips = DEFAULT_TIPS_BY_SLUG[slug] || [];
 
       try {
         const res = await getArticleTips(slug);
