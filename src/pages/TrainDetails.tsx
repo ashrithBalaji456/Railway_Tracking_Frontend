@@ -8,6 +8,7 @@ import { translateName } from '../utils/transliteration';
 import { getStationDisplayName } from '../utils/stationUtils';
 import { searchHistoryService } from '../services/searchHistoryService';
 import { getStationGastronomyBadge, type StationDelicacy } from '../data/stationGastronomy';
+import { getDepartedWindowInfo } from '../utils/liveStatusUtils';
 
 interface StationSelectorDropdownProps {
   label: string;
@@ -1162,7 +1163,12 @@ export default function TrainDetails() {
   const format12Hour = (timeStr: string) => {
     if (!timeStr) return '';
     try {
-      const [h, m] = timeStr.split(':');
+      let clean = timeStr.trim();
+      if (clean.includes('T')) {
+        const idx = clean.indexOf('T');
+        clean = clean.substring(idx + 1, idx + 6);
+      }
+      const [h, m] = clean.split(':');
       const hour = parseInt(h);
       const ampm = hour >= 12 ? 'PM' : 'AM';
       const formattedHour = hour % 12 || 12;
@@ -2740,21 +2746,61 @@ export default function TrainDetails() {
                               </span>
                             )}
                             {showLive && liveStop && liveStop.status && (
-                              <span className={`px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider border transition-all ${
-                                isStationCancelled || liveStop.status?.toLowerCase()?.includes('cancel')
-                                  ? 'bg-rose-950/60 border-rose-800/50 text-rose-300'
-                                  : liveStop.status?.toUpperCase() === 'DEPARTED'
-                                  ? 'bg-indigo-950/60 border-indigo-800/50 text-indigo-300'
-                                  : liveStop.status?.toUpperCase() === 'ARRIVED'
-                                  ? 'bg-emerald-950/60 border-emerald-800/50 text-emerald-300'
-                                  : liveStop.status?.toUpperCase() === 'UPCOMING'
-                                  ? 'bg-sky-950/60 border-sky-800/50 text-sky-300'
-                                  : liveStop.status?.toUpperCase() === 'SCHEDULED'
-                                  ? 'bg-slate-950 border-slate-800 text-slate-400'
-                                  : 'bg-slate-900 border-slate-700 text-slate-300'
-                              }`}>
-                                {isStationCancelled ? 'Cancelled' : liveStop.status.toUpperCase()}
-                              </span>
+                              (() => {
+                                if (isStationCancelled || liveStop.status?.toLowerCase()?.includes('cancel')) {
+                                  return (
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider border bg-rose-950/60 border-rose-800/50 text-rose-300">
+                                      Cancelled
+                                    </span>
+                                  );
+                                }
+                                const isDeparted = liveStop.status?.toUpperCase() === 'DEPARTED';
+                                const depWindow = getDepartedWindowInfo(liveStop.actualDeparture, 7);
+
+                                if (depWindow.isWithinWindow) {
+                                  // Prominent temporary red DEPARTED badge for 7 minutes after confirmed departure
+                                  return (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider border bg-red-950/80 border-red-500/60 text-red-300 shadow-sm shadow-red-950/50">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                                      DEPARTED
+                                    </span>
+                                  );
+                                }
+                                if (isDeparted) {
+                                  // After 7 minutes: standard post-departure status
+                                  return (
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider border bg-indigo-950/60 border-indigo-800/50 text-indigo-300">
+                                      DEPARTED
+                                    </span>
+                                  );
+                                }
+                                if (liveStop.status?.toUpperCase() === 'ARRIVED') {
+                                  return (
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider border bg-emerald-950/60 border-emerald-800/50 text-emerald-300">
+                                      ARRIVED
+                                    </span>
+                                  );
+                                }
+                                if (liveStop.status?.toUpperCase() === 'UPCOMING') {
+                                  return (
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider border bg-sky-950/60 border-sky-800/50 text-sky-300">
+                                      UPCOMING
+                                    </span>
+                                  );
+                                }
+                                if (liveStop.status?.toUpperCase() === 'SCHEDULED') {
+                                  return (
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider border bg-slate-950 border-slate-800 text-slate-400">
+                                      SCHEDULED
+                                    </span>
+                                  );
+                                }
+                                return (
+                                  <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider border bg-slate-900 border-slate-700 text-slate-300">
+                                    {liveStop.status.toUpperCase()}
+                                  </span>
+                                );
+                              })()
                             )}
                             {showLive && liveStop && liveStop.delayMinutes !== undefined && liveStop.delayMinutes !== null && !isStationCancelled && (
                               <span className={`px-1.5 py-0.2 rounded text-[8px] sm:text-[9px] font-bold ${

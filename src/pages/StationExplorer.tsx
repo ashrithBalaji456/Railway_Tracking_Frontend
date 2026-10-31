@@ -9,6 +9,7 @@ import RecentSearchesDropdown from '../components/RecentSearchesDropdown';
 import { getStationDisplayName } from '../utils/stationUtils';
 import { getStationGastronomy, STATION_GASTRONOMY } from '../data/stationGastronomy';
 import { STATION_AMENITIES, type StationAmenity, getStationAmenitiesForStation, getStationCategoryDetails } from '../data/stationAmenities';
+import { getDepartedWindowInfo, formatTimeForDisplay } from '../utils/liveStatusUtils';
 import { X } from 'lucide-react';
 
 export default function StationExplorer() {
@@ -378,54 +379,32 @@ export default function StationExplorer() {
 
   const renderLiveStatusBadge = (trainOrStatus: any) => {
     let s = typeof trainOrStatus === 'string' ? trainOrStatus : (trainOrStatus?.liveStatus || 'SCHEDULED');
+    const actDep = typeof trainOrStatus === 'object' && trainOrStatus !== null ? trainOrStatus.actualDeparture : null;
+    const actArr = typeof trainOrStatus === 'object' && trainOrStatus !== null ? trainOrStatus.actualArrival : null;
 
-    // Automatic reconciliation with actual times or elapsed expected times
-    if (typeof trainOrStatus === 'object' && trainOrStatus !== null) {
-      const actDep = trainOrStatus.actualDeparture;
-      const actArr = trainOrStatus.actualArrival;
-      if (actDep && actDep.trim() !== '') {
-        s = 'DEPARTED';
-      } else if (actArr && actArr.trim() !== '') {
-        s = 'ARRIVED';
-      } else if (s === 'UPCOMING' || s === 'SCHEDULED') {
-        const delay = trainOrStatus.delayMinutes || 0;
-        const parseTimeMins = (tStr?: string) => {
-          if (!tStr) return null;
-          let clean = tStr.trim();
-          if (clean.includes('T')) {
-            const idx = clean.indexOf('T');
-            clean = clean.substring(idx + 1, idx + 6);
-          } else if (clean.length > 5 && clean.includes(':')) {
-            clean = clean.substring(0, 5);
-          }
-          const parts = clean.split(':');
-          if (parts.length < 2) return null;
-          const h = parseInt(parts[0], 10);
-          const m = parseInt(parts[1], 10);
-          return isNaN(h) || isNaN(m) ? null : h * 60 + m;
-        };
-
-        const now = new Date();
-        const nowMins = now.getHours() * 60 + now.getMinutes();
-
-        let depM = parseTimeMins(trainOrStatus.expectedDeparture);
-        let arrM = parseTimeMins(trainOrStatus.expectedArrival);
-
-        if (depM === null && trainOrStatus.scheduledDeparture) {
-          const schM = parseTimeMins(trainOrStatus.scheduledDeparture);
-          if (schM !== null) depM = (schM + delay) % 1440;
-        }
-        if (arrM === null && trainOrStatus.scheduledArrival) {
-          const schA = parseTimeMins(trainOrStatus.scheduledArrival);
-          if (schA !== null) arrM = (schA + delay) % 1440;
-        }
-
-        if (depM !== null && nowMins >= depM) {
-          s = 'DEPARTED';
-        } else if (arrM !== null && nowMins >= arrM) {
-          s = 'ARRIVED';
-        }
+    // Check confirmed actual departure for temporary 7-minute window
+    if (actDep && typeof actDep === 'string' && actDep.trim() !== '') {
+      const depWindow = getDepartedWindowInfo(actDep, 7);
+      if (depWindow.isWithinWindow) {
+        // Prominent temporary red DEPARTED badge for 7 minutes after confirmed departure
+        return (
+          <span className="inline-flex items-center text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-red-950/80 text-red-300 border border-red-500/60 uppercase tracking-wider shadow-sm shadow-red-950/50">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-500 mr-1.5 animate-pulse"></span>
+            DEPARTED
+          </span>
+        );
       }
+      // After 7 minutes: remove temporary red badge and transition to standard post-departure status
+      return (
+        <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-900/80 text-slate-400 border border-slate-700/60 uppercase tracking-wider">
+          <Check className="h-2.5 w-2.5 mr-1 text-slate-400" />
+          DEPARTED
+        </span>
+      );
+    }
+
+    if (actArr && typeof actArr === 'string' && actArr.trim() !== '') {
+      s = 'ARRIVED';
     }
 
     const norm = (s || '').toUpperCase().replace('_', ' ');
@@ -439,8 +418,8 @@ export default function StationExplorer() {
     }
     if (norm === 'DEPARTED') {
       return (
-        <span className="inline-flex items-center text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-indigo-950/70 text-indigo-300 border border-indigo-500/40 uppercase tracking-wider shadow-sm">
-          <Check className="h-2.5 w-2.5 mr-1 text-indigo-400" />
+        <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-900/80 text-slate-400 border border-slate-700/60 uppercase tracking-wider">
+          <Check className="h-2.5 w-2.5 mr-1 text-slate-400" />
           DEPARTED
         </span>
       );
@@ -466,6 +445,7 @@ export default function StationExplorer() {
       </span>
     );
   };
+
 
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
@@ -1102,12 +1082,12 @@ export default function StationExplorer() {
                                 <div className="text-[11px] font-semibold space-y-0.5 pt-0.5 sm:text-right">
                                   {t.actualArrival && (
                                     <p className="text-emerald-400">
-                                      Actual Arr: <span className="font-bold">{t.actualArrival}</span>
+                                      Actual Arr: <span className="font-bold">{formatTimeForDisplay(t.actualArrival)}</span>
                                     </p>
                                   )}
                                   {t.actualDeparture && (
                                     <p className="text-indigo-400">
-                                      Actual Dep: <span className="font-bold">{t.actualDeparture}</span>
+                                      Actual Dep: <span className="font-bold">{formatTimeForDisplay(t.actualDeparture)}</span>
                                     </p>
                                   )}
                                 </div>
