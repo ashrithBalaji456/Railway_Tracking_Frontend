@@ -879,7 +879,7 @@ export default function StationExplorer() {
                     </div>
                     <div className="flex items-center space-x-3 text-xs text-slate-500 flex-wrap">
                       {liveData && liveData.window && (
-                        <span>Window: {liveData.window.from} to {liveData.window.to} (Next {liveData.window.hours} Hours)</span>
+                        <span>Window: {liveData.window.from} to {liveData.window.to} (Past 2h + Next {liveData.window.hours}h)</span>
                       )}
                       {lastUpdatedLive && (
                         <span className="text-slate-450">• Last updated {lastUpdatedLive.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -984,13 +984,28 @@ export default function StationExplorer() {
                       };
 
                       const expectedTimeFormatted = formatTimeOnly(expectedTimeStr);
+                      let isNextDay = false;
+                      if (expectedTimeStr) {
+                        try {
+                          const d = new Date(expectedTimeStr);
+                          if (!isNaN(d.getTime())) {
+                            const now = new Date();
+                            if (d.getDate() !== now.getDate() && d.getTime() > now.getTime()) {
+                              isNextDay = true;
+                            }
+                          }
+                        } catch {}
+                      }
 
                       return (
                         <div key={`${t.trainNumber}-${idx}`} className="p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 hover:bg-slate-850/40 transition-colors animate-fade-in">
                           {/* Left Column: Time & Train Info */}
                           <div className="flex items-start space-x-4">
                             <div className="text-left shrink-0 pt-0.5">
-                              <span className="block font-extrabold text-lg text-slate-100">{expectedTimeFormatted || t.scheduledArrival || t.scheduledDeparture}</span>
+                              <div className="flex items-baseline gap-1">
+                                <span className="block font-extrabold text-lg text-slate-100">{expectedTimeFormatted || t.scheduledArrival || t.scheduledDeparture}</span>
+                                {isNextDay && <span className="text-[10px] text-amber-400 font-semibold">(+1d)</span>}
+                              </div>
                               <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Expected</span>
                             </div>
 
