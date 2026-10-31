@@ -2109,3 +2109,36 @@ This section documents the frontend views and components integrated for rail dis
   - **Official Reservation Charting Rules:** RailAI answers chart preparation inquiries with the exact 10-hour / 8:00 PM / 30-minute Railway Board timings.
 
 
+### 15.19. Client-Side Cache-First Architecture, In-Flight Deduplication & Background Refresh in StationExplorer
+
+* **1. Performance Problem Solved (Tab-Switching Latency & Duplicate Requests):**
+  - **Issue:** Previously, navigating between `Scheduled Timetable` and `Live Station Board` tabs in `StationExplorer.tsx` discarded state, unmounted views, and triggered blocking API calls on every click with full-screen loading spinners (`Loading live station board...`).
+  - **Resolution:** Implemented module-level in-memory caching and request deduplication in `StationExplorer.tsx`:
+    - `stationLiveBoardCache = new Map<string, { data: any; timestamp: number }>()` with 5-minute TTL (`LIVE_BOARD_TTL_MS = 5 * 60 * 1000`).
+    - `stationTimetableCache = new Map<string, { data: any; timestamp: number }>()` with 30-minute TTL (`TIMETABLE_TTL_MS = 30 * 60 * 1000`).
+    - Tab switching is now instantaneous (<10ms) without full-screen loading spinners.
+
+* **2. In-Flight Request Deduplication:**
+  - Maintains `inFlightLiveBoard` and `inFlightTimetable` Promise maps keyed by `${stationCode}_${liveHours}` and `${stationCode}_${selectedType}`.
+  - If a request for the same parameters is already in flight, subsequent calls attach to the existing Promise rather than dispatching redundant HTTP requests.
+
+* **3. Non-Blocking Ambient Background Refresh (`isBackgroundRefreshing`):**
+  - If cached data is present but expired, `StationExplorer` immediately displays the cached trains to the user without wiping the screen, while quietly initiating a background fetch.
+  - Displays a subtle ambient indicator (`Updating...` and spinning badge) in the station header so users know data freshness is being synchronized.
+  - If an API request fails, the component gracefully retains and displays the cached dataset with a subtle warning rather than showing a blank error screen.
+
+* **4. Manual Refresh Bypass:**
+  - The "Refresh Board" button explicitly bypasses the client-side in-memory cache and passes `refresh=true` to the backend API (`/api/stations/{code}/live?hours={hours}&refresh=true`), forcing fresh upstream RailRadar retrieval.
+  - Features an automated 30-second countdown cooldown timer to prevent accidental API quota exhaustion.
+
+
+### 15.20. Live Rolling Window Synchronization, Accurate Window Metadata & Seamless Tab Navigation
+
+* **1. Synchronized Rolling Window UI Display:**
+  - Displays accurate time-window intervals matching official IRCTC display standards: `Window: HH:mm to HH:mm (Past 2h + Next Xh) • Last updated HH:mm`.
+  - Supports 2h, 4h, 6h, and 8h interactive window buttons with instant reactive filtering.
+  - Fully compatible with post-midnight rolling intervals (e.g. `23:13 to 05:13`), correctly rendering early morning arrivals with `(+1d)` badges and expected passage times.
+
+* **2. 7-Minute Confirmed Departure Transition:**
+  - When a train departs the station, `renderLiveStatusBadge` prominently displays a glowing red `DEPARTED` badge with an animated pulse dot for 7 minutes after confirmed actual departure (`actualDeparture`).
+  - After 7 minutes, it automatically transitions into a subtle slate `DEPARTED` indicator with checkmark icon, giving passengers immediate clarity on freshly departed versus older departures.
