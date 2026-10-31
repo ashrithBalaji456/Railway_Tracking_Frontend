@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Search, Train, Building2, Clock, AlertTriangle, ArrowRight, Heart, CalendarDays, ArrowLeft, Utensils, Sparkles, MapPin, BookOpen } from 'lucide-react';
+import { Search, Train, Building2, Clock, AlertTriangle, ArrowRight, Heart, CalendarDays, ArrowLeft, Utensils, Sparkles, MapPin, BookOpen, RotateCw, Check } from 'lucide-react';
 import api from '../services/api';
 import { stationService } from '../services/stationService';
 import { searchHistoryService } from '../services/searchHistoryService';
@@ -33,6 +33,9 @@ export default function StationExplorer() {
   const [liveData, setLiveData] = useState<any>(null);
   const [liveLoading, setLiveLoading] = useState(false);
   const [liveError, setLiveError] = useState('');
+  const [lastUpdatedLive, setLastUpdatedLive] = useState<Date | null>(null);
+  const [refreshCooldown, setRefreshCooldown] = useState<number>(0);
+  const [individualLoading, setIndividualLoading] = useState<Record<string, boolean>>({});
 
   const [trains, setTrains] = useState<any[]>([]);
   // Fetch Live Station Weather via Open-Meteo
@@ -283,6 +286,7 @@ export default function StationExplorer() {
       const response: any = await stationService.getLiveStationBoard(stationCodeParam, liveHours);
       if (response.success && response.data) {
         setLiveData(response.data);
+        setLastUpdatedLive(new Date());
       }
     } catch (err: any) {
       setLiveError(err.message || 'Unable to load the live station board. Please try again.');
@@ -293,16 +297,66 @@ export default function StationExplorer() {
     }
   };
 
+  // 30-second cooldown timer for manual refresh
+  useEffect(() => {
+    if (refreshCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setRefreshCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [refreshCooldown]);
+
+  const handleManualRefresh = () => {
+    if (refreshCooldown > 0 || liveLoading) return;
+    setRefreshCooldown(30);
+    fetchLiveBoard(true);
+  };
+
+  const handleCheckSingleTrainLive = async (trainNumber: string) => {
+    setIndividualLoading((prev) => ({ ...prev, [trainNumber]: true }));
+    try {
+      const res: any = await api.get(`/api/v1/trains/${trainNumber}/live`);
+      if (res.success && res.data) {
+        const live = res.data;
+        const cleanStationCode = (stationCodeParam || '').trim().toUpperCase();
+        const routeItem = live.route?.find((r: any) => 
+          (r.stationCode || r.station_code || '').trim().toUpperCase() === cleanStationCode
+        );
+
+        if (routeItem && liveData && liveData.trains) {
+          const updatedTrains = liveData.trains.map((t: any) => {
+            if (t.trainNumber !== trainNumber) return t;
+            let status = 'SCHEDULED';
+            if (routeItem.hasDeparted || routeItem.has_departed || routeItem.actualDeparture || routeItem.actual_departure) {
+              status = 'DEPARTED';
+            } else if (routeItem.hasArrived || routeItem.has_arrived || routeItem.actualArrival || routeItem.actual_arrival) {
+              status = 'ARRIVED';
+            } else if (live.currentStationCode === cleanStationCode || live.nextStationCode === cleanStationCode) {
+              status = 'UPCOMING';
+            }
+            return {
+              ...t,
+              liveStatus: status,
+              actualArrival: routeItem.actualArrival || routeItem.actual_arrival || t.actualArrival,
+              actualDeparture: routeItem.actualDeparture || routeItem.actual_departure || t.actualDeparture,
+              delayMinutes: routeItem.delayMinutes ?? routeItem.delay_minutes ?? t.delayMinutes,
+              platform: routeItem.platform || t.platform
+            };
+          });
+          setLiveData({ ...liveData, trains: updatedTrains });
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch individual train live status', e);
+    } finally {
+      setIndividualLoading((prev) => ({ ...prev, [trainNumber]: false }));
+    }
+  };
+
   useEffect(() => {
     if (boardMode !== 'LIVE' || !stationCodeParam) return;
-
+    // On-demand fetch without background auto-polling to conserve free-tier API quota
     fetchLiveBoard(true);
-
-    const intervalId = setInterval(() => {
-      fetchLiveBoard(false);
-    }, 60000);
-
-    return () => clearInterval(intervalId);
   }, [stationCodeParam, boardMode, liveHours]);
 
   const handleStationSelect = (code: string, itemData?: any) => {
@@ -320,6 +374,46 @@ export default function StationExplorer() {
     setStationQuery('');
     setStationsList([]);
     setShowStationDrop(false);
+  };
+
+    const renderLiveStatusBadge = (status: string | undefined) => {
+    const s = (status || '').toUpperCase().replace('_', ' ');
+    if (s === 'ARRIVED' || s === 'AT STATION') {
+      return (
+        <span className="inline-flex items-center text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-950/70 text-emerald-300 border border-emerald-500/40 uppercase tracking-wider shadow-sm">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
+          ARRIVED
+        </span>
+      );
+    }
+    if (s === 'DEPARTED') {
+      return (
+        <span className="inline-flex items-center text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-indigo-950/70 text-indigo-300 border border-indigo-500/40 uppercase tracking-wider shadow-sm">
+          <Check className="h-2.5 w-2.5 mr-1 text-indigo-400" />
+          DEPARTED
+        </span>
+      );
+    }
+    if (s === 'UPCOMING') {
+      return (
+        <span className="inline-flex items-center text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-sky-950/70 text-sky-300 border border-sky-500/40 uppercase tracking-wider shadow-sm">
+          <span className="h-1.5 w-1.5 rounded-full bg-sky-400 mr-1.5 animate-pulse"></span>
+          UPCOMING
+        </span>
+      );
+    }
+    if (s === 'SCHEDULED' || s === 'NOT STARTED') {
+      return (
+        <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-900 text-slate-300 border border-slate-700 uppercase tracking-wider">
+          SCHEDULED
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-950/40 text-amber-300 border border-amber-800/40 uppercase tracking-wider">
+        STATUS UNAVAILABLE
+      </span>
+    );
   };
 
   return (
@@ -737,10 +831,11 @@ export default function StationExplorer() {
               </>
             ) : boardMode === 'LIVE' ? (
               <>
-                {/* Live Board Window Selector */}
-                <div className="border-b border-slate-800 bg-slate-950/40 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                {/* Live Board Window Selector & Refresh */}
+                <div className="border-b border-slate-800 bg-slate-950/40 p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
                       <h3 className="font-bold text-slate-200">Trains Arriving / Passing Through</h3>
                       {liveData?.trains && (
                         <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-indigo-950/60 text-indigo-300 border border-indigo-500/30">
@@ -748,27 +843,47 @@ export default function StationExplorer() {
                         </span>
                       )}
                     </div>
-                    {liveData && liveData.window && (
-                      <p className="text-xs text-slate-500">
-                        Window: {liveData.window.from} to {liveData.window.to} (Next {liveData.window.hours} Hours)
-                      </p>
-                    )}
+                    <div className="flex items-center space-x-3 text-xs text-slate-500 flex-wrap">
+                      {liveData && liveData.window && (
+                        <span>Window: {liveData.window.from} to {liveData.window.to} (Next {liveData.window.hours} Hours)</span>
+                      )}
+                      {lastUpdatedLive && (
+                        <span className="text-slate-450">• Last updated {lastUpdatedLive.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider shrink-0">Time Window:</span>
-                    <div className="flex bg-slate-900 border border-slate-800 p-1 rounded-lg">
-                      {[2, 4, 6, 8].map((hours) => (
-                        <button
-                          key={hours}
-                          onClick={() => setLiveHours(hours)}
-                          className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${liveHours === hours
-                              ? 'bg-indigo-600 text-white shadow-md'
-                              : 'text-slate-400 hover:text-slate-205'
-                            }`}
-                        >
-                          {hours} Hrs
-                        </button>
-                      ))}
+                  <div className="flex items-center space-x-3 flex-wrap gap-y-2">
+                    {/* Manual Refresh Button with 30s Cooldown */}
+                    <button
+                      onClick={handleManualRefresh}
+                      disabled={refreshCooldown > 0 || liveLoading}
+                      className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                        refreshCooldown > 0 || liveLoading
+                          ? 'bg-slate-900/60 border-slate-800 text-slate-500 cursor-not-allowed'
+                          : 'bg-indigo-950/60 hover:bg-indigo-900/60 border-indigo-500/40 text-indigo-300 hover:text-indigo-200 shadow-sm'
+                      }`}
+                      title="Manual refresh with 30s cooldown to optimize API quota"
+                    >
+                      <RotateCw className={`h-3.5 w-3.5 ${liveLoading ? 'animate-spin text-indigo-400' : ''}`} />
+                      <span>{refreshCooldown > 0 ? `Refresh (${refreshCooldown}s)` : 'Refresh Board'}</span>
+                    </button>
+
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider shrink-0">Window:</span>
+                      <div className="flex bg-slate-900 border border-slate-800 p-1 rounded-lg">
+                        {[2, 4, 6, 8].map((hours) => (
+                          <button
+                            key={hours}
+                            onClick={() => setLiveHours(hours)}
+                            className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${liveHours === hours
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'text-slate-400 hover:text-slate-205'
+                              }`}
+                          >
+                            {hours}h
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -931,20 +1046,43 @@ export default function StationExplorer() {
                                 </div>
                               )}
 
-                              <div className="flex items-center gap-2 mt-1 sm:justify-end">
-                                <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${delayVal > 0 ? 'bg-amber-950/40 text-amber-400 border border-amber-900/30' : 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/30'
+                              {/* Actual Arrival & Departure info */}
+                              {(t.actualArrival || t.actualDeparture) && (
+                                <div className="text-[11px] font-semibold space-y-0.5 pt-0.5 sm:text-right">
+                                  {t.actualArrival && (
+                                    <p className="text-emerald-400">
+                                      Actual Arr: <span className="font-bold">{t.actualArrival}</span>
+                                    </p>
+                                  )}
+                                  {t.actualDeparture && (
+                                    <p className="text-indigo-400">
+                                      Actual Dep: <span className="font-bold">{t.actualDeparture}</span>
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-2 mt-1 sm:justify-end flex-wrap">
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${delayVal > 0 ? 'bg-amber-950/40 text-amber-400 border border-amber-900/30' : 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/30'
                                   }`}>
                                   {formattedDelay}
                                 </span>
-                                {t.liveStatus && (
-                                  <span className="text-[10px] bg-slate-900 border border-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
-                                    {t.liveStatus.replace('_', ' ')}
-                                  </span>
-                                )}
+                                {renderLiveStatusBadge(t.liveStatus)}
                               </div>
                             </div>
 
-                            <div className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-3 shrink-0">
+                              {/* On-demand check single train live if scheduled */}
+                              {(t.liveStatus === 'SCHEDULED' || !t.liveStatus || t.liveStatus === 'STATUS_UNAVAILABLE') && (
+                                <button
+                                  onClick={() => handleCheckSingleTrainLive(t.trainNumber)}
+                                  disabled={individualLoading[t.trainNumber]}
+                                  className="text-[11px] font-semibold bg-slate-900 hover:bg-slate-850 text-indigo-300 border border-indigo-500/30 px-2 py-1.5 rounded-lg transition-colors cursor-pointer"
+                                  title="Check live route for this train"
+                                >
+                                  {individualLoading[t.trainNumber] ? 'Checking...' : 'Check Live'}
+                                </button>
+                              )}
                               {(t.platform && t.platform !== '—' && t.platform.trim() !== '') ? (
                                 <div className="text-center bg-slate-950 border border-slate-850 px-3 py-1.5 rounded-lg shrink-0">
                                   <span className="block text-[9px] text-slate-550 font-bold uppercase tracking-wider">Platform</span>
