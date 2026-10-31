@@ -2132,13 +2132,18 @@ This section documents the frontend views and components integrated for rail dis
   - Features an automated 30-second countdown cooldown timer to prevent accidental API quota exhaustion.
 
 
-### 15.20. Live Rolling Window Synchronization, Accurate Window Metadata & Seamless Tab Navigation
+### 15.20. Live Rolling Window Synchronization, Accurate Future Window & Race-Condition-Free State Architecture
 
-* **1. Synchronized Rolling Window UI Display:**
-  - Displays accurate time-window intervals matching official IRCTC display standards: `Window: HH:mm to HH:mm (Past 2h + Next Xh) • Last updated HH:mm`.
+* **1. Synchronized Future Window UI Display:**
+  - Displays accurate time-window intervals representing upcoming future passage: `Window: HH:mm to HH:mm (Next X hours) • Last updated HH:mm`.
   - Supports 2h, 4h, 6h, and 8h interactive window buttons with instant reactive filtering.
-  - Fully compatible with post-midnight rolling intervals (e.g. `23:13 to 05:13`), correctly rendering early morning arrivals with `(+1d)` badges and expected passage times.
+  - Fully compatible with post-midnight rolling intervals (e.g. `23:45 to 03:45`), correctly rendering early morning arrivals with expected passage times.
 
 * **2. 7-Minute Confirmed Departure Transition:**
   - When a train departs the station, `renderLiveStatusBadge` prominently displays a glowing red `DEPARTED` badge with an animated pulse dot for 7 minutes after confirmed actual departure (`actualDeparture`).
-  - After 7 minutes, it automatically transitions into a subtle slate `DEPARTED` indicator with checkmark icon, giving passengers immediate clarity on freshly departed versus older departures.
+  - After 7 minutes, the backend authoritative filter automatically removes the train from the board so older departures do not clutter future window views.
+
+* **3. Parameterized Async Fetching & Race Condition Elimination:**
+  - `fetchLiveBoard(targetHours, showSpinner, forceRefresh)` accepts `targetHours` explicitly rather than relying on React state closure.
+  - Tracks `latestRequestedHoursRef = useRef(liveHours)` to ensure that an earlier or slower response (e.g. 2h) can never overwrite the active UI when the user has already switched to 4h, 6h, or 8h.
+  - In-memory cache entries (`${cleanCode}_${targetHours}`) and in-flight promises are strictly isolated by station code and hours window.

@@ -50,6 +50,7 @@ export default function StationExplorer() {
   const [weather, setWeather] = useState<{ temperature: number; windspeed: number; weathercode: number } | null>(null);
   const [selectedGastronomyCode, setSelectedGastronomyCode] = useState<string | null>(null);
   const [liveHours, setLiveHours] = useState(4);
+  const latestRequestedHoursRef = useRef<number>(4);
   const [liveData, setLiveData] = useState<any>(null);
   const [liveLoading, setLiveLoading] = useState(false);
   const [liveError, setLiveError] = useState('');
@@ -334,62 +335,74 @@ export default function StationExplorer() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchLiveBoard = async (showSpinner = false, forceRefresh = false) => {
+  const fetchLiveBoard = async (targetHours: number, showSpinner = false, forceRefresh = false) => {
     if (!stationCodeParam) return;
     const cleanCode = stationCodeParam.trim().toUpperCase();
-    const cacheKey = `${cleanCode}_${liveHours}`;
+    const cacheKey = `${cleanCode}_${targetHours}`;
     const cached = stationLiveBoardCache.get(cacheKey);
     const now = Date.now();
 
     if (cached && (now - cached.timestamp < LIVE_BOARD_TTL_MS) && !forceRefresh) {
-      setLiveData(cached.data);
-      setLastUpdatedLive(new Date(cached.timestamp));
-      setLiveLoading(false);
-      setLiveError('');
+      if (targetHours === latestRequestedHoursRef.current) {
+        setLiveData(cached.data);
+        setLastUpdatedLive(new Date(cached.timestamp));
+        setLiveLoading(false);
+        setLiveError('');
+      }
       return;
     }
 
     if (cached && !forceRefresh) {
-      setLiveData(cached.data);
-      setLastUpdatedLive(new Date(cached.timestamp));
+      if (targetHours === latestRequestedHoursRef.current) {
+        setLiveData(cached.data);
+        setLastUpdatedLive(new Date(cached.timestamp));
+      }
       showSpinner = false;
     }
 
-    if (showSpinner) {
-      setLiveLoading(true);
-      setLiveError('');
-    } else {
-      setIsBackgroundRefreshing(true);
+    if (targetHours === latestRequestedHoursRef.current) {
+      if (showSpinner) {
+        setLiveLoading(true);
+        setLiveError('');
+      } else {
+        setIsBackgroundRefreshing(true);
+      }
     }
 
     try {
       let reqPromise = inFlightLiveBoard.get(cacheKey);
       if (!reqPromise || forceRefresh) {
-        reqPromise = stationService.getLiveStationBoard(cleanCode, liveHours, forceRefresh);
+        reqPromise = stationService.getLiveStationBoard(cleanCode, targetHours, forceRefresh);
         inFlightLiveBoard.set(cacheKey, reqPromise);
       }
 
       const response: any = await reqPromise;
       if (response && response.success && response.data) {
-        setLiveData(response.data);
         const updateTime = new Date();
-        setLastUpdatedLive(updateTime);
         stationLiveBoardCache.set(cacheKey, {
           data: response.data,
           timestamp: updateTime.getTime()
         });
-        setLiveError('');
+
+        // Only update UI if the response matches the latest selected hours window
+        if (targetHours === latestRequestedHoursRef.current) {
+          setLiveData(response.data);
+          setLastUpdatedLive(updateTime);
+          setLiveError('');
+        }
       }
     } catch (err: any) {
-      if (!cached) {
+      if (!cached && targetHours === latestRequestedHoursRef.current) {
         setLiveError(err.message || 'Unable to load the live station board. Please try again.');
       }
     } finally {
       inFlightLiveBoard.delete(cacheKey);
-      if (showSpinner) {
-        setLiveLoading(false);
+      if (targetHours === latestRequestedHoursRef.current) {
+        if (showSpinner) {
+          setLiveLoading(false);
+        }
+        setIsBackgroundRefreshing(false);
       }
-      setIsBackgroundRefreshing(false);
     }
   };
 
@@ -405,7 +418,7 @@ export default function StationExplorer() {
   const handleManualRefresh = () => {
     if (refreshCooldown > 0 || liveLoading || isBackgroundRefreshing) return;
     setRefreshCooldown(30);
-    fetchLiveBoard(false, true);
+    fetchLiveBoard(liveHours, false, true);
   };
 
   const handleCheckSingleTrainLive = async (trainNumber: string) => {
@@ -451,6 +464,7 @@ export default function StationExplorer() {
 
   useEffect(() => {
     if (boardMode !== 'LIVE' || !stationCodeParam) return;
+    latestRequestedHoursRef.current = liveHours;
     const cleanCode = stationCodeParam.trim().toUpperCase();
     const cacheKey = `${cleanCode}_${liveHours}`;
     const cached = stationLiveBoardCache.get(cacheKey);
@@ -462,7 +476,7 @@ export default function StationExplorer() {
       setLiveLoading(false);
       setLiveError('');
     } else {
-      fetchLiveBoard(!cached, false);
+      fetchLiveBoard(liveHours, !cached, false);
     }
   }, [stationCodeParam, boardMode, liveHours]);
 
@@ -985,7 +999,7 @@ export default function StationExplorer() {
                     </div>
                     <div className="flex items-center space-x-3 text-xs text-slate-500 flex-wrap">
                       {liveData && liveData.window && (
-                        <span>Window: {liveData.window.from} to {liveData.window.to} (Past 2h + Next {liveData.window.hours}h)</span>
+                        <span>Window: {liveData.window.from} to {liveData.window.to} (Next {liveData.window.hours} hours)</span>
                       )}
                       {lastUpdatedLive && (
                         <span className="text-slate-450">• Last updated {lastUpdatedLive.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -1019,7 +1033,10 @@ export default function StationExplorer() {
                         {[2, 4, 6, 8].map((hours) => (
                           <button
                             key={hours}
-                            onClick={() => setLiveHours(hours)}
+                            onClick={() => {
+                              if (liveHours === hours) return;
+                              setLiveHours(hours);
+                            }}
                             className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${liveHours === hours
                                 ? 'bg-indigo-600 text-white shadow-md'
                                 : 'text-slate-400 hover:text-slate-205'
@@ -1044,7 +1061,7 @@ export default function StationExplorer() {
                     <AlertTriangle className="h-10 w-10 text-red-500 mx-auto opacity-80" />
                     <p className="text-sm text-slate-450">{liveError}</p>
                     <button
-                      onClick={() => fetchLiveBoard(true)}
+                      onClick={() => fetchLiveBoard(liveHours, true)}
                       className="bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 px-4 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                     >
                       Retry Loading
