@@ -376,9 +376,60 @@ export default function StationExplorer() {
     setShowStationDrop(false);
   };
 
-    const renderLiveStatusBadge = (status: string | undefined) => {
-    const s = (status || '').toUpperCase().replace('_', ' ');
-    if (s === 'ARRIVED' || s === 'AT STATION') {
+  const renderLiveStatusBadge = (trainOrStatus: any) => {
+    let s = typeof trainOrStatus === 'string' ? trainOrStatus : (trainOrStatus?.liveStatus || 'SCHEDULED');
+
+    // Automatic reconciliation with actual times or elapsed expected times
+    if (typeof trainOrStatus === 'object' && trainOrStatus !== null) {
+      const actDep = trainOrStatus.actualDeparture;
+      const actArr = trainOrStatus.actualArrival;
+      if (actDep && actDep.trim() !== '') {
+        s = 'DEPARTED';
+      } else if (actArr && actArr.trim() !== '') {
+        s = 'ARRIVED';
+      } else if (s === 'UPCOMING' || s === 'SCHEDULED') {
+        const delay = trainOrStatus.delayMinutes || 0;
+        const parseTimeMins = (tStr?: string) => {
+          if (!tStr) return null;
+          let clean = tStr.trim();
+          if (clean.includes('T')) {
+            const idx = clean.indexOf('T');
+            clean = clean.substring(idx + 1, idx + 6);
+          } else if (clean.length > 5 && clean.includes(':')) {
+            clean = clean.substring(0, 5);
+          }
+          const parts = clean.split(':');
+          if (parts.length < 2) return null;
+          const h = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10);
+          return isNaN(h) || isNaN(m) ? null : h * 60 + m;
+        };
+
+        const now = new Date();
+        const nowMins = now.getHours() * 60 + now.getMinutes();
+
+        let depM = parseTimeMins(trainOrStatus.expectedDeparture);
+        let arrM = parseTimeMins(trainOrStatus.expectedArrival);
+
+        if (depM === null && trainOrStatus.scheduledDeparture) {
+          const schM = parseTimeMins(trainOrStatus.scheduledDeparture);
+          if (schM !== null) depM = (schM + delay) % 1440;
+        }
+        if (arrM === null && trainOrStatus.scheduledArrival) {
+          const schA = parseTimeMins(trainOrStatus.scheduledArrival);
+          if (schA !== null) arrM = (schA + delay) % 1440;
+        }
+
+        if (depM !== null && nowMins >= depM) {
+          s = 'DEPARTED';
+        } else if (arrM !== null && nowMins >= arrM) {
+          s = 'ARRIVED';
+        }
+      }
+    }
+
+    const norm = (s || '').toUpperCase().replace('_', ' ');
+    if (norm === 'ARRIVED' || norm === 'AT STATION') {
       return (
         <span className="inline-flex items-center text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-950/70 text-emerald-300 border border-emerald-500/40 uppercase tracking-wider shadow-sm">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
@@ -386,7 +437,7 @@ export default function StationExplorer() {
         </span>
       );
     }
-    if (s === 'DEPARTED') {
+    if (norm === 'DEPARTED') {
       return (
         <span className="inline-flex items-center text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-indigo-950/70 text-indigo-300 border border-indigo-500/40 uppercase tracking-wider shadow-sm">
           <Check className="h-2.5 w-2.5 mr-1 text-indigo-400" />
@@ -394,7 +445,7 @@ export default function StationExplorer() {
         </span>
       );
     }
-    if (s === 'UPCOMING') {
+    if (norm === 'UPCOMING') {
       return (
         <span className="inline-flex items-center text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-sky-950/70 text-sky-300 border border-sky-500/40 uppercase tracking-wider shadow-sm">
           <span className="h-1.5 w-1.5 rounded-full bg-sky-400 mr-1.5 animate-pulse"></span>
@@ -402,7 +453,7 @@ export default function StationExplorer() {
         </span>
       );
     }
-    if (s === 'SCHEDULED' || s === 'NOT STARTED') {
+    if (norm === 'SCHEDULED' || norm === 'NOT STARTED') {
       return (
         <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-900 text-slate-300 border border-slate-700 uppercase tracking-wider">
           SCHEDULED
@@ -1067,7 +1118,7 @@ export default function StationExplorer() {
                                   }`}>
                                   {formattedDelay}
                                 </span>
-                                {renderLiveStatusBadge(t.liveStatus)}
+                                {renderLiveStatusBadge(t)}
                               </div>
                             </div>
 
