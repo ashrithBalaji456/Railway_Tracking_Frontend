@@ -131,4 +131,42 @@ export interface BlogArticle {
   sections: ArticleSection[];
 }
 
+export interface StationLiveStatus {
+  stationCode: string;
+  stationName: string;
+  sequenceNumber?: number;
+  scheduledArrival?: string;
+  scheduledDeparture?: string;
+  actualArrival?: string;
+  actualDeparture?: string;
+  delayMinutes?: number;
+  status?: string; // ARRIVED, DEPARTED, SKIPPED, UPCOMING, SCHEDULED
+  isHalt?: boolean;
+  platform?: string;
+}
+
+export interface TrainLiveStatus {
+  trainNumber: string;
+  trainName: string;
+  runStatus?: string;
+  currentStationCode?: string;
+  currentStationName?: string;
+  nextStationCode?: string;
+  nextStationName?: string;
+  delayMinutes?: number;
+  latitude?: number;
+  longitude?: number;
+  speed?: number;
+  bearing?: number;
+  routeProgress?: number;
+  lastLocationInfo?: string;
+  lastUpdatedAt?: string;
+  stations?: StationLiveStatus[];
+  isCancelled?: boolean;
+  isDiverted?: boolean;
+  isRescheduled?: boolean;
+  disruptionMessage?: string;
+  skippedStations?: string[];
+}
+
 

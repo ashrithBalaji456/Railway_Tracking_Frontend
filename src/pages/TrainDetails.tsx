@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X, ArrowLeftRight, Info, Sparkles, Zap, Search, Check } from 'lucide-react';
+import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X, ArrowLeftRight, Info, Sparkles, Zap, Search, Check, RotateCw } from 'lucide-react';
 import api, { getTrainDelayReport } from '../services/api';
 import type { TrainDelayReport } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -221,6 +221,8 @@ export default function TrainDetails() {
   const [error, setError] = useState('');
   const [routeError, setRouteError] = useState('');
   const [liveError, setLiveError] = useState('');
+  const [isRefreshingLive, setIsRefreshingLive] = useState(false);
+  const [refreshCooldown, setRefreshCooldown] = useState(0);
   
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteId, setFavoriteId] = useState<number | null>(null);
@@ -1018,6 +1020,18 @@ export default function TrainDetails() {
       } finally {
         setLoading(false);
       }
+
+      // Fetch initial live status once (cached on backend, zero aggressive auto-polling)
+      try {
+        const liveUrl = `/api/v1/trains/${trainNumber}/live` + (selectedJourneyDate ? `?journeyDate=${selectedJourneyDate}` : '');
+        const liveRes: any = await api.get(liveUrl);
+        if (liveRes && liveRes.success && liveRes.data) {
+          setLiveStatus(liveRes.data);
+          setShowLive(true);
+        }
+      } catch (liveErr) {
+        // Live status is non-blocking for basic route display
+      }
     };
 
     fetchTrainData();
@@ -1046,22 +1060,58 @@ export default function TrainDetails() {
     }
   }, [route]);
 
-  const startPolling = () => {
-    const poll = async () => {
-      try {
-        const liveUrl = `/api/v1/trains/${trainNumber}/live` + (selectedJourneyDate ? `?journeyDate=${selectedJourneyDate}` : '');
-        const response: any = await api.get(liveUrl);
-        if (response.success && response.data) {
-          setLiveStatus(response.data);
-          setLiveError('');
+  // Cooldown timer for manual refresh (to safeguard the 100 req/month free quota)
+  useEffect(() => {
+    if (refreshCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setRefreshCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [refreshCooldown]);
+
+  const fetchLiveStatus = async (isManual = false) => {
+    if (!trainNumber) return;
+    if (isManual && refreshCooldown > 0) return;
+    try {
+      setIsRefreshingLive(true);
+      const liveUrl = `/api/v1/trains/${trainNumber}/live` + (selectedJourneyDate ? `?journeyDate=${selectedJourneyDate}` : '');
+      const response: any = await api.get(liveUrl);
+      if (response && response.success && response.data) {
+        setLiveStatus(response.data);
+        setShowLive(true);
+        setLiveError('');
+      } else {
+        if (!liveStatus) {
+          setLiveError('Live tracking is currently unavailable for this train.');
         }
-      } catch (err) {
-        console.error('REST polling fallback error', err);
-        setLiveError('RailRadar live status is not available right now.');
       }
-    };
-    poll(); // initial call
-    intervalRef.current = window.setInterval(poll, 10000);
+      if (isManual) {
+        setRefreshCooldown(30); // 30s cooldown prevents rapid quota exhaustion
+      }
+    } catch (err: any) {
+      console.error('Error fetching live status:', err);
+      if (!liveStatus) {
+        setLiveError('Unable to retrieve live train status. Showing scheduled timetable.');
+      }
+    } finally {
+      setIsRefreshingLive(false);
+    }
+  };
+
+  const startPolling = () => {
+    // Only fetch once as fallback if SSE is disconnected, avoiding frequent automatic polling to protect the 100 req/month quota
+    fetchLiveStatus(false);
+  };
+
+  const formatLastUpdated = (dateStr?: string) => {
+    if (!dateStr) return 'Recently';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    } catch {
+      return dateStr;
+    }
   };
 
   // Load Live Status with SSE and REST fallback
@@ -2420,10 +2470,18 @@ export default function TrainDetails() {
       {/* Complete Station Route Timeline */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg p-2.5 sm:p-5 space-y-3 sm:space-y-6">
         <div className="border-b border-slate-800 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <h3 className="font-bold text-slate-200 text-sm sm:text-lg flex items-center space-x-2">
-            <span>{t('routeTimetable')}</span>
-          </h3>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs font-semibold text-slate-400">
+          <div className="flex items-center space-x-2">
+            <h3 className="font-bold text-slate-200 text-sm sm:text-lg flex items-center space-x-2">
+              <span>{t('routeTimetable')}</span>
+            </h3>
+            {showLive && liveStatus && (
+              <span className="bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 shadow-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Live Tracking Active
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-semibold text-slate-400">
             {/* Date selector input */}
             <div className="flex items-center space-x-2 bg-slate-950 border border-slate-800 px-2 py-1 rounded-lg">
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Date:</span>
@@ -2434,6 +2492,22 @@ export default function TrainDetails() {
                 className="bg-transparent text-slate-200 border-none outline-none font-bold text-xs [color-scheme:dark] cursor-pointer"
               />
             </div>
+            {/* Manual Refresh Button (respects 100 req/month free quota) */}
+            <button
+              onClick={() => fetchLiveStatus(true)}
+              disabled={isRefreshingLive || refreshCooldown > 0}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all inline-flex items-center space-x-1.5 cursor-pointer ${
+                refreshCooldown > 0
+                  ? 'bg-slate-950 border-slate-800 text-slate-500 cursor-not-allowed'
+                  : 'bg-sky-950/60 border-sky-800/60 text-sky-300 hover:bg-sky-900/60 hover:text-sky-200 shadow-sm'
+              }`}
+              title="Manually refresh live arrival and departure status"
+            >
+              <RotateCw className={`h-3 w-3 ${isRefreshingLive ? 'animate-spin' : ''}`} />
+              <span>
+                {isRefreshingLive ? 'Refreshing...' : refreshCooldown > 0 ? `Refresh (${refreshCooldown}s)` : 'Refresh Live'}
+              </span>
+            </button>
             <span className="flex items-center space-x-1.5 text-[11px] sm:text-xs">
               <span className="h-2.5 w-2.5 bg-sky-500 rounded-full inline-block border border-slate-900" />
               <span>Halt Station</span>
@@ -2444,6 +2518,53 @@ export default function TrainDetails() {
             </span>
           </div>
         </div>
+
+        {/* Live Status Metadata Sub-bar */}
+        {showLive && liveStatus && (
+          <div className="bg-slate-950/80 border border-slate-800/80 rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-slate-400">
+                Last updated:{' '}
+                <strong className="text-slate-200">
+                  {liveStatus.lastUpdatedAt ? formatLastUpdated(liveStatus.lastUpdatedAt) : 'Recently synced'}
+                </strong>
+              </span>
+              {liveStatus.delayMinutes !== undefined && liveStatus.delayMinutes !== null && (
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  liveStatus.delayMinutes > 0
+                    ? 'bg-amber-950/60 text-amber-300 border border-amber-900/40'
+                    : 'bg-emerald-950/60 text-emerald-300 border border-emerald-900/40'
+                }`}>
+                  {liveStatus.delayMinutes > 0 ? `${liveStatus.delayMinutes}m delay overall` : 'Running On Time'}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-slate-400">
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" /> Arrived
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-indigo-400" /> Departed
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-sky-400" /> Upcoming
+              </span>
+            </div>
+          </div>
+        )}
+
+        {liveError && (
+          <div className="bg-amber-950/30 border border-amber-800/40 text-amber-300/90 text-xs px-3 py-2 rounded-lg flex items-center justify-between gap-2">
+            <span>{liveError}</span>
+            <button
+              onClick={() => fetchLiveStatus(true)}
+              disabled={isRefreshingLive}
+              className="text-[11px] font-bold underline hover:text-amber-200 cursor-pointer"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {route && route.stations && route.stations.length > 0 ? (
           <div className="w-full">
@@ -2492,9 +2613,9 @@ export default function TrainDetails() {
                         }`}
                       >
                         {/* 1. Arrival Timing (Left) */}
-                        <div className="w-14 sm:w-20 text-right pr-1 sm:pr-2 shrink-0">
-                          <div className={`text-[11px] sm:text-xs font-bold leading-tight ${
-                            isStationCancelled ? 'line-through text-slate-500' : 'text-slate-200'
+                        <div className="w-16 sm:w-24 text-right pr-1 sm:pr-2 shrink-0">
+                          <div className={`text-[10px] sm:text-[11px] font-semibold leading-tight ${
+                            isStationCancelled ? 'line-through text-slate-500' : 'text-slate-400'
                           }`}>
                             {s.arrivalTime ? format12Hour(s.arrivalTime) : '---'}
                           </div>
@@ -2502,13 +2623,23 @@ export default function TrainDetails() {
                             <div className="text-[9px] sm:text-[10px] text-rose-400 font-bold leading-none mt-0.5">
                               Cancelled
                             </div>
-                          ) : (
-                            showLive && liveStop && liveStop.delayMinutes > 0 && s.arrivalTime && (
-                              <div className="text-[9px] sm:text-[10px] text-red-500 font-bold leading-none mt-0.5">
-                                {formatDelayedTime(s.arrivalTime, liveStop.delayMinutes)}
-                              </div>
-                            )
-                          )}
+                          ) : showLive && liveStop ? (
+                            <div className="mt-0.5 leading-none">
+                              {liveStop.actualArrival ? (
+                                <div className={`text-[10px] sm:text-xs font-bold ${
+                                  (liveStop.delayMinutes && liveStop.delayMinutes > 0) ? 'text-amber-400' : 'text-emerald-400'
+                                }`}>
+                                  Act: {format12Hour(liveStop.actualArrival)}
+                                </div>
+                              ) : s.arrivalTime && liveStop.delayMinutes !== undefined && liveStop.delayMinutes !== null ? (
+                                <div className={`text-[9px] sm:text-[10px] font-bold ${
+                                  liveStop.delayMinutes > 0 ? 'text-amber-400' : 'text-emerald-400'
+                                }`}>
+                                  {liveStop.delayMinutes > 0 ? formatDelayedTime(s.arrivalTime, liveStop.delayMinutes) : 'On Time'}
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
                         </div>
 
                         {/* 2. Timeline Track: Centered Continuous Line + Dot */}
@@ -2557,6 +2688,11 @@ export default function TrainDetails() {
                             }`}>
                               {translateName(s.stationName, language)}
                             </h4>
+                            {s.stationCode && (
+                              <span className="text-[10px] sm:text-xs font-mono font-bold text-sky-400">
+                                ({s.stationCode})
+                              </span>
+                            )}
                             {isStationCancelled && (
                               <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[9px] font-bold px-1.5 py-0.2 rounded shadow-sm">
                                 Cancelled at this station
@@ -2567,9 +2703,9 @@ export default function TrainDetails() {
                             <span className="font-semibold text-slate-400">
                               {s.distance !== undefined && s.distance !== null ? `${s.distance} km` : `${s.sequenceNumber * 80} km`}
                             </span>
-                            {s.platform && (
-                              <span className="bg-slate-950 text-slate-350 px-1 py-0.2 rounded border border-slate-800 text-[9px] font-bold">
-                                PF {s.platform}
+                            {(liveStop?.platform || s.platform) && (
+                              <span className="bg-slate-950 text-slate-300 px-1.5 py-0.2 rounded border border-slate-700 text-[9px] font-bold">
+                                PF {liveStop?.platform || s.platform}
                               </span>
                             )}
                             {s.haltMinutes > 0 && (
@@ -2603,17 +2739,30 @@ export default function TrainDetails() {
                                 <span>{s.speedToNextStationKmph} km/h</span>
                               </span>
                             )}
-                            {showLive && liveStop && (
-                              <span className={`px-1 py-0.2 rounded text-[8px] sm:text-[9px] font-bold uppercase border transition-all ${
+                            {showLive && liveStop && liveStop.status && (
+                              <span className={`px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider border transition-all ${
                                 isStationCancelled || liveStop.status?.toLowerCase()?.includes('cancel')
                                   ? 'bg-rose-950/60 border-rose-800/50 text-rose-300'
-                                  : liveStop.status?.toLowerCase() === 'departed'
-                                  ? 'bg-indigo-950/40 border-indigo-900/30 text-indigo-400'
-                                  : liveStop.status?.toLowerCase() === 'arrived'
-                                  ? 'bg-emerald-950/40 border-emerald-900/30 text-emerald-400'
-                                  : 'bg-slate-950 border-slate-800 text-slate-400'
+                                  : liveStop.status?.toUpperCase() === 'DEPARTED'
+                                  ? 'bg-indigo-950/60 border-indigo-800/50 text-indigo-300'
+                                  : liveStop.status?.toUpperCase() === 'ARRIVED'
+                                  ? 'bg-emerald-950/60 border-emerald-800/50 text-emerald-300'
+                                  : liveStop.status?.toUpperCase() === 'UPCOMING'
+                                  ? 'bg-sky-950/60 border-sky-800/50 text-sky-300'
+                                  : liveStop.status?.toUpperCase() === 'SCHEDULED'
+                                  ? 'bg-slate-950 border-slate-800 text-slate-400'
+                                  : 'bg-slate-900 border-slate-700 text-slate-300'
                               }`}>
-                                {isStationCancelled ? 'Cancelled' : (liveStop.status || 'Scheduled')}
+                                {isStationCancelled ? 'Cancelled' : liveStop.status.toUpperCase()}
+                              </span>
+                            )}
+                            {showLive && liveStop && liveStop.delayMinutes !== undefined && liveStop.delayMinutes !== null && !isStationCancelled && (
+                              <span className={`px-1.5 py-0.2 rounded text-[8px] sm:text-[9px] font-bold ${
+                                liveStop.delayMinutes > 0
+                                  ? 'bg-amber-950/50 text-amber-400 border border-amber-900/40'
+                                  : 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/30'
+                              }`}>
+                                {liveStop.delayMinutes > 0 ? `+${liveStop.delayMinutes}m` : 'On Time'}
                               </span>
                             )}
                           </div>
@@ -2621,8 +2770,8 @@ export default function TrainDetails() {
 
                         {/* 4. Departure Timing (Right) */}
                         <div className="w-16 sm:w-24 text-right pl-1 shrink-0">
-                          <div className={`text-[11px] sm:text-xs font-bold leading-tight ${
-                            isStationCancelled ? 'line-through text-slate-500' : 'text-slate-200'
+                          <div className={`text-[10px] sm:text-[11px] font-semibold leading-tight ${
+                            isStationCancelled ? 'line-through text-slate-500' : 'text-slate-400'
                           }`}>
                             {s.departureTime ? format12Hour(s.departureTime) : '---'}
                           </div>
@@ -2630,13 +2779,23 @@ export default function TrainDetails() {
                             <div className="text-[9px] sm:text-[10px] text-rose-400 font-bold leading-none mt-0.5">
                               Cancelled
                             </div>
-                          ) : (
-                            showLive && liveStop && liveStop.delayMinutes > 0 && s.departureTime && (
-                              <div className="text-[9px] sm:text-[10px] text-red-500 font-bold leading-none mt-0.5">
-                                {formatDelayedTime(s.departureTime, liveStop.delayMinutes)}
-                              </div>
-                            )
-                          )}
+                          ) : showLive && liveStop ? (
+                            <div className="mt-0.5 leading-none">
+                              {liveStop.actualDeparture ? (
+                                <div className={`text-[10px] sm:text-xs font-bold ${
+                                  (liveStop.delayMinutes && liveStop.delayMinutes > 0) ? 'text-amber-400' : 'text-emerald-400'
+                                }`}>
+                                  Act: {format12Hour(liveStop.actualDeparture)}
+                                </div>
+                              ) : s.departureTime && liveStop.delayMinutes !== undefined && liveStop.delayMinutes !== null ? (
+                                <div className={`text-[9px] sm:text-[10px] font-bold ${
+                                  liveStop.delayMinutes > 0 ? 'text-amber-400' : 'text-emerald-400'
+                                }`}>
+                                  {liveStop.delayMinutes > 0 ? formatDelayedTime(s.departureTime, liveStop.delayMinutes) : 'On Time'}
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     );
@@ -2690,8 +2849,13 @@ export default function TrainDetails() {
                           <div className="bg-slate-950/50 border border-slate-800/80 rounded-lg p-1.5 my-1 space-y-0.5">
                             {item.stations.map((passStation: any) => {
                               const isTrainAtPassStation = showLive && bubbleStationCode === passStation.stationCode?.toUpperCase();
+                              const passLiveStop = liveStatus?.stations?.find(
+                                (ls: any) => ls.stationCode?.toUpperCase() === passStation.stationCode?.toUpperCase()
+                              );
                               const isPassCancelled = !!(
                                 isFullyCancelled ||
+                                passLiveStop?.status?.toLowerCase()?.includes('cancel') ||
+                                passLiveStop?.status?.toLowerCase()?.includes('skip') ||
                                 (liveStatus?.skippedStations && liveStatus.skippedStations.some(
                                   (sc: string) => sc?.toUpperCase() === passStation.stationCode?.toUpperCase()
                                 ))
@@ -2741,7 +2905,13 @@ export default function TrainDetails() {
                                         isPassCancelled ? 'text-rose-200 line-through opacity-85' : 'text-slate-300'
                                       }`}>
                                         {translateName(passStation.stationName, language)}
+                                        {passStation.stationCode && <span className="ml-1 text-[9px] font-mono text-sky-400">({passStation.stationCode})</span>}
                                       </span>
+                                      {passLiveStop?.status && (
+                                        <span className="text-[7px] sm:text-[8px] font-bold text-slate-400 uppercase bg-slate-900 border border-slate-800 px-1 py-0.2 rounded">
+                                          {passLiveStop.status}
+                                        </span>
+                                      )}
                                       {isTrainAtPassStation && (
                                         <span className="text-[7px] sm:text-[8px] font-black text-sky-300 bg-sky-500/30 border border-sky-400/50 px-1 rounded uppercase tracking-wide">
                                           Train Location
