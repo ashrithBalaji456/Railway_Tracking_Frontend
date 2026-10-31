@@ -262,14 +262,15 @@ export default function TrainDetails() {
   const bubbleStationCode = (() => {
     if (!liveStatus) return null;
     const status = (liveStatus.runStatus || liveStatus.status)?.toLowerCase();
+    const isMoving = liveStatus.speed != null && liveStatus.speed > 5;
     
-    const isReached = 
+    const isReached = !isMoving && (
       status === 'reached' || 
       status === 'reached-destination' || 
       status === 'completed' ||
-      liveStatus.nextStationName?.toLowerCase()?.includes('reached') ||
-      liveStatus.lastLocationInfo?.toLowerCase()?.includes('reached') ||
-      (liveStatus.routeProgress != null && liveStatus.routeProgress >= 0.999);
+      (liveStatus.routeProgress != null && liveStatus.routeProgress >= 0.999) ||
+      (liveStatus.nextStationName?.toLowerCase()?.includes('reached') && (liveStatus.routeProgress != null && liveStatus.routeProgress >= 0.9))
+    );
 
     if (isReached) {
       if (route && route.stations && route.stations.length > 0) {
@@ -1969,13 +1970,14 @@ export default function TrainDetails() {
                     return isSkipped || isStatusCancelled;
                   };
 
-                  const isReached = 
+                  const isMoving = liveStatus.speed != null && liveStatus.speed > 5;
+                  const isReached = !isMoving && (
                     runStatus === 'reached' || 
                     runStatus === 'reached-destination' || 
                     runStatus === 'completed' ||
-                    liveStatus.nextStationName?.toLowerCase()?.includes('reached') ||
-                    liveStatus.lastLocationInfo?.toLowerCase()?.includes('reached') ||
-                    (liveStatus.routeProgress != null && liveStatus.routeProgress >= 0.999);
+                    (liveStatus.routeProgress != null && liveStatus.routeProgress >= 0.999) ||
+                    (liveStatus.nextStationName?.toLowerCase()?.includes('reached') && (liveStatus.routeProgress != null && liveStatus.routeProgress >= 0.9))
+                  );
 
                   if (isReached) {
                     const destName = translateName(train?.destinationStation || liveStatus.nextStationName || 'Destination', language);
@@ -2052,13 +2054,14 @@ export default function TrainDetails() {
                     return isSkipped || isStatusCancelled;
                   };
 
-                  const isReached = 
+                  const isMoving = liveStatus.speed != null && liveStatus.speed > 5;
+                  const isReached = !isMoving && (
                     runStatus === 'reached' || 
                     runStatus === 'reached-destination' || 
                     runStatus === 'completed' ||
-                    liveStatus.nextStationName?.toLowerCase()?.includes('reached') ||
-                    liveStatus.lastLocationInfo?.toLowerCase()?.includes('reached') ||
-                    (liveStatus.routeProgress != null && liveStatus.routeProgress >= 0.999);
+                    (liveStatus.routeProgress != null && liveStatus.routeProgress >= 0.999) ||
+                    (liveStatus.nextStationName?.toLowerCase()?.includes('reached') && (liveStatus.routeProgress != null && liveStatus.routeProgress >= 0.9))
+                  );
 
                   if (isReached) {
                     return 'Journey Completed';
@@ -2754,10 +2757,17 @@ export default function TrainDetails() {
                                     </span>
                                   );
                                 }
-                                const isDeparted = liveStop.status?.toUpperCase() === 'DEPARTED';
+                                const isAtStation = isTrainHere || 
+                                                    liveStop.status?.toUpperCase() === 'ARRIVED' || 
+                                                    liveStop.status?.toUpperCase() === 'AT_STATION' || 
+                                                    liveStop.status?.toLowerCase()?.includes('at-station');
+                                const isDeparted = !isAtStation && (
+                                  liveStop.status?.toUpperCase() === 'DEPARTED' || 
+                                  liveStop.status?.toLowerCase()?.includes('depart')
+                                );
                                 const depWindow = getDepartedWindowInfo(liveStop.actualDeparture, 7);
 
-                                if (depWindow.isWithinWindow) {
+                                if (isDeparted && depWindow.isWithinWindow) {
                                   // Prominent temporary red DEPARTED badge for 7 minutes after confirmed departure
                                   return (
                                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider border bg-red-950/80 border-red-500/60 text-red-300 shadow-sm shadow-red-950/50">
@@ -2774,10 +2784,10 @@ export default function TrainDetails() {
                                     </span>
                                   );
                                 }
-                                if (liveStop.status?.toUpperCase() === 'ARRIVED') {
+                                if (isAtStation) {
                                   return (
                                     <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider border bg-emerald-950/60 border-emerald-800/50 text-emerald-300">
-                                      ARRIVED
+                                      {liveStop.status?.toUpperCase() === 'AT_STATION' || isTrainHere ? 'AT STATION' : 'ARRIVED'}
                                     </span>
                                   );
                                 }
@@ -2827,11 +2837,15 @@ export default function TrainDetails() {
                             </div>
                           ) : showLive && liveStop ? (
                             <div className="mt-0.5 leading-none">
-                              {liveStop.actualDeparture ? (
+                              {liveStop.actualDeparture && !isTrainHere && liveStop.status?.toUpperCase() === 'DEPARTED' ? (
                                 <div className={`text-[10px] sm:text-xs font-bold ${
                                   (liveStop.delayMinutes && liveStop.delayMinutes > 0) ? 'text-amber-400' : 'text-emerald-400'
                                 }`}>
                                   Act: {format12Hour(liveStop.actualDeparture)}
+                                </div>
+                              ) : liveStop.actualDeparture && (isTrainHere || liveStop.status?.toUpperCase() === 'AT_STATION' || liveStop.status?.toUpperCase() === 'ARRIVED') ? (
+                                <div className="text-[10px] sm:text-xs font-bold text-amber-400">
+                                  Exp: {format12Hour(liveStop.actualDeparture)}
                                 </div>
                               ) : s.departureTime && liveStop.delayMinutes !== undefined && liveStop.delayMinutes !== null ? (
                                 <div className={`text-[9px] sm:text-[10px] font-bold ${

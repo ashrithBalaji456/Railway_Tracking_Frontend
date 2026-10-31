@@ -382,8 +382,11 @@ export default function StationExplorer() {
     const actDep = typeof trainOrStatus === 'object' && trainOrStatus !== null ? trainOrStatus.actualDeparture : null;
     const actArr = typeof trainOrStatus === 'object' && trainOrStatus !== null ? trainOrStatus.actualArrival : null;
 
+    let norm = (s || '').toUpperCase().replace('_', ' ');
+    const isDepartedStatus = norm === 'DEPARTED';
+
     // Check confirmed actual departure for temporary 7-minute window
-    if (actDep && typeof actDep === 'string' && actDep.trim() !== '') {
+    if (isDepartedStatus && actDep && typeof actDep === 'string' && actDep.trim() !== '') {
       const depWindow = getDepartedWindowInfo(actDep, 7);
       if (depWindow.isWithinWindow) {
         // Prominent temporary red DEPARTED badge for 7 minutes after confirmed departure
@@ -403,11 +406,11 @@ export default function StationExplorer() {
       );
     }
 
-    if (actArr && typeof actArr === 'string' && actArr.trim() !== '') {
+    if (actArr && typeof actArr === 'string' && actArr.trim() !== '' && !isDepartedStatus) {
       s = 'ARRIVED';
+      norm = 'ARRIVED';
     }
 
-    const norm = (s || '').toUpperCase().replace('_', ' ');
     if (norm === 'ARRIVED' || norm === 'AT STATION') {
       return (
         <span className="inline-flex items-center text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-950/70 text-emerald-300 border border-emerald-500/40 uppercase tracking-wider shadow-sm">
