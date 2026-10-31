@@ -12,6 +12,25 @@ import { STATION_AMENITIES, type StationAmenity, getStationAmenitiesForStation, 
 import { getDepartedWindowInfo, formatTimeForDisplay } from '../utils/liveStatusUtils';
 import { X } from 'lucide-react';
 
+interface CachedTimetable {
+  station: any;
+  trains: any[];
+  timestamp: number;
+}
+
+interface CachedLiveBoard {
+  data: any;
+  timestamp: number;
+}
+
+const LIVE_BOARD_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const TIMETABLE_TTL_MS = 30 * 60 * 1000;  // 30 minutes
+
+const stationTimetableCache = new Map<string, CachedTimetable>();
+const stationLiveBoardCache = new Map<string, CachedLiveBoard>();
+const inFlightTimetable = new Map<string, Promise<any>>();
+const inFlightLiveBoard = new Map<string, Promise<any>>();
+
 export default function StationExplorer() {
   const [searchParams, setSearchParams] = useSearchParams();
   const stationCodeParam = searchParams.get('code') || '';
@@ -36,6 +55,7 @@ export default function StationExplorer() {
   const [liveError, setLiveError] = useState('');
   const [lastUpdatedLive, setLastUpdatedLive] = useState<Date | null>(null);
   const [refreshCooldown, setRefreshCooldown] = useState<number>(0);
+  const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
   const [individualLoading, setIndividualLoading] = useState<Record<string, boolean>>({});
 
   const [trains, setTrains] = useState<any[]>([]);
@@ -230,35 +250,72 @@ export default function StationExplorer() {
     return () => clearTimeout(delayDebounce);
   }, [stationQuery]);
 
-  // Load Station Details and Trains
+  // Load Station Details and Trains (Cache-First + In-Flight Deduplication)
   useEffect(() => {
     if (!stationCodeParam) return;
+    const cleanCode = stationCodeParam.trim().toUpperCase();
+    const cacheKey = `${cleanCode}_${filterType}`;
+    const cached = stationTimetableCache.get(cacheKey);
+    const isFresh = cached && (Date.now() - cached.timestamp < TIMETABLE_TTL_MS);
+
+    if (isFresh) {
+      setSelectedStation(cached.station);
+      setTrains(cached.trains);
+      setLoading(false);
+      setError('');
+      return;
+    }
+
+    if (cached) {
+      setSelectedStation(cached.station);
+      setTrains(cached.trains);
+      setLoading(false);
+    }
 
     const fetchStationData = async () => {
-      setLoading(true);
+      const hasCached = !!cached;
+      if (!hasCached) {
+        setLoading(true);
+      }
       setError('');
+
       try {
-        // Get details
-        const detailsResponse: any = await api.get(`/api/v1/stations/${stationCodeParam}`);
-        if (detailsResponse.success && detailsResponse.data) {
-          setSelectedStation(detailsResponse.data);
-          const s = detailsResponse.data;
+        let reqPromise = inFlightTimetable.get(cacheKey);
+        if (!reqPromise) {
+          reqPromise = Promise.all([
+            api.get(`/api/v1/stations/${cleanCode}`),
+            stationService.getStationTrains(cleanCode, filterType, false)
+          ]);
+          inFlightTimetable.set(cacheKey, reqPromise);
+        }
+
+        const [detailsResponse, boardResponse]: any = await reqPromise;
+        let stData = selectedStation;
+        if (detailsResponse && detailsResponse.success && detailsResponse.data) {
+          stData = detailsResponse.data;
+          setSelectedStation(stData);
           searchHistoryService.addSearch({
             type: 'STATION',
-            code: s.stationCode,
-            title: s.stationName,
-            subtitle: [s.district, s.state].filter(Boolean).filter((x: string) => x !== '-').join(', '),
+            code: stData.stationCode,
+            title: stData.stationName,
+            subtitle: [stData.district, stData.state].filter(Boolean).filter((x: string) => x !== '-').join(', '),
           });
         }
 
-        // Get board trains (filtered on backend or mapped)
-        const boardResponse: any = await api.get(`/api/v1/stations/${stationCodeParam}/trains?type=${filterType}`);
-        if (boardResponse.success && boardResponse.data) {
+        if (boardResponse && boardResponse.success && boardResponse.data) {
           setTrains(boardResponse.data);
+          stationTimetableCache.set(cacheKey, {
+            station: stData,
+            trains: boardResponse.data,
+            timestamp: Date.now()
+          });
         }
       } catch (err: any) {
-        setError(err.message || 'Failed to load station information');
+        if (!hasCached) {
+          setError(err.message || 'Failed to load station information');
+        }
       } finally {
+        inFlightTimetable.delete(cacheKey);
         setLoading(false);
       }
     };
@@ -277,24 +334,62 @@ export default function StationExplorer() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchLiveBoard = async (showSpinner = true) => {
+  const fetchLiveBoard = async (showSpinner = false, forceRefresh = false) => {
     if (!stationCodeParam) return;
+    const cleanCode = stationCodeParam.trim().toUpperCase();
+    const cacheKey = `${cleanCode}_${liveHours}`;
+    const cached = stationLiveBoardCache.get(cacheKey);
+    const now = Date.now();
+
+    if (cached && (now - cached.timestamp < LIVE_BOARD_TTL_MS) && !forceRefresh) {
+      setLiveData(cached.data);
+      setLastUpdatedLive(new Date(cached.timestamp));
+      setLiveLoading(false);
+      setLiveError('');
+      return;
+    }
+
+    if (cached && !forceRefresh) {
+      setLiveData(cached.data);
+      setLastUpdatedLive(new Date(cached.timestamp));
+      showSpinner = false;
+    }
+
     if (showSpinner) {
       setLiveLoading(true);
       setLiveError('');
+    } else {
+      setIsBackgroundRefreshing(true);
     }
+
     try {
-      const response: any = await stationService.getLiveStationBoard(stationCodeParam, liveHours);
-      if (response.success && response.data) {
+      let reqPromise = inFlightLiveBoard.get(cacheKey);
+      if (!reqPromise || forceRefresh) {
+        reqPromise = stationService.getLiveStationBoard(cleanCode, liveHours, forceRefresh);
+        inFlightLiveBoard.set(cacheKey, reqPromise);
+      }
+
+      const response: any = await reqPromise;
+      if (response && response.success && response.data) {
         setLiveData(response.data);
-        setLastUpdatedLive(new Date());
+        const updateTime = new Date();
+        setLastUpdatedLive(updateTime);
+        stationLiveBoardCache.set(cacheKey, {
+          data: response.data,
+          timestamp: updateTime.getTime()
+        });
+        setLiveError('');
       }
     } catch (err: any) {
-      setLiveError(err.message || 'Unable to load the live station board. Please try again.');
+      if (!cached) {
+        setLiveError(err.message || 'Unable to load the live station board. Please try again.');
+      }
     } finally {
+      inFlightLiveBoard.delete(cacheKey);
       if (showSpinner) {
         setLiveLoading(false);
       }
+      setIsBackgroundRefreshing(false);
     }
   };
 
@@ -308,9 +403,9 @@ export default function StationExplorer() {
   }, [refreshCooldown]);
 
   const handleManualRefresh = () => {
-    if (refreshCooldown > 0 || liveLoading) return;
+    if (refreshCooldown > 0 || liveLoading || isBackgroundRefreshing) return;
     setRefreshCooldown(30);
-    fetchLiveBoard(true);
+    fetchLiveBoard(false, true);
   };
 
   const handleCheckSingleTrainLive = async (trainNumber: string) => {
@@ -356,8 +451,19 @@ export default function StationExplorer() {
 
   useEffect(() => {
     if (boardMode !== 'LIVE' || !stationCodeParam) return;
-    // On-demand fetch without background auto-polling to conserve free-tier API quota
-    fetchLiveBoard(true);
+    const cleanCode = stationCodeParam.trim().toUpperCase();
+    const cacheKey = `${cleanCode}_${liveHours}`;
+    const cached = stationLiveBoardCache.get(cacheKey);
+    const isFresh = cached && (Date.now() - cached.timestamp < LIVE_BOARD_TTL_MS);
+
+    if (isFresh) {
+      setLiveData(cached.data);
+      setLastUpdatedLive(new Date(cached.timestamp));
+      setLiveLoading(false);
+      setLiveError('');
+    } else {
+      fetchLiveBoard(!cached, false);
+    }
   }, [stationCodeParam, boardMode, liveHours]);
 
   const handleStationSelect = (code: string, itemData?: any) => {
@@ -884,22 +990,27 @@ export default function StationExplorer() {
                       {lastUpdatedLive && (
                         <span className="text-slate-450">• Last updated {lastUpdatedLive.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       )}
+                      {isBackgroundRefreshing && (
+                        <span className="text-indigo-400 font-semibold flex items-center gap-1 animate-pulse">
+                          <RotateCw className="h-3 w-3 animate-spin" /> Updating...
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center space-x-3 flex-wrap gap-y-2">
                     {/* Manual Refresh Button with 30s Cooldown */}
                     <button
                       onClick={handleManualRefresh}
-                      disabled={refreshCooldown > 0 || liveLoading}
+                      disabled={refreshCooldown > 0 || liveLoading || isBackgroundRefreshing}
                       className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                        refreshCooldown > 0 || liveLoading
+                        refreshCooldown > 0 || liveLoading || isBackgroundRefreshing
                           ? 'bg-slate-900/60 border-slate-800 text-slate-500 cursor-not-allowed'
                           : 'bg-indigo-950/60 hover:bg-indigo-900/60 border-indigo-500/40 text-indigo-300 hover:text-indigo-200 shadow-sm'
                       }`}
                       title="Manual refresh with 30s cooldown to optimize API quota"
                     >
-                      <RotateCw className={`h-3.5 w-3.5 ${liveLoading ? 'animate-spin text-indigo-400' : ''}`} />
-                      <span>{refreshCooldown > 0 ? `Refresh (${refreshCooldown}s)` : 'Refresh Board'}</span>
+                      <RotateCw className={`h-3.5 w-3.5 ${(liveLoading || isBackgroundRefreshing) ? 'animate-spin text-indigo-400' : ''}`} />
+                      <span>{refreshCooldown > 0 ? `Refresh (${refreshCooldown}s)` : isBackgroundRefreshing ? 'Updating...' : 'Refresh Board'}</span>
                     </button>
 
                     <div className="flex items-center space-x-2">
