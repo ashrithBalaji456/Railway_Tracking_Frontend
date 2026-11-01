@@ -99,7 +99,7 @@ export default function StationExplorer() {
 
   const [filterType, setFilterType] = useState('ALL'); // ALL, STOPPING, NON_STOP
   const [dayFilter, setDayFilter] = useState('ALL_DAYS');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(Boolean(stationCodeParam));
   const [error, setError] = useState('');
 
   const navigate = useNavigate();
@@ -1569,7 +1569,7 @@ export default function StationExplorer() {
             )}
           </div>
         </div>
-      ) : loading || stationCodeParam ? (
+      ) : loading || (stationCodeParam && !error && !selectedStation) ? (
         <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 sm:p-8 space-y-6 animate-pulse">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
             <div className="space-y-2">
