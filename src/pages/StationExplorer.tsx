@@ -149,9 +149,9 @@ export default function StationExplorer() {
       .filter(Boolean);
   };
 
-  const formatDelay = (minutes: number) => {
-
-    if (!minutes || minutes <= 0) return 'On Time';
+  const formatDelay = (minutes: number | null | undefined) => {
+    if (minutes === null || minutes === undefined) return 'Scheduled';
+    if (minutes <= 0) return 'On Time';
     const hrs = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return hrs > 0 ? `Delayed by ${hrs} hr${hrs > 1 ? 's' : ''} ${mins} min${mins > 1 ? 's' : ''}` : `Delayed by ${mins} mins`;
@@ -591,6 +591,32 @@ export default function StationExplorer() {
   };
 
 
+  const formatWindowHeading = (window: any) => {
+    if (!window) return '';
+    try {
+      if (window.fromDateTime && window.toDateTime) {
+        const fromD = new Date(window.fromDateTime);
+        const toD = new Date(window.toDateTime);
+        if (!isNaN(fromD.getTime()) && !isNaN(toD.getTime())) {
+          const fromStr = fromD.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' }) + ', ' +
+            fromD.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit', hour12: true });
+          const toStr = toD.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' }) + ', ' +
+            toD.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit', hour12: true });
+          return `${fromStr} – ${toStr} (${window.hours || 4}h)`;
+        }
+      }
+    } catch {}
+    if (window.from && window.to) {
+      const today = new Date();
+      const fromStr = today.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' }) + ', ' + window.from;
+      const isNextDay = window.from > window.to;
+      const toDate = isNextDay ? new Date(today.getTime() + 86400000) : today;
+      const toStr = toDate.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' }) + ', ' + window.to;
+      return `${fromStr} – ${toStr} (${window.hours || 4}h)`;
+    }
+    return '';
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
       {/* Back to previous page button */}
@@ -777,7 +803,7 @@ export default function StationExplorer() {
                   }`}
               >
                 <span>⚡ Live Station Board</span>
-                {liveData?.trains && liveData.trains.length > 0 && (
+                {!liveLoading && liveData?.trains && liveData.trains.length > 0 && liveData.window?.hours === liveHours && (
                   <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${boardMode === 'LIVE'
                       ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
                       : 'bg-slate-800 text-slate-400'
@@ -967,10 +993,12 @@ export default function StationExplorer() {
                                 )}
                               </span>
                             </div>
-                            {t.delayMinutes > 0 ? (
+                            {t.delayMinutes !== null && t.delayMinutes !== undefined && t.delayMinutes > 0 ? (
                               <span className="text-xs text-amber-400">{formatDelay(t.delayMinutes)}</span>
-                            ) : (
+                            ) : t.delayMinutes === 0 ? (
                               <span className="text-xs text-emerald-400">On Time</span>
+                            ) : (
+                              <span className="text-xs text-slate-400">Scheduled</span>
                             )}
                           </div>
 
@@ -1012,18 +1040,18 @@ export default function StationExplorer() {
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
                       <h3 className="font-bold text-slate-200">Trains Arriving / Passing Through</h3>
-                      {liveData?.trains && (
+                      {!liveLoading && liveData?.trains && liveData.window?.hours === liveHours && (
                         <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-indigo-950/60 text-indigo-300 border border-indigo-500/30">
                           {liveData.trains.length} {liveData.trains.length === 1 ? 'Train' : 'Trains'}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center space-x-3 text-xs text-slate-500 flex-wrap">
-                      {liveData && liveData.window && liveData.window.hours === liveHours && (
-                        <span>Window: {liveData.window.from} to {liveData.window.to} (Next {liveData.window.hours} hours)</span>
+                      {!liveLoading && liveData && liveData.window && liveData.window.hours === liveHours && (
+                        <span>Window: {formatWindowHeading(liveData.window)}</span>
                       )}
-                      {lastUpdatedLive && (
-                        <span className="text-slate-450">• Last updated {lastUpdatedLive.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      {!liveLoading && lastUpdatedLive && liveData?.window?.hours === liveHours && (
+                        <span className="text-slate-450">• Last updated {lastUpdatedLive.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })}</span>
                       )}
                       {isBackgroundRefreshing && (
                         <span className="text-indigo-400 font-semibold flex items-center gap-1 animate-pulse">
@@ -1056,6 +1084,8 @@ export default function StationExplorer() {
                             key={hours}
                             onClick={() => {
                               if (liveHours === hours) return;
+                              setLiveData(null);
+                              setLiveLoading(true);
                               setLiveHours(hours);
                             }}
                             className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${liveHours === hours
@@ -1104,7 +1134,7 @@ export default function StationExplorer() {
                             if (isoStr.includes(':')) return isoStr.substring(0, 5);
                             return isoStr;
                           }
-                          return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                          return date.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false });
                         } catch {
                           return isoStr;
                         }
@@ -1132,18 +1162,40 @@ export default function StationExplorer() {
                         }
                       };
 
-                      const expectedTimeFormatted = formatTimeOnly(expectedTimeStr);
-                      let isNextDay = false;
+                      const scheduledPassageTime = t.scheduledArrival || t.scheduledDeparture || '';
+
+                      // Synchronized expected passage time:
+                      // If delayed, expected passage time = scheduled time + delay minutes (or fallback to formatted expectedTimeStr)
+                      let expectedPassageTime = '';
+                      if (delayVal && delayVal > 0 && scheduledPassageTime) {
+                        expectedPassageTime = addDelayToTime(scheduledPassageTime, delayVal);
+                      } else if (delayVal === 0 && scheduledPassageTime) {
+                        expectedPassageTime = scheduledPassageTime;
+                      } else {
+                        expectedPassageTime = formatTimeOnly(expectedTimeStr) || scheduledPassageTime;
+                      }
+
+                      let dateBadge: string | null = null;
                       if (expectedTimeStr) {
                         try {
                           const d = new Date(expectedTimeStr);
                           if (!isNaN(d.getTime())) {
                             const now = new Date();
-                            if (d.getDate() !== now.getDate() && d.getTime() > now.getTime()) {
-                              isNextDay = true;
+                            const dIST = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
+                            const nowIST = now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
+                            if (dIST !== nowIST && d.getTime() > now.getTime()) {
+                              dateBadge = 'Tomorrow';
                             }
                           }
                         } catch {}
+                      }
+                      if (!dateBadge && scheduledPassageTime) {
+                        const cleanT = scheduledPassageTime.substring(0, 5);
+                        const curH = parseInt(new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', hour12: false }).format(new Date()), 10);
+                        const trH = parseInt(cleanT.split(':')[0], 10);
+                        if (!isNaN(trH) && !isNaN(curH) && curH >= 18 && trH < 6) {
+                          dateBadge = 'Tomorrow';
+                        }
                       }
 
                       return (
@@ -1151,9 +1203,13 @@ export default function StationExplorer() {
                           {/* Left Column: Time & Train Info */}
                           <div className="flex items-start space-x-4">
                             <div className="text-left shrink-0 pt-0.5">
-                              <div className="flex items-baseline gap-1">
-                                <span className="block font-extrabold text-lg text-slate-100">{expectedTimeFormatted || t.scheduledArrival || t.scheduledDeparture}</span>
-                                {isNextDay && <span className="text-[10px] text-amber-400 font-semibold">(+1d)</span>}
+                              <div className="flex flex-col items-start">
+                                {dateBadge && (
+                                  <span className="text-[10px] font-extrabold text-amber-400 uppercase tracking-wider">
+                                    {dateBadge}
+                                  </span>
+                                )}
+                                <span className="block font-extrabold text-lg text-slate-100">{expectedPassageTime}</span>
                               </div>
                               <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Expected</span>
                             </div>
@@ -1235,10 +1291,10 @@ export default function StationExplorer() {
                                 </div>
                               ) : (
                                 <div className="text-xs text-slate-350 space-y-1">
-                                  <p>Scheduled Passage: <span className="font-semibold text-slate-200">{t.scheduledArrival || t.scheduledDeparture}</span></p>
+                                  <p>Scheduled Passage: <span className="font-semibold text-slate-200">{scheduledPassageTime}</span></p>
                                   {delayVal > 0 && (
                                     <p className="text-[10px] text-red-500 font-bold mt-0.5 leading-none">
-                                      Expected Passage: {addDelayToTime(t.scheduledArrival || t.scheduledDeparture, delayVal)}
+                                      Expected Passage: {expectedPassageTime}
                                     </p>
                                   )}
                                 </div>
@@ -1261,10 +1317,11 @@ export default function StationExplorer() {
                               )}
 
                               <div className="flex items-center gap-2 mt-1 sm:justify-end flex-wrap">
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${delayVal > 0 ? 'bg-amber-950/40 text-amber-400 border border-amber-900/30' : 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/30'
-                                  }`}>
-                                  {formattedDelay}
-                                </span>
+                                {delayVal !== null && delayVal !== undefined && t.liveStatus !== 'SCHEDULED' ? (
+                                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${delayVal > 0 ? 'bg-amber-950/40 text-amber-400 border border-amber-900/30' : 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/30'}`}>
+                                    {formattedDelay}
+                                  </span>
+                                ) : null}
                                 {renderLiveStatusBadge(t)}
                               </div>
                             </div>
