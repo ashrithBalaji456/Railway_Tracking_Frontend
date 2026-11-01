@@ -202,15 +202,18 @@ function StationSelectorDropdown({
 
 export default function TrainDetails() {
   const { trainNumber } = useParams<{ trainNumber: string }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const getTodayDateString = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
   };
-  const dateParam = searchParams.get('date') || getTodayDateString();
+  const getOffsetDateString = (offsetDays: number) => {
+    const now = new Date();
+    const istToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
+    const [y, m, d] = istToday.split('-').map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d + offsetDays));
+    return dt.toISOString().slice(0, 10);
+  };
+  const dateParam = searchParams.get('journeyDate') || searchParams.get('date') || getTodayDateString();
   const [selectedJourneyDate, setSelectedJourneyDate] = useState(dateParam);
 
   const [train, setTrain] = useState<any>(null);
@@ -258,6 +261,7 @@ export default function TrainDetails() {
   );
   const sseRef = useRef<EventSource | null>(null);
   const intervalRef = useRef<number | null>(null);
+  const requestSeqRef = useRef<number>(0);
 
   const bubbleStationCode = (() => {
     if (!liveStatus) return null;
@@ -946,12 +950,16 @@ export default function TrainDetails() {
     if (!trainNumber) return;
 
     const fetchTrainData = async () => {
+      const currentSeq = ++requestSeqRef.current;
       setLoading(true);
       setError('');
       setRouteError('');
+      setLiveStatus(null);
+      setLiveError('');
       try {
         const url = `/api/v1/trains/${trainNumber}` + (selectedJourneyDate ? `?journeyDate=${selectedJourneyDate}` : '');
         const detailsResponse: any = await api.get(url);
+        if (currentSeq !== requestSeqRef.current) return;
         if (detailsResponse.success && detailsResponse.data) {
           setTrain(detailsResponse.data);
           const t = detailsResponse.data;
@@ -966,9 +974,11 @@ export default function TrainDetails() {
           });
         }
       } catch (err: any) {
+        if (currentSeq !== requestSeqRef.current) return;
         try {
           const liveUrl = `/api/v1/trains/${trainNumber}/live` + (selectedJourneyDate ? `?journeyDate=${selectedJourneyDate}` : '');
           const liveResponse: any = await api.get(liveUrl);
+          if (currentSeq !== requestSeqRef.current) return;
           if (liveResponse.success && liveResponse.data) {
             const live = liveResponse.data;
             setLiveStatus(live);
@@ -999,15 +1009,19 @@ export default function TrainDetails() {
             return;
           }
         } catch (liveErr: any) {
+          if (currentSeq !== requestSeqRef.current) return;
           setError(liveErr.message || err.message || 'Failed to load train details');
           setLoading(false);
           return;
         }
       }
 
+      if (currentSeq !== requestSeqRef.current) return;
+
       try {
         const routeUrl = `/api/v1/trains/${trainNumber}/route` + (selectedJourneyDate ? `?journeyDate=${selectedJourneyDate}` : '');
         const routeResponse: any = await api.get(routeUrl);
+        if (currentSeq !== requestSeqRef.current) return;
         if (routeResponse.success) {
           setRoute(routeResponse.data);
           if (routeResponse.data && routeResponse.data.coachPosition) {
@@ -1017,16 +1031,20 @@ export default function TrainDetails() {
           }
         }
       } catch (err: any) {
+        if (currentSeq !== requestSeqRef.current) return;
         setRoute(null);
         setRouteError(err.message || 'RailRadar route data is not available for this train right now.');
       } finally {
-        setLoading(false);
+        if (currentSeq === requestSeqRef.current) {
+          setLoading(false);
+        }
       }
 
       // Fetch initial live status once (cached on backend, zero aggressive auto-polling)
       try {
         const liveUrl = `/api/v1/trains/${trainNumber}/live` + (selectedJourneyDate ? `?journeyDate=${selectedJourneyDate}` : '');
         const liveRes: any = await api.get(liveUrl);
+        if (currentSeq !== requestSeqRef.current) return;
         if (liveRes && liveRes.success && liveRes.data) {
           setLiveStatus(liveRes.data);
           setShowLive(true);
@@ -1074,10 +1092,12 @@ export default function TrainDetails() {
   const fetchLiveStatus = async (isManual = false) => {
     if (!trainNumber) return;
     if (isManual && refreshCooldown > 0) return;
+    const currentSeq = ++requestSeqRef.current;
     try {
       setIsRefreshingLive(true);
       const liveUrl = `/api/v1/trains/${trainNumber}/live` + (selectedJourneyDate ? `?journeyDate=${selectedJourneyDate}` : '');
       const response: any = await api.get(liveUrl);
+      if (currentSeq !== requestSeqRef.current) return;
       if (response && response.success && response.data) {
         setLiveStatus(response.data);
         setShowLive(true);
@@ -1091,12 +1111,15 @@ export default function TrainDetails() {
         setRefreshCooldown(30); // 30s cooldown prevents rapid quota exhaustion
       }
     } catch (err: any) {
+      if (currentSeq !== requestSeqRef.current) return;
       console.error('Error fetching live status:', err);
       if (!liveStatus) {
         setLiveError('Unable to retrieve live train status. Showing scheduled timetable.');
       }
     } finally {
-      setIsRefreshingLive(false);
+      if (currentSeq === requestSeqRef.current) {
+        setIsRefreshingLive(false);
+      }
     }
   };
 
@@ -1535,14 +1558,15 @@ export default function TrainDetails() {
               { label: 'Today', offset: 0 },
               { label: 'Tomorrow', offset: 1 },
             ].map(({ label, offset }) => {
-              const d = new Date();
-              d.setDate(d.getDate() + offset);
-              const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+              const dateStr = getOffsetDateString(offset);
               const isSelected = selectedJourneyDate === dateStr;
               return (
                 <button
                   key={label}
-                  onClick={() => setSelectedJourneyDate(dateStr)}
+                  onClick={() => {
+                    setSelectedJourneyDate(dateStr);
+                    setSearchParams({ journeyDate: dateStr }, { replace: true });
+                  }}
                   className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-indigo-600/30 border-indigo-500/50 text-indigo-300 shadow-sm shadow-indigo-500/10'
@@ -1556,12 +1580,20 @@ export default function TrainDetails() {
             <input
               type="date"
               value={selectedJourneyDate}
-              onChange={(e) => setSelectedJourneyDate(e.target.value)}
+              onChange={(e) => {
+                setSelectedJourneyDate(e.target.value);
+                setSearchParams({ journeyDate: e.target.value }, { replace: true });
+              }}
               className="bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold outline-none focus:border-indigo-500 [color-scheme:dark] cursor-pointer"
             />
             {selectedJourneyDate !== getTodayDateString() && (
               <span className="text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold animate-pulse">
                 Tracking {selectedJourneyDate < getTodayDateString() ? "previous day's" : "future"} rake
+              </span>
+            )}
+            {liveStatus?.startDate && (
+              <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                Rake started: {liveStatus.startDate}
               </span>
             )}
           </div>
@@ -2486,7 +2518,7 @@ export default function TrainDetails() {
             {showLive && liveStatus && (
               <span className="bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 shadow-sm">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Live Tracking Active
+                Live Tracking Active {liveStatus.startDate ? `(Rake: ${liveStatus.startDate})` : ''}
               </span>
             )}
           </div>
@@ -2497,7 +2529,10 @@ export default function TrainDetails() {
               <input
                 type="date"
                 value={selectedJourneyDate}
-                onChange={(e) => setSelectedJourneyDate(e.target.value)}
+                onChange={(e) => {
+                  setSelectedJourneyDate(e.target.value);
+                  setSearchParams({ journeyDate: e.target.value }, { replace: true });
+                }}
                 className="bg-transparent text-slate-200 border-none outline-none font-bold text-xs [color-scheme:dark] cursor-pointer"
               />
             </div>
@@ -2612,7 +2647,16 @@ export default function TrainDetails() {
                         (sc: string) => sc?.toUpperCase() === s.stationCode?.toUpperCase()
                       ))
                     );
-                    const isTrainHere = showLive && !isStationCancelled && bubbleStationCode === s.stationCode?.toUpperCase();
+                    const isStopDeparted = liveStop?.status?.toUpperCase() === 'DEPARTED' || 
+                                           liveStop?.status?.toLowerCase()?.includes('depart');
+                    const isTrainHere = showLive && !isStationCancelled && !isStopDeparted && bubbleStationCode === s.stationCode?.toUpperCase();
+                    const isAtStation = !isStopDeparted && (
+                      isTrainHere || 
+                      liveStop?.status?.toUpperCase() === 'ARRIVED' || 
+                      liveStop?.status?.toUpperCase() === 'AT_STATION' || 
+                      liveStop?.status?.toLowerCase()?.includes('at-station')
+                    );
+                    const isDeparted = isStopDeparted;
 
                     return (
                       <div
@@ -2634,7 +2678,13 @@ export default function TrainDetails() {
                             </div>
                           ) : showLive && liveStop ? (
                             <div className="mt-0.5 leading-none">
-                              {liveStop.actualArrival ? (
+                              {liveStop.isPredicted || liveStop.status?.toUpperCase() === 'UPCOMING' || liveStop.status?.toUpperCase() === 'SCHEDULED' ? (
+                                <div className={`text-[10px] sm:text-xs font-bold ${
+                                  (liveStop.delayMinutes && liveStop.delayMinutes > 0) ? 'text-amber-400' : 'text-emerald-400'
+                                }`}>
+                                  Exp: {format12Hour(liveStop.expectedArrival || (s.arrivalTime && liveStop.delayMinutes !== undefined && liveStop.delayMinutes !== null ? formatDelayedTime(s.arrivalTime, liveStop.delayMinutes) : s.arrivalTime))}
+                                </div>
+                              ) : liveStop.actualArrival ? (
                                 <div className={`text-[10px] sm:text-xs font-bold ${
                                   (liveStop.delayMinutes && liveStop.delayMinutes > 0) ? 'text-amber-400' : 'text-emerald-400'
                                 }`}>
@@ -2757,14 +2807,6 @@ export default function TrainDetails() {
                                     </span>
                                   );
                                 }
-                                const isAtStation = isTrainHere || 
-                                                    liveStop.status?.toUpperCase() === 'ARRIVED' || 
-                                                    liveStop.status?.toUpperCase() === 'AT_STATION' || 
-                                                    liveStop.status?.toLowerCase()?.includes('at-station');
-                                const isDeparted = !isAtStation && (
-                                  liveStop.status?.toUpperCase() === 'DEPARTED' || 
-                                  liveStop.status?.toLowerCase()?.includes('depart')
-                                );
                                 const depWindow = getDepartedWindowInfo(liveStop.actualDeparture, 7);
 
                                 if (isDeparted && depWindow.isWithinWindow) {
@@ -2837,21 +2879,15 @@ export default function TrainDetails() {
                             </div>
                           ) : showLive && liveStop ? (
                             <div className="mt-0.5 leading-none">
-                              {liveStop.actualDeparture && !isTrainHere && liveStop.status?.toUpperCase() === 'DEPARTED' ? (
+                              {liveStop.actualDeparture && isDeparted ? (
                                 <div className={`text-[10px] sm:text-xs font-bold ${
                                   (liveStop.delayMinutes && liveStop.delayMinutes > 0) ? 'text-amber-400' : 'text-emerald-400'
                                 }`}>
                                   Act: {format12Hour(liveStop.actualDeparture)}
                                 </div>
-                              ) : liveStop.actualDeparture && (isTrainHere || liveStop.status?.toUpperCase() === 'AT_STATION' || liveStop.status?.toUpperCase() === 'ARRIVED') ? (
+                              ) : (liveStop.expectedDeparture || (isAtStation && liveStop.actualDeparture) || s.departureTime) ? (
                                 <div className="text-[10px] sm:text-xs font-bold text-amber-400">
-                                  Exp: {format12Hour(liveStop.actualDeparture)}
-                                </div>
-                              ) : s.departureTime && liveStop.delayMinutes !== undefined && liveStop.delayMinutes !== null ? (
-                                <div className={`text-[9px] sm:text-[10px] font-bold ${
-                                  liveStop.delayMinutes > 0 ? 'text-amber-400' : 'text-emerald-400'
-                                }`}>
-                                  {liveStop.delayMinutes > 0 ? formatDelayedTime(s.departureTime, liveStop.delayMinutes) : 'On Time'}
+                                  Exp: {format12Hour(liveStop.expectedDeparture || (isAtStation ? liveStop.actualDeparture : null) || (s.departureTime && liveStop.delayMinutes !== undefined && liveStop.delayMinutes !== null ? formatDelayedTime(s.departureTime, liveStop.delayMinutes) : s.departureTime))}
                                 </div>
                               ) : null}
                             </div>

@@ -1273,7 +1273,19 @@ export default function StationExplorer() {
                               )}
 
                               <button
-                                onClick={() => navigate(`/trains/${t.trainNumber}`)}
+                                onClick={() => {
+                                  let dateStr = t.journeyDate;
+                                  if (!dateStr) {
+                                    const dayOffset = (t.arrivalDay && t.arrivalDay > 1) ? t.arrivalDay - 1 : 0;
+                                    const now = new Date();
+                                    const istToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
+                                    const [y, m, d] = istToday.split('-').map(Number);
+                                    const dt = new Date(Date.UTC(y, m - 1, d - dayOffset));
+                                    dateStr = dt.toISOString().slice(0, 10);
+                                  }
+                                  const q = dateStr ? `?journeyDate=${encodeURIComponent(dateStr)}` : '';
+                                  navigate(`/trains/${t.trainNumber}${q}`);
+                                }}
                                 className="bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                               >
                                 Track Live
