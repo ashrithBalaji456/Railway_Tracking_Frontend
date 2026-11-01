@@ -430,31 +430,40 @@ export default function StationExplorer() {
   const handleCheckSingleTrainLive = async (trainNumber: string) => {
     setIndividualLoading((prev) => ({ ...prev, [trainNumber]: true }));
     try {
-      const res: any = await api.get(`/api/v1/trains/${trainNumber}/live`);
+      const targetTrain = liveData?.trains?.find((t: any) => t.trainNumber === trainNumber);
+      const journeyParam = targetTrain?.journeyDate ? `?journeyDate=${encodeURIComponent(targetTrain.journeyDate)}` : '';
+      const res: any = await api.get(`/api/v1/trains/${trainNumber}/live${journeyParam}`);
       if (res.success && res.data) {
         const live = res.data;
         const cleanStationCode = (stationCodeParam || '').trim().toUpperCase();
-        const routeItem = live.route?.find((r: any) => 
+        const routeList = live.stations || live.route || [];
+        const routeItem = routeList.find((r: any) => 
           (r.stationCode || r.station_code || '').trim().toUpperCase() === cleanStationCode
         );
 
         if (routeItem && liveData && liveData.trains) {
           const updatedTrains = liveData.trains.map((t: any) => {
             if (t.trainNumber !== trainNumber) return t;
-            let status = 'SCHEDULED';
-            if (routeItem.hasDeparted || routeItem.has_departed || routeItem.actualDeparture || routeItem.actual_departure) {
+            let status = t.liveStatus || 'SCHEDULED';
+            const sStatus = (routeItem.status || '').toLowerCase();
+            const actDep = routeItem.actualDeparture || routeItem.actual_departure;
+            const actArr = routeItem.actualArrival || routeItem.actual_arrival;
+
+            if (actDep || sStatus.includes('depart')) {
               status = 'DEPARTED';
-            } else if (routeItem.hasArrived || routeItem.has_arrived || routeItem.actualArrival || routeItem.actual_arrival) {
-              status = 'ARRIVED';
-            } else if (live.currentStationCode === cleanStationCode || live.nextStationCode === cleanStationCode) {
+            } else if (actArr || sStatus.includes('at-station') || sStatus.includes('at_station') || sStatus.includes('arriv')) {
+              status = 'AT_STATION';
+            } else if (sStatus.includes('upcoming') || sStatus.includes('approach') || live.currentStationCode === cleanStationCode || live.nextStationCode === cleanStationCode) {
               status = 'UPCOMING';
             }
             return {
               ...t,
               liveStatus: status,
-              actualArrival: routeItem.actualArrival || routeItem.actual_arrival || t.actualArrival,
-              actualDeparture: routeItem.actualDeparture || routeItem.actual_departure || t.actualDeparture,
-              delayMinutes: routeItem.delayMinutes ?? routeItem.delay_minutes ?? t.delayMinutes,
+              actualArrival: actArr || t.actualArrival,
+              actualDeparture: actDep || t.actualDeparture,
+              expectedArrival: routeItem.expectedArrival || routeItem.expected_arrival || t.expectedArrival,
+              expectedDeparture: routeItem.expectedDeparture || routeItem.expected_departure || t.expectedDeparture,
+              delayMinutes: routeItem.delayMinutes ?? routeItem.delay_minutes ?? live.delayMinutes ?? t.delayMinutes,
               platform: routeItem.platform || t.platform
             };
           });
