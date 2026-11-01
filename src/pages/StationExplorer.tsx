@@ -51,6 +51,7 @@ export default function StationExplorer() {
   const [selectedGastronomyCode, setSelectedGastronomyCode] = useState<string | null>(null);
   const [liveHours, setLiveHours] = useState(4);
   const latestRequestedHoursRef = useRef<number>(4);
+  const liveRequestSeqRef = useRef<number>(0);
   const [liveData, setLiveData] = useState<any>(null);
   const [liveLoading, setLiveLoading] = useState(false);
   const [liveError, setLiveError] = useState('');
@@ -344,12 +345,13 @@ export default function StationExplorer() {
   const fetchLiveBoard = async (targetHours: number, showSpinner = false, forceRefresh = false) => {
     if (!stationCodeParam) return;
     const cleanCode = stationCodeParam.trim().toUpperCase();
+    const currentSeq = ++liveRequestSeqRef.current;
     const cacheKey = `${cleanCode}_${targetHours}`;
     const cached = stationLiveBoardCache.get(cacheKey);
     const now = Date.now();
 
     if (cached && (now - cached.timestamp < LIVE_BOARD_TTL_MS) && !forceRefresh) {
-      if (targetHours === latestRequestedHoursRef.current) {
+      if (targetHours === latestRequestedHoursRef.current && cleanCode === (stationCodeParam || '').trim().toUpperCase()) {
         setLiveData(cached.data);
         setLastUpdatedLive(new Date(cached.timestamp));
         setLiveLoading(false);
@@ -359,7 +361,7 @@ export default function StationExplorer() {
     }
 
     if (cached && !forceRefresh) {
-      if (targetHours === latestRequestedHoursRef.current) {
+      if (targetHours === latestRequestedHoursRef.current && cleanCode === (stationCodeParam || '').trim().toUpperCase()) {
         setLiveData(cached.data);
         setLastUpdatedLive(new Date(cached.timestamp));
       }
@@ -390,20 +392,22 @@ export default function StationExplorer() {
           timestamp: updateTime.getTime()
         });
 
-        // Only update UI if the response matches the latest selected hours window
-        if (targetHours === latestRequestedHoursRef.current) {
+        // Strict request sequence and parameters isolation: reject obsolete responses
+        if (currentSeq === liveRequestSeqRef.current && 
+            targetHours === latestRequestedHoursRef.current &&
+            cleanCode === (stationCodeParam || '').trim().toUpperCase()) {
           setLiveData(response.data);
           setLastUpdatedLive(updateTime);
           setLiveError('');
         }
       }
     } catch (err: any) {
-      if (!cached && targetHours === latestRequestedHoursRef.current) {
+      if (!cached && currentSeq === liveRequestSeqRef.current && targetHours === latestRequestedHoursRef.current) {
         setLiveError(err.message || 'Unable to load the live station board. Please try again.');
       }
     } finally {
       inFlightLiveBoard.delete(cacheKey);
-      if (targetHours === latestRequestedHoursRef.current) {
+      if (currentSeq === liveRequestSeqRef.current && targetHours === latestRequestedHoursRef.current) {
         if (showSpinner) {
           setLiveLoading(false);
         }
@@ -422,8 +426,7 @@ export default function StationExplorer() {
   }, [refreshCooldown]);
 
   const handleManualRefresh = () => {
-    if (refreshCooldown > 0 || liveLoading || isBackgroundRefreshing) return;
-    setRefreshCooldown(30);
+    if (liveLoading || isBackgroundRefreshing) return;
     fetchLiveBoard(liveHours, false, true);
   };
 
@@ -491,7 +494,10 @@ export default function StationExplorer() {
       setLiveLoading(false);
       setLiveError('');
     } else {
-      fetchLiveBoard(liveHours, !cached, false);
+      if (liveData && liveData.window && liveData.window.hours !== liveHours) {
+        setLiveData(null); // Clear mismatched window data immediately to avoid stale display
+      }
+      fetchLiveBoard(liveHours, true, false);
     }
   }, [stationCodeParam, boardMode, liveHours]);
 
@@ -1013,7 +1019,7 @@ export default function StationExplorer() {
                       )}
                     </div>
                     <div className="flex items-center space-x-3 text-xs text-slate-500 flex-wrap">
-                      {liveData && liveData.window && (
+                      {liveData && liveData.window && liveData.window.hours === liveHours && (
                         <span>Window: {liveData.window.from} to {liveData.window.to} (Next {liveData.window.hours} hours)</span>
                       )}
                       {lastUpdatedLive && (
@@ -1027,19 +1033,19 @@ export default function StationExplorer() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-3 flex-wrap gap-y-2">
-                    {/* Manual Refresh Button with 30s Cooldown */}
+                    {/* Manual Refresh Button */}
                     <button
                       onClick={handleManualRefresh}
-                      disabled={refreshCooldown > 0 || liveLoading || isBackgroundRefreshing}
+                      disabled={liveLoading || isBackgroundRefreshing}
                       className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                        refreshCooldown > 0 || liveLoading || isBackgroundRefreshing
+                        liveLoading || isBackgroundRefreshing
                           ? 'bg-slate-900/60 border-slate-800 text-slate-500 cursor-not-allowed'
                           : 'bg-indigo-950/60 hover:bg-indigo-900/60 border-indigo-500/40 text-indigo-300 hover:text-indigo-200 shadow-sm'
                       }`}
-                      title="Manual refresh with 30s cooldown to optimize API quota"
+                      title="Refresh board with latest live tracking"
                     >
                       <RotateCw className={`h-3.5 w-3.5 ${(liveLoading || isBackgroundRefreshing) ? 'animate-spin text-indigo-400' : ''}`} />
-                      <span>{refreshCooldown > 0 ? `Refresh (${refreshCooldown}s)` : isBackgroundRefreshing ? 'Updating...' : 'Refresh Board'}</span>
+                      <span>{liveLoading || isBackgroundRefreshing ? 'Updating...' : 'Refresh Board'}</span>
                     </button>
 
                     <div className="flex items-center space-x-2">
