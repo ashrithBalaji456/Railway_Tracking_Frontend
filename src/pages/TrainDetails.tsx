@@ -286,20 +286,66 @@ export default function TrainDetails() {
     const isSkippedStation = (sc?: string) => 
       !sc ? false : (liveStatus.skippedStations && liveStatus.skippedStations.some((x: string) => x?.toUpperCase() === sc?.toUpperCase()));
 
-    // 1. Explicit station match from live location text (e.g. "at-station at Chennai Beach" -> MSB)
-    if (liveStatus.lastLocationInfo && route?.stations) {
-      const locLower = liveStatus.lastLocationInfo.toLowerCase();
-      const matched = route.stations.find((s: any) => 
-        s.stationName && locLower.includes(s.stationName.toLowerCase()) && !isSkippedStation(s.stationCode)
-      );
-      if (matched && matched.stationCode) {
-        return matched.stationCode.toUpperCase();
+    const isDepartedStation = (sc?: string) => {
+      if (!sc) return false;
+      const st = liveStatus.stations?.find((s: any) => s.stationCode?.toUpperCase() === sc.toUpperCase());
+      if (!st) return false;
+      const s = (st.status || '').toLowerCase();
+      return s.includes('depart') || Boolean(st.actualDeparture);
+    };
+
+    // 0. Reliable structured telemetry: active station stop with AT_STATION or ARRIVED status that has not departed
+    if (liveStatus.stations && liveStatus.stations.length > 0) {
+      const atStationStop = liveStatus.stations.find((st: any) => {
+        if (!st?.stationCode || isSkippedStation(st.stationCode)) return false;
+        const s = (st.status || '').toLowerCase();
+        const isDep = s.includes('depart') || Boolean(st.actualDeparture);
+        return !isDep && (s.includes('at-station') || s.includes('at_station') || s === 'arrived');
+      });
+      if (atStationStop?.stationCode) {
+        return atStationStop.stationCode.toUpperCase();
       }
     }
 
-    // 2. If currentStationCode is set and is NOT cancelled/skipped, use it
+    // 1. Explicit station match from live location text (e.g. "at-station at Chennai Beach" -> MSB, "at-station at Mancheral" -> MCI)
+    if (liveStatus.lastLocationInfo && route?.stations) {
+      const locText = liveStatus.lastLocationInfo;
+      const locLower = locText.toLowerCase();
+      const isAtOrArrived = locLower.includes('at-station') || locLower.includes('arrived') || locLower.includes('at platform');
+      if (isAtOrArrived) {
+        // Prefer exact station code matching (e.g. "(MCI)" or " MCI ")
+        const matchedByCode = route.stations.find((s: any) => 
+          s.stationCode && 
+          new RegExp(`\\b${s.stationCode}\\b`, 'i').test(locText) && 
+          !isSkippedStation(s.stationCode) && 
+          !isDepartedStation(s.stationCode)
+        );
+        if (matchedByCode?.stationCode) {
+          return matchedByCode.stationCode.toUpperCase();
+        }
+
+        // Exact station name matching (excluding departed and skipped stations)
+        const matchedByName = route.stations.find((s: any) => {
+          if (!s.stationName || isSkippedStation(s.stationCode) || isDepartedStation(s.stationCode)) return false;
+          const sName = s.stationName.toLowerCase().trim();
+          if (sName.length < 3) return false;
+          return locLower.includes(sName) || locLower.replace(/[^a-z0-9]/g, '').includes(sName.replace(/[^a-z0-9]/g, ''));
+        });
+        if (matchedByName?.stationCode) {
+          return matchedByName.stationCode.toUpperCase();
+        }
+      }
+    }
+
+    // 2. If currentStationCode is set and is NOT cancelled/skipped, check if it has already departed
     if (liveStatus.currentStationCode && liveStatus.currentStationCode !== '-' && !isSkippedStation(liveStatus.currentStationCode)) {
-      return liveStatus.currentStationCode.toUpperCase();
+      if (!isDepartedStation(liveStatus.currentStationCode)) {
+        return liveStatus.currentStationCode.toUpperCase();
+      }
+      // If currentStationCode has departed, train is in transit to nextStationCode
+      if (liveStatus.nextStationCode && !isSkippedStation(liveStatus.nextStationCode)) {
+        return liveStatus.nextStationCode.toUpperCase();
+      }
     }
 
     // 3. If scheduled origin or current station is cancelled, find the first non-cancelled active station (e.g. Chennai Beach MSB)
@@ -2730,9 +2776,9 @@ export default function TrainDetails() {
                             )}
                           </div>
 
-                          {/* Train Icon bubble sliding above/on the dot */}
+                          {/* Train Icon bubble directly centered on the active station dot */}
                           {isTrainHere && (
-                            <div className="absolute -top-11 sm:-top-12 z-20 bg-gradient-to-br from-sky-400 to-sky-600 text-white w-8 h-8 sm:w-10 sm:h-10 rounded-full shadow-lg shadow-sky-500/35 border-2 border-slate-900 animate-bounce flex items-center justify-center">
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 bg-gradient-to-br from-sky-400 to-sky-600 text-white w-8 h-8 sm:w-9 sm:h-9 rounded-full shadow-lg shadow-sky-500/40 border-2 border-slate-900 animate-pulse flex items-center justify-center pointer-events-none">
                               <Train className="h-4 w-4 sm:h-5 sm:w-5" />
                               <span className="absolute -bottom-1.5 bg-sky-950 text-[6px] sm:text-[7px] font-black px-1 rounded uppercase tracking-wider border border-sky-400 select-none">Live</span>
                             </div>
@@ -3037,7 +3083,7 @@ export default function TrainDetails() {
                                           <div className="h-2 w-2 bg-sky-400 rounded-full" />
                                           <div className="absolute -inset-1.5 bg-sky-500/40 rounded-full animate-ping" />
                                         </div>
-                                        <div className="absolute -top-11 sm:-top-12 z-20 bg-gradient-to-br from-sky-400 to-sky-600 text-white w-8 h-8 sm:w-10 sm:h-10 rounded-full shadow-lg shadow-sky-500/35 border-2 border-slate-900 animate-bounce flex items-center justify-center">
+                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 bg-gradient-to-br from-sky-400 to-sky-600 text-white w-8 h-8 sm:w-9 sm:h-9 rounded-full shadow-lg shadow-sky-500/40 border-2 border-slate-900 animate-pulse flex items-center justify-center pointer-events-none">
                                           <Train className="h-4 w-4 sm:h-5 sm:w-5" />
                                           <span className="absolute -bottom-1.5 bg-sky-950 text-[6px] sm:text-[7px] font-black px-1 rounded uppercase tracking-wider border border-sky-400 select-none">Live</span>
                                         </div>
