@@ -281,32 +281,38 @@ export default function StationExplorer() {
       setError('');
 
       try {
+        // 1. Fetch station metadata immediately so station header and tabs render right away
+        const stationPromise = api.get(`/api/v1/stations/${cleanCode}`).then((res: any) => {
+          if (res && res.success && res.data) {
+            setSelectedStation(res.data);
+            searchHistoryService.addSearch({
+              type: 'STATION',
+              code: res.data.stationCode,
+              title: res.data.stationName,
+              subtitle: [res.data.district, res.data.state].filter(Boolean).filter((x: string) => x !== '-').join(', '),
+            });
+            return res.data;
+          }
+          return null;
+        }).catch((err: any) => {
+          console.warn('Failed to load station details', err);
+          return null;
+        });
+
+        // 2. Fetch timetable trains concurrently with deduplication
         let reqPromise = inFlightTimetable.get(cacheKey);
         if (!reqPromise) {
-          reqPromise = Promise.all([
-            api.get(`/api/v1/stations/${cleanCode}`),
-            stationService.getStationTrains(cleanCode, filterType, false)
-          ]);
+          reqPromise = stationService.getStationTrains(cleanCode, filterType, false);
           inFlightTimetable.set(cacheKey, reqPromise);
         }
 
-        const [detailsResponse, boardResponse]: any = await reqPromise;
-        let stData = selectedStation;
-        if (detailsResponse && detailsResponse.success && detailsResponse.data) {
-          stData = detailsResponse.data;
-          setSelectedStation(stData);
-          searchHistoryService.addSearch({
-            type: 'STATION',
-            code: stData.stationCode,
-            title: stData.stationName,
-            subtitle: [stData.district, stData.state].filter(Boolean).filter((x: string) => x !== '-').join(', '),
-          });
-        }
+        const [stData, boardResponse]: any = await Promise.all([stationPromise, reqPromise]);
+        const finalSt = stData || selectedStation;
 
         if (boardResponse && boardResponse.success && boardResponse.data) {
           setTrains(boardResponse.data);
           stationTimetableCache.set(cacheKey, {
-            station: stData,
+            station: finalSt,
             trains: boardResponse.data,
             timestamp: Date.now()
           });
@@ -1561,6 +1567,29 @@ export default function StationExplorer() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      ) : loading || stationCodeParam ? (
+        <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 sm:p-8 space-y-6 animate-pulse">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
+            <div className="space-y-2">
+              <div className="h-4 w-28 bg-slate-800 rounded"></div>
+              <div className="h-8 w-64 bg-slate-700 rounded-lg"></div>
+              <div className="h-4 w-40 bg-slate-800/60 rounded"></div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-24 bg-slate-800 rounded-xl"></div>
+              <div className="h-10 w-24 bg-slate-800 rounded-xl"></div>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div className="h-12 w-full bg-slate-800/40 rounded-xl"></div>
+            <div className="h-20 w-full bg-slate-800/30 rounded-xl"></div>
+            <div className="h-20 w-full bg-slate-800/30 rounded-xl"></div>
+          </div>
+          <div className="text-center text-xs text-slate-400 font-medium flex items-center justify-center gap-2">
+            <RotateCw className="h-3.5 w-3.5 animate-spin text-indigo-400" />
+            <span>Loading station details for {stationCodeParam}...</span>
           </div>
         </div>
       ) : (

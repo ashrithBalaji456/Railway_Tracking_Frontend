@@ -2956,6 +2956,35 @@ export default function TrainDetails() {
                                   (sc: string) => sc?.toUpperCase() === passStation.stationCode?.toUpperCase()
                                 ))
                               );
+
+                              // Resolve train relative sequence position
+                              const currentBubbleSeq = route?.stations?.find(
+                                (st: any) => st.stationCode?.toUpperCase() === bubbleStationCode
+                              )?.sequenceNumber;
+
+                              const isPassedBySeq = currentBubbleSeq != null && passStation.sequenceNumber < currentBubbleSeq;
+                              const isUpcomingBySeq = currentBubbleSeq != null && passStation.sequenceNumber > currentBubbleSeq;
+
+                              const passStatusRaw = passLiveStop?.status?.toLowerCase() || '';
+                              const isPassStopDeparted = passStatusRaw.includes('depart') || 
+                                                         Boolean(passLiveStop?.actualDeparture) || 
+                                                         (isPassedBySeq && !isTrainAtPassStation);
+                              const isPassAtStation = !isPassStopDeparted && (
+                                isTrainAtPassStation || 
+                                passStatusRaw.includes('at-station') || 
+                                passStatusRaw.includes('at_station') || 
+                                passStatusRaw === 'arrived'
+                              );
+                              const isPassUpcoming = !isPassStopDeparted && !isPassAtStation && (
+                                passStatusRaw === 'upcoming' || passStatusRaw === 'scheduled' || isUpcomingBySeq
+                              );
+                              const isPassPredicted = Boolean(passLiveStop?.isPredicted || isPassUpcoming || (!isPassStopDeparted && !isPassAtStation));
+
+                              // Resolve effective delay from station or train general delay
+                              const passDelay = (passLiveStop?.delayMinutes !== undefined && passLiveStop?.delayMinutes !== null)
+                                ? passLiveStop.delayMinutes
+                                : (liveStatus?.delayMinutes ?? 0);
+
                               return (
                                 <div key={passStation.sequenceNumber} className={`flex items-center py-1.5 relative rounded transition-colors ${
                                   isTrainAtPassStation ? 'bg-sky-500/15 border border-sky-500/40 shadow-sm my-0.5' :
@@ -2963,11 +2992,38 @@ export default function TrainDetails() {
                                 }`}>
                                   {/* Arrival timing */}
                                   <div className="w-14 sm:w-20 text-right pr-1 sm:pr-2 shrink-0">
-                                    <span className={`text-[10px] sm:text-xs font-mono ${
+                                    <div className={`text-[10px] sm:text-xs font-mono leading-tight ${
                                       isPassCancelled ? 'line-through text-slate-500' : 'text-slate-450'
                                     }`}>
                                       {passStation.arrivalTime ? format12Hour(passStation.arrivalTime) : '---'}
-                                    </span>
+                                    </div>
+                                    {isPassCancelled ? (
+                                      <div className="text-[8px] sm:text-[9px] text-rose-400 font-bold leading-none mt-0.5">
+                                        Cancelled
+                                      </div>
+                                    ) : showLive && (passLiveStop || passDelay > 0) ? (
+                                      <div className="mt-0.5 leading-none">
+                                        {passLiveStop?.actualArrival && !isPassPredicted && (isPassStopDeparted || isPassAtStation) ? (
+                                          <div className={`text-[9px] sm:text-[10px] font-bold ${
+                                            passDelay > 0 ? 'text-amber-400' : 'text-emerald-400'
+                                          }`}>
+                                            Act: {format12Hour(passLiveStop.actualArrival)}
+                                          </div>
+                                        ) : isPassStopDeparted && passStation.arrivalTime ? (
+                                          <div className={`text-[9px] sm:text-[10px] font-bold ${
+                                            passDelay > 0 ? 'text-amber-400' : 'text-emerald-400'
+                                          }`}>
+                                            Act: {passDelay > 0 ? formatDelayedTime(passStation.arrivalTime, passDelay) : format12Hour(passStation.arrivalTime)}
+                                          </div>
+                                        ) : (isPassPredicted || isPassUpcoming) && passStation.arrivalTime ? (
+                                          <div className={`text-[9px] sm:text-[10px] font-bold ${
+                                            passDelay > 0 ? 'text-amber-400' : 'text-emerald-400'
+                                          }`}>
+                                            Exp: {format12Hour(passLiveStop?.expectedArrival || (passDelay > 0 ? formatDelayedTime(passStation.arrivalTime, passDelay) : passStation.arrivalTime))}
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                    ) : null}
                                   </div>
 
                                   {/* Dot / Live train bubble */}
@@ -3003,15 +3059,55 @@ export default function TrainDetails() {
                                         {translateName(passStation.stationName, language)}
                                         {passStation.stationCode && <span className="ml-1 text-[9px] font-mono text-sky-400">({passStation.stationCode})</span>}
                                       </span>
-                                      {passLiveStop?.status && (
-                                        <span className="text-[7px] sm:text-[8px] font-bold text-slate-400 uppercase bg-slate-900 border border-slate-800 px-1 py-0.2 rounded">
-                                          {passLiveStop.status}
-                                        </span>
-                                      )}
-                                      {isTrainAtPassStation && (
-                                        <span className="text-[7px] sm:text-[8px] font-black text-sky-300 bg-sky-500/30 border border-sky-400/50 px-1 rounded uppercase tracking-wide">
-                                          Train Location
-                                        </span>
+                                      {showLive && !isPassCancelled && (
+                                        <>
+                                          {isPassStopDeparted ? (
+                                            (() => {
+                                              const depWindow = getDepartedWindowInfo(passLiveStop?.actualDeparture, 7);
+                                              if (depWindow.isWithinWindow) {
+                                                return (
+                                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[7px] sm:text-[8px] font-extrabold uppercase tracking-wider border bg-red-950/80 border-red-500/60 text-red-300">
+                                                    <span className="h-1 w-1 rounded-full bg-red-500 animate-pulse"></span>
+                                                    DEPARTED
+                                                  </span>
+                                                );
+                                              }
+                                              return (
+                                                <span className="text-[7px] sm:text-[8px] font-bold text-indigo-300 uppercase bg-indigo-950/60 border border-indigo-800/50 px-1.5 py-0.2 rounded">
+                                                  DEPARTED
+                                                </span>
+                                              );
+                                            })()
+                                          ) : isPassAtStation ? (
+                                            <span className="text-[7px] sm:text-[8px] font-bold text-emerald-300 uppercase bg-emerald-950/60 border border-emerald-800/50 px-1.5 py-0.2 rounded">
+                                              {isTrainAtPassStation ? 'TRAIN LOCATION' : 'AT STATION'}
+                                            </span>
+                                          ) : isPassUpcoming ? (
+                                            <span className="text-[7px] sm:text-[8px] font-bold text-sky-300 uppercase bg-sky-950/60 border border-sky-800/50 px-1.5 py-0.2 rounded">
+                                              UPCOMING
+                                            </span>
+                                          ) : passLiveStop?.status ? (
+                                            <span className="text-[7px] sm:text-[8px] font-bold text-slate-400 uppercase bg-slate-900 border border-slate-800 px-1.5 py-0.2 rounded">
+                                              {passLiveStop.status}
+                                            </span>
+                                          ) : null}
+
+                                          {isTrainAtPassStation && !isPassAtStation && (
+                                            <span className="text-[7px] sm:text-[8px] font-black text-sky-300 bg-sky-500/30 border border-sky-400/50 px-1 rounded uppercase tracking-wide">
+                                              Train Location
+                                            </span>
+                                          )}
+
+                                          {passDelay !== undefined && passDelay !== null && (
+                                            <span className={`px-1.5 py-0.2 rounded text-[7px] sm:text-[8px] font-bold ${
+                                              passDelay > 0
+                                                ? 'bg-amber-950/50 text-amber-400 border border-amber-900/40'
+                                                : 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/30'
+                                            }`}>
+                                              {passDelay > 0 ? `+${passDelay}m` : 'On Time'}
+                                            </span>
+                                          )}
+                                        </>
                                       )}
                                       {isPassCancelled && (
                                         <span className="text-[8px] font-bold text-rose-300 bg-rose-500/20 border border-rose-500/30 px-1 rounded">
@@ -3031,11 +3127,38 @@ export default function TrainDetails() {
 
                                   {/* Departure timing */}
                                   <div className="w-16 sm:w-24 text-right pl-1 shrink-0">
-                                    <span className={`text-[10px] sm:text-xs font-mono ${
+                                    <div className={`text-[10px] sm:text-xs font-mono leading-tight ${
                                       isPassCancelled ? 'line-through text-slate-500' : 'text-slate-450'
                                     }`}>
                                       {passStation.departureTime ? format12Hour(passStation.departureTime) : '---'}
-                                    </span>
+                                    </div>
+                                    {isPassCancelled ? (
+                                      <div className="text-[8px] sm:text-[9px] text-rose-400 font-bold leading-none mt-0.5">
+                                        Cancelled
+                                      </div>
+                                    ) : showLive && (passLiveStop || passDelay > 0) ? (
+                                      <div className="mt-0.5 leading-none">
+                                        {passLiveStop?.actualDeparture && !isPassPredicted && isPassStopDeparted ? (
+                                          <div className={`text-[9px] sm:text-[10px] font-bold ${
+                                            passDelay > 0 ? 'text-amber-400' : 'text-emerald-400'
+                                          }`}>
+                                            Act: {format12Hour(passLiveStop.actualDeparture)}
+                                          </div>
+                                        ) : isPassStopDeparted && passStation.departureTime ? (
+                                          <div className={`text-[9px] sm:text-[10px] font-bold ${
+                                            passDelay > 0 ? 'text-amber-400' : 'text-emerald-400'
+                                          }`}>
+                                            Act: {passDelay > 0 ? formatDelayedTime(passStation.departureTime, passDelay) : format12Hour(passStation.departureTime)}
+                                          </div>
+                                        ) : (isPassPredicted || isPassUpcoming || isPassAtStation) && passStation.departureTime ? (
+                                          <div className={`text-[9px] sm:text-[10px] font-bold ${
+                                            passDelay > 0 ? 'text-amber-400' : 'text-emerald-400'
+                                          }`}>
+                                            Exp: {format12Hour(passLiveStop?.expectedDeparture || (passDelay > 0 ? formatDelayedTime(passStation.departureTime, passDelay) : passStation.departureTime))}
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                    ) : null}
                                   </div>
                                 </div>
                               );
