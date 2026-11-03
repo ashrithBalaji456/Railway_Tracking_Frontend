@@ -47,10 +47,10 @@ export default function Register() {
       });
 
       if (response.success) {
-        setSuccess('Registration successful! Redirecting to sign in...');
+        setSuccess('Registration successful! A welcome email was sent to your inbox. Redirecting to sign in...');
         setTimeout(() => {
           navigate('/login');
-        }, 1500);
+        }, 1800);
       } else {
         setError(response.message || 'Registration failed');
       }
