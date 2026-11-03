@@ -4,6 +4,7 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
 import StationExplorer from './pages/StationExplorer';
 import TrainDetails from './pages/TrainDetails';
 import MapTracker from './pages/MapTracker';
@@ -32,6 +33,7 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/stations" element={<StationExplorer />} />
               <Route path="/trains/:trainNumber" element={<TrainDetails />} />
               <Route path="/map" element={<MapTracker />} />
