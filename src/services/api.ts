@@ -27,13 +27,16 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    const isAuthRequest = error.config?.url?.includes('/api/v1/auth/');
+    if (error.response && error.response.status === 401 && !isAuthRequest) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('username');
       localStorage.removeItem('email');
       localStorage.removeItem('userId');
       localStorage.removeItem('roles');
-      window.location.href = '/login';
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     const message = error.response?.data?.message || 'Something went wrong';
     return Promise.reject(new Error(message));

@@ -16,7 +16,7 @@ export default function Login() {
     setError('');
 
     if (!username.trim()) {
-      setError('Username cannot be empty');
+      setError('Username or email cannot be empty');
       return;
     }
     if (password.length < 6) {
@@ -28,7 +28,7 @@ export default function Login() {
 
     try {
       const response: any = await api.post('/api/v1/auth/signin', {
-        username,
+        username: username.trim(),
         password,
       });
 
@@ -64,7 +64,7 @@ export default function Login() {
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="block text-sm font-medium text-slate-400 mb-2">Username</label>
+          <label className="block text-sm font-medium text-slate-400 mb-2">Username or Email</label>
           <div className="relative">
             <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
               <User className="h-5 w-5" />
@@ -72,10 +72,11 @@ export default function Login() {
             <input
               type="text"
               required
+              autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-md w-full pl-10 pr-3 py-2.5 text-slate-200 outline-none transition-all placeholder:text-slate-650"
-              placeholder="Enter your username"
+              placeholder="Enter your username or email"
             />
           </div>
         </div>
