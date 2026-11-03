@@ -2327,3 +2327,166 @@ File path: `src/pages/TrainDetails.tsx`
 
 * When tracking a train that has active service exceptions or cancellations, the top **Disruption Alert Banner** includes a dedicated **"Email Advisory"** button alongside the standard "Details" link.
 * Allows passengers tracking an affected train to arm email updates or test dispatch the advisory memo with a single click.
+
+---
+
+## 20. 📘 Step-by-Step Notification & Email Services Handbook
+
+### 20.1. Frontend Notification Architecture Map
+
+```
++---------------------------------------------------------------------------------------------------------+
+|                                    FRONTEND NOTIFICATION ARCHITECTURE                                   |
++---------------------------------------------------------------------------------------------------------+
+|                                                                                                         |
+|  [USER ENTRY POINTS]                                                                                    |
+|  * PnrStatus.tsx              ---> SmartPnrPredictorCard.tsx (Chart Clock) & Morning Reminder Form      |
+|  * StationExplorer.tsx        ---> Live Board "Email Board" Timetable Snapshot Modal                   |
+|  * TrainDetails.tsx           ---> StationWakeUpAlarmModal.tsx & RingingAlarmOverlay.tsx               |
+|  * DisruptionsPage.tsx        ---> DisruptionAlertModal.tsx & Live Route Exception Banners             |
+|  * Navbar.tsx                 ---> NotificationPreferencesModal.tsx (Global Cockpit)                   |
+|                                                                                                         |
+|                                         |                                                               |
+|                                         v                                                               |
+|  [CLIENT SERVICES & BROWSER HARDWARE]                                                                   |
+|  * alarmAudioService.ts       ---> Web Audio API Oscillators (Digital Clock / Siren / Train Horn)       |
+|                               ---> navigator.wakeLock (Screen Wake Lock Sentinel during night travel)   |
+|                               ---> navigator.vibrate (Continuous SOS hardware vibration loop)           |
+|                               ---> window.speechSynthesis (Voice announcements)                         |
+|  * pnrPredictorService.ts     ---> Statistical Quota & Class Confirmation Algorithm                    |
+|                               ---> Official IRCTC Chart Preparation Timeline Engine                     |
+|                               ---> Web Audio Notification Alert Chime (880Hz -> 1320Hz)                 |
+|  * api.ts                     ---> Axios Client communicating with Spring Boot Backend Endpoints        |
+|  * LocalStorage Keys          ---> 'email', 'whatsapp_phone', 'rail_armed_alarm', 'rail_pnr_history'   |
+|                                                                                                         |
+|                                         |                                                               |
+|                                         v                                                               |
+|  [BACKEND REST DISPATCH]                                                                                |
+|  * POST /api/v1/pnr/reminder            ---> Schedules 06:00 AM IST morning travel alert                |
+|  * POST /api/stations/{code}/live/email ---> Emails 2-8h upcoming timetable snapshot                    |
+|  * POST /api/v1/alarm/approaching       ---> Dispatches emergency proximity wake-up email               |
+|  * POST /api/v1/pnr/chart-alert         ---> Arms IRCTC chart preparation email alert                   |
+|  * POST /api/v1/disruptions/alert       ---> Arms route diversion & cancellation advisory alert         |
++---------------------------------------------------------------------------------------------------------+
+```
+
+---
+
+### 20.2. Step-by-Step User Guides for Every Notification Service
+
+#### 1. 🚆 Travel Day Morning Reminder (06:00 AM IST Briefing)
+* **What is the use:** Ensures passengers never miss boarding by delivering an automated 06:00 AM morning email with real-time GPS tracking, platform indicators, and delay warnings on their journey date.
+* **Step-by-Step User Guide:**
+  1. Go to the **PNR Status** page (`/pnr`).
+  2. Enter your 10-digit PNR (e.g. `4521849021`) and 5-digit train number (e.g. `12951`).
+  3. Under **Travel Day Morning Reminder**, select your travel date from the date picker.
+  4. Ensure your email is specified in the **Alert Recipient Email** field.
+  5. Click **"Schedule Morning Reminder"**.
+  6. Click **"Send Sample Email"** if you wish to preview the email layout in your inbox immediately.
+
+---
+
+#### 2. 📊 Station Live Departure / Arrival Board Email Snapshot
+* **What is the use:** Provides relatives or pickup drivers waiting at stations with a clean, printer-friendly or inbox-accessible timetable of all trains arriving and departing within a 2-to-8-hour window.
+* **Step-by-Step User Guide:**
+  1. Open **Station Explorer** (`/stations`).
+  2. Search for any junction (e.g., `NDLS`, `BCT`, `HWH`, `SC`).
+  3. In the station navigation tabs, select **Live Board**.
+  4. Choose your window (e.g., `Next 4 Hours` or `Next 8 Hours`).
+  5. Click the **"Email Board"** button in the action bar.
+  6. Confirm your email address and click **"Dispatch Snapshot"**.
+
+---
+
+#### 3. ⏰ Station Approaching Night Guardian (Audio & Emergency Email Alarm)
+* **What is the use:** Guarantees overnight travelers wake up before their destination. Utilizes synthesized sound, phone vibration, screen wake-lock, and an emergency backup email.
+* **Step-by-Step User Guide:**
+  1. Navigate to **Live Train Details** (`/trains/{trainNumber}`).
+  2. Scroll down the route station halts to locate your destination or intermediate stop.
+  3. Click the bell icon button **"Set Alarm"** next to the station name.
+  4. Choose when you want the alarm to ring (**15m**, **30m**, **45m**, or **60m** prior to arrival).
+  5. Choose an alarm ringtone (`Digital Clock`, `Emergency Siren`, or `Train Horn`) and click **"Test Tone"** to check sound volume.
+  6. Enter an optional backup email address and click **"Arm Alarm"**.
+  7. When armed, a floating golden status pill appears on the top-right. Keep the tab open during your journey; the application automatically requests a screen wake lock so your phone will not sleep.
+  8. When triggered, a full-screen flashing alert overlay activates with repeating audio and vibration. Click **"I AM AWAKE • STOP ALARM"** to dismiss.
+
+---
+
+#### 4. 🎫 IRCTC Chart Preparation Notification & Probability Predictor
+* **What is the use:** Waitlist (`WL`) and `RAC` passengers can track the exact clearance probability of their ticket and receive an email the moment IRCTC finalizes the chart so they can see their coach and berth allocations.
+* **Step-by-Step User Guide:**
+  1. Open **PNR Status** (`/pnr`).
+  2. In the **Smart PNR Predictor & Charting Countdown** card:
+     * **To predict confirmation chance:** Select your Quota (`GNWL`, `RLWL`, `PQWL`, `TQWL`, `RAC`), Class (`SL`, `3A`, etc.), Booking WL, and Current WL. View your instant percentage gauge and historical clearance insight.
+     * **To track charting clock:** Switch to the **Chart Countdown Clock** tab.
+  3. Review the live countdown clock (automatically configured: 8:00 PM previous night for 5 AM–2 PM departures; 10 hours prior for afternoon/night departures; 30 minutes prior for Chart 2).
+  4. Click **"Chime Preview"** to hear the Web Audio notification sound.
+  5. Enter your email and click **"Arm Chart Alert"** (or **"Test Email"** to preview the email).
+
+---
+
+#### 5. 🚨 Route Disruption & Weather Safety Advisory Alert
+* **What is the use:** Keeps passengers informed if their train is cancelled, diverted via an alternative route, or delayed due to fog or monsoon conditions, and outlines instructions for claiming a 100% fare refund.
+* **Step-by-Step User Guide:**
+  1. Open the **Disruptions** page (`/disruptions`) or view any train displaying a red disruption banner in Live Tracking.
+  2. Click the **"Email Advisory"** button on the disrupted train card.
+  3. Inspect the disruption reason, diverted route, and official IRCTC TDR refund guidelines.
+  4. Confirm your email and click **"Arm Disruption Alert"** (or **"Send Sample Email"** for an instant preview).
+
+---
+
+#### 6. ⚠️ Automated Live Delay Alerts & Sensitivity Threshold
+* **What is the use:** Sends an email when a favorited train is running late past the passenger's chosen threshold.
+* **Step-by-Step User Guide:**
+  1. Open **Live Train Details** (`/trains/{trainNumber}`) and click the **Heart** icon to favorite the train.
+  2. Click the **"Alerts" (`🔔`)** icon in the top navigation bar.
+  3. Under **Live Delay Alert Sensitivity**, choose your threshold:
+     * **15 mins delay** (high sensitivity)
+     * **30 mins delay** (moderate sensitivity)
+     * **60 mins delay** (major delay alert only)
+  4. Click **"Save All Preferences"**.
+
+---
+
+#### 7. 🗺️ Journey Planner Itinerary Travel Memo
+* **What is the use:** Dispatches a formatted multi-leg journey itinerary with intermediate connection layovers and platform stops to the passenger's email.
+* **Step-by-Step User Guide:**
+  1. Navigate to **Journey Planner** (`/journey`).
+  2. Enter source and destination stations and click **"Find Routes"**.
+  3. Select any route card and click **"Email Itinerary"**.
+  4. Provide the recipient email and click **"Send Travel Memo"**.
+
+---
+
+#### 8. 📬 Smart Rotating Weekly RailTrack Gazette
+* **What is the use:** Delivers a curated weekly digest of network speed records, tourist guides, and route updates every Sunday morning.
+* **Step-by-Step User Guide:**
+  1. Click **"Alerts" (`🔔`)** in the navbar.
+  2. Under **Automated Alert Rules**, toggle **Weekly Rail Gazette** to **ON**.
+  3. If going on leave or wishing to pause digests temporarily, toggle the switch to **OFF**.
+  4. Click **"Save All Preferences"**.
+
+---
+
+#### 9. 🛡️ User Notification & Alert Preferences Center Cockpit
+* **What is the use:** Central cockpit to inspect all active reminders, disarm night alarms, and manage communication channels in one place.
+* **Step-by-Step User Guide:**
+  1. Click the **"Alerts" (`🔔`)** button in the top desktop navigation bar (or mobile menu drawer).
+  2. **Notification Rules & Channels Tab:**
+     * Enter your Primary Email and WhatsApp contact. These values are saved locally and auto-fill across all forms in the application.
+     * Configure toggle switches for Weekly Gazette, Travel Day Reminder, and Station Wake-Up Alarm.
+     * Select delay sensitivity threshold.
+     * Click **"Save All Preferences"**.
+  3. **Active Reminders & Alarms Tab:**
+     * View any currently armed Station Approaching Night Alarms with a 1-click **"Disarm"** button.
+     * Inspect all scheduled 06:00 AM PNR travel reminders with a 1-click **"Cancel"** button.
+
+---
+
+#### 10. 🔐 Authentication OTP Verification & Welcome Onboarding
+* **What is the use:** Safe self-service password recovery using secure 6-digit verification codes.
+* **Step-by-Step User Guide:**
+  1. On the login screen, click **"Forgot Password?"**.
+  2. Enter your registered email address.
+  3. Check your email for a 6-digit numeric OTP valid for 15 minutes.
+  4. Enter the OTP and your new password on the verification screen to reset credentials.
