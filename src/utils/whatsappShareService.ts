@@ -128,6 +128,60 @@ class WhatsAppShareService {
 
     this.openWhatsApp(msg, phoneNumber);
   }
+
+  /**
+   * Generates formatted text for PNR Waitlist Confirmation Forecast
+   */
+  sharePnrConfirmationPrediction(data: {
+    pnr: string;
+    trainNumber: string;
+    travelDate: string;
+    quota: string;
+    travelClass: string;
+    currentStatus: number;
+    probability: number;
+    headline: string;
+  }, phoneNumber?: string): void {
+    const { pnr, trainNumber, travelDate, quota, travelClass, currentStatus, probability, headline } = data;
+
+    let msg = `🎫 *RailTrack India • PNR Confirmation Forecast*\n`;
+    msg += `🔢 *PNR:* ${pnr} • *Train:* ${trainNumber}\n`;
+    msg += `📅 *Date:* ${travelDate} • *Class:* ${travelClass}\n`;
+    msg += `📊 *Status:* ${quota} #${currentStatus}\n`;
+    msg += `🎯 *Confirmation Chance:* ${probability}% (${headline})\n`;
+
+    const host = window.location.origin;
+    msg += `\n🔗 *Track live status & chart countdown:*\n${host}/pnr?pnr=${pnr}\n`;
+
+    this.openWhatsApp(msg, phoneNumber);
+  }
+
+  /**
+   * Generates formatted text for IRCTC Chart Preparation Countdown
+   */
+  shareChartPreparationCountdown(data: {
+    trainNumber: string;
+    trainName?: string;
+    travelDate: string;
+    departureTime: string;
+    phaseTitle: string;
+    countdownText: string;
+    ruleApplied: string;
+  }, phoneNumber?: string): void {
+    const { trainNumber, trainName, travelDate, departureTime, phaseTitle, countdownText, ruleApplied } = data;
+
+    let msg = `⏳ *IRCTC Chart Preparation Clock • RailTrack India*\n`;
+    msg += `🚄 *Train:* ${trainNumber} ${trainName ? `- ${trainName}` : ''}\n`;
+    msg += `🕒 *Departure:* ${travelDate} at ${departureTime}\n`;
+    msg += `📊 *Phase:* ${phaseTitle}\n`;
+    msg += `⏱️ *Time Remaining:* ${countdownText}\n`;
+    msg += `📋 *Rule:* ${ruleApplied}\n`;
+
+    const host = window.location.origin;
+    msg += `\n🔗 *Check live chart countdown & platform:*\n${host}/pnr?pnr=4521849021\n`;
+
+    this.openWhatsApp(msg, phoneNumber);
+  }
 }
 
 export const whatsappShareService = new WhatsAppShareService();

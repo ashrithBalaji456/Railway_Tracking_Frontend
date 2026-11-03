@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import whatsappShareService from '../utils/whatsappShareService';
+import SmartPnrPredictorCard from '../components/SmartPnrPredictorCard';
 
 interface SavedPnr {
   pnr: string;
@@ -467,6 +468,14 @@ export default function PnrStatus() {
           </button>
         </div>
       </div>
+
+      {/* Smart PNR Charting & Confirmation Probability Predictor */}
+      <SmartPnrPredictorCard
+        initialPnr={cleanPnr}
+        initialTrainNumber={trainNumberInput || reminderTrain || '12951'}
+        initialTrainName={reminderTrainName || 'Express'}
+        initialTravelDate={reminderDate}
+      />
 
       {/* Travel Day Morning Reminder via Brevo */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 p-5 sm:p-7 shadow-xl space-y-5">

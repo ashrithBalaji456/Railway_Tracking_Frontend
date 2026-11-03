@@ -2236,3 +2236,61 @@ File path: `src/components/Navbar.tsx`
   - Added an **"Alerts"** bell button adjacent to the language switcher, featuring an intuitive Lucide `Bell` icon and styled glassmorphism container.
 * **Mobile Drawer Menu:**
   - Added a dedicated **"Alerts & Preferences"** entry in the mobile responsive menu so smartphone users can adjust settings with a single tap.
+
+---
+
+## 18. 🎫 Smart PNR Confirmation Predictor & IRCTC Charting Countdown Clock
+
+### 18.1. Overview & Problem Solved
+Because official Indian Railways PNR status queries are protected behind CAPTCHAs, passengers checking unconfirmed tickets (`WL` or `RAC`) typically need guidance on whether their ticket will actually confirm and when their coaches/berths will be finalized.
+
+This feature introduces an intelligence cockpit inside `PnrStatus.tsx`:
+1. A **Statistical Confirmation Probability Engine** assessing clearing likelihood.
+2. A **Live IRCTC Chart Preparation Countdown Clock** calculating exact charting milestones.
+3. Automated **Brevo Charting Email Alerts** and **1-Tap WhatsApp Share** capabilities.
+
+### 18.2. Prediction & Charting Service (`pnrPredictorService.ts`)
+File path: `src/utils/pnrPredictorService.ts`
+
+* **Waitlist Confirmation Algorithm (`calculateProbability`):**
+  - **Quota Base Confidence:**
+    - `GNWL` (General Waitlist): Base confidence ~80% (draws from primary quota cancellations).
+    - `RLWL` (Remote Location): Base confidence ~52% (limited to remote halt quotas).
+    - `PQWL` (Pooled Quota): Base confidence ~32% (restricted pooled quota).
+    - `TQWL` (Tatkal Waitlist): Base confidence ~18% (no refund on cancellation, minimal movement).
+    - `RAC` (Reservation Against Cancellation): Guaranteed travel (~90–99% probability of full berth conversion).
+  - **Class Capacity Weighting:**
+    - `SL` (Sleeper): Multiplier 1.15 (400+ berths across 6–8 coaches, highest clearance).
+    - `3A` / `3E`: Multiplier 1.0 (~380 berths).
+    - `2A`: Multiplier 0.78 (~100 berths).
+    - `1A`: Multiplier 0.45 (18–24 berths, WL > 4 rarely clears).
+  - **Clearance Velocity:** Measures `bookingStatus - currentStatus` to award velocity momentum.
+  - **Urgency Factor:** Accelerates projected clearance in the final 48 hours as uncertain travelers cancel.
+* **Official Indian Railways Chart Preparation Timeline (`calculateChartTimeline`):**
+  - **Morning Trains (Departing 05:00 to 14:00):** Chart 1 finalized at **08:00 PM on the previous night**.
+  - **Other Trains (Departing after 14:00 or before 05:00):** Chart 1 finalized **10 hours before departure**.
+  - **Final Chart (Chart 2):** Finalized **30 minutes before departure** from originating station.
+  - Formats real-time ticking countdowns (`DDd HHh : MMm : SSs`) and determines phase progression (`BOOKING`, `CHART1_PREPARED`, `CURRENT_BOOKING`, `CHART2_FINALIZED`).
+* **Web Audio Notification Chime (`playNotificationChime`):**
+  - Synthesizes a two-tone ascending frequency chime (880 Hz $\rightarrow$ 1320 Hz) using the native browser `AudioContext` to preview countdown completion alarms without audio file downloads.
+
+### 18.3. UI Component Architecture (`SmartPnrPredictorCard.tsx`)
+File path: `src/components/SmartPnrPredictorCard.tsx`
+
+* **Confirmation Predictor Tab:**
+  - Interactive dropdowns for Quota and Class, plus numerical inputs for Booking and Current status.
+  - Real-time animated probability gauge (color-coded in emerald, amber, or rose).
+  - Display tags for cleared spots so far.
+  - Separate cards for **Historical Clearance Insight** and **Actionable Travel Guidance** (e.g., Tatkal 10:00 AM / 11:00 AM reminder prompts).
+* **Chart Countdown Clock Tab:**
+  - Time input for scheduled departure time and travel date.
+  - Bold real-time ticking countdown clock displaying time left to the next charting milestone.
+  - 4-phase visual progression track (`Booking Open` ➔ `Chart 1 Finalized` ➔ `Current Booking` ➔ `Chart 2 Locked`).
+  - Integrated notification form: Arm Chart Alert, Send Sample Test Email via Brevo, and Web Audio chime preview.
+* **1-Tap WhatsApp Sharing:**
+  - Uses `whatsappShareService.sharePnrConfirmationPrediction(...)` and `whatsappShareService.shareChartPreparationCountdown(...)` for instant mobile sharing to WhatsApp.
+
+### 18.4. Integration in `PnrStatus.tsx`
+File path: `src/pages/PnrStatus.tsx`
+
+* Positioned prominently directly above the Travel Day Morning Reminder form, dynamically receiving the user's active PNR, train number, and journey date from the lookup input fields.

@@ -585,3 +585,4 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
     </div>
   );
 }
+
