@@ -10,7 +10,7 @@ import { getStationDisplayName } from '../utils/stationUtils';
 import { getStationGastronomy, STATION_GASTRONOMY } from '../data/stationGastronomy';
 import { STATION_AMENITIES, type StationAmenity, getStationAmenitiesForStation, getStationCategoryDetails } from '../data/stationAmenities';
 import { getDepartedWindowInfo, formatTimeForDisplay } from '../utils/liveStatusUtils';
-import { X } from 'lucide-react';
+import { X, Mail, Send } from 'lucide-react';
 
 interface CachedTimetable {
   station: any;
@@ -59,6 +59,41 @@ export default function StationExplorer() {
   const [refreshCooldown, setRefreshCooldown] = useState<number>(0);
   const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
   const [individualLoading, setIndividualLoading] = useState<Record<string, boolean>>({});
+
+  // Email Station Live Board State
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailAddress, setEmailAddress] = useState<string>(localStorage.getItem('email') || '');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const handleSendBoardEmail = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!selectedStation?.stationCode) return;
+    if (!emailAddress.trim() || !emailAddress.includes('@')) {
+      setEmailStatus({ type: 'error', message: 'Please enter a valid recipient email address.' });
+      return;
+    }
+
+    try {
+      setEmailSending(true);
+      setEmailStatus(null);
+      const res: any = await api.post(`/api/stations/${selectedStation.stationCode}/live/email`, {
+        email: emailAddress.trim(),
+        hours: liveHours
+      });
+      setEmailStatus({
+        type: 'success',
+        message: res.message || `Live board snapshot for ${selectedStation.stationName} (${selectedStation.stationCode}) sent to ${emailAddress}!`
+      });
+    } catch (err: any) {
+      setEmailStatus({
+        type: 'error',
+        message: err.response?.data?.message || err.message || 'Failed to dispatch station board email.'
+      });
+    } finally {
+      setEmailSending(false);
+    }
+  };
 
   const [trains, setTrains] = useState<any[]>([]);
   // Fetch Live Station Weather via Open-Meteo
@@ -1076,6 +1111,16 @@ export default function StationExplorer() {
                       <span>{liveLoading || isBackgroundRefreshing ? 'Updating...' : 'Refresh Board'}</span>
                     </button>
 
+                    {/* Email Live Board Snapshot Button */}
+                    <button
+                      onClick={() => setShowEmailModal(true)}
+                      className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-purple-500/40 bg-purple-950/50 hover:bg-purple-900/60 text-purple-200 hover:text-white shadow-sm transition-all cursor-pointer"
+                      title="Email this real-time timetable snapshot to your inbox"
+                    >
+                      <Mail className="h-3.5 w-3.5 text-purple-400" />
+                      <span>Email Board</span>
+                    </button>
+
                     <div className="flex items-center space-x-2">
                       <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider shrink-0">Window:</span>
                       <div className="flex bg-slate-900 border border-slate-800 p-1 rounded-lg">
@@ -1732,6 +1777,96 @@ export default function StationExplorer() {
                 Got It
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email Station Live Board Modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-slate-900 border border-purple-500/30 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+            <div className="flex items-start justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-purple-950/70 border border-purple-500/30 rounded-xl text-purple-300">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-base">Email Station Live Board</h3>
+                  <p className="text-xs text-slate-400">
+                    {selectedStation?.stationName} ({selectedStation?.stationCode}) • Next {liveHours} Hours
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEmailModal(false);
+                  setEmailStatus(null);
+                }}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              We will dispatch a real-time timetable snapshot including train numbers, origin, destination, scheduled/expected times, platform numbers, and live delay statuses via Brevo.
+            </p>
+
+            {emailStatus && (
+              <div
+                className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
+                  emailStatus.type === "success"
+                    ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-300"
+                    : "bg-rose-950/60 border-rose-500/40 text-rose-300"
+                }`}
+              >
+                {emailStatus.type === "success" ? (
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                )}
+                <span>{emailStatus.message}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSendBoardEmail} className="space-y-3 pt-1">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                  Recipient Email Address:
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="name@example.com"
+                  value={emailAddress}
+                  onChange={(e) => setEmailAddress(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEmailModal(false);
+                    setEmailStatus(null);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 hover:text-white text-xs font-semibold cursor-pointer"
+                >
+                  Close
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={emailSending}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-purple-600/20 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{emailSending ? "Sending Snapshot..." : "Send Snapshot Email"}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

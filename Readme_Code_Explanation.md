@@ -2147,3 +2147,40 @@ This section documents the frontend views and components integrated for rail dis
   - `fetchLiveBoard(targetHours, showSpinner, forceRefresh)` accepts `targetHours` explicitly rather than relying on React state closure.
   - Tracks `latestRequestedHoursRef = useRef(liveHours)` to ensure that an earlier or slower response (e.g. 2h) can never overwrite the active UI when the user has already switched to 4h, 6h, or 8h.
   - In-memory cache entries (`${cleanCode}_${targetHours}`) and in-flight promises are strictly isolated by station code and hours window.
+
+
+---
+
+## 16. 🔊 Client-Side Notification, Audio Alarm Synthesis & Real-Time Alert Architecture
+
+### 16.1. Hardware & Audio Synthesis Engine (`alarmAudioService.ts`)
+To reliably wake sleeping passengers on overnight train journeys without requiring third-party apps or high-bandwidth network connectivity, the application implements native browser hardware synthesis:
+* **Web Audio API Oscillators:**
+  - Employs `AudioContext` and synthetic oscillators to produce continuous acoustic alarms with zero external `.mp3` or `.wav` dependencies.
+  - Three distinct alarm profiles:
+    1. `digital_clock`: High-frequency square-wave beeps (1046.5 Hz & 1318.5 Hz) simulating a digital travel alarm clock.
+    2. `emergency_siren`: Frequency-modulated sawtooth wave sweeping between 750 Hz and 1500 Hz.
+    3. `train_horn`: Dual harmonized brass-like sawtooth waves (311.13 Hz and 370.0 Hz) imitating a diesel/electric locomotive horn.
+* **Continuous Hardware Vibration Loop (`navigator.vibrate`):**
+  - Triggers repeating SOS vibration patterns (`[600, 200, 600, 200, 1000, 400]`) every 3 seconds so passengers feel physical alerts under pillows or in pockets.
+* **Screen Wake Lock API (`navigator.wakeLock`):**
+  - Requests a `WakeLockSentinel` (`navigator.wakeLock.request('screen')`) when an alarm is armed, preventing mobile operating systems from sleeping or throttling background timers during night travel.
+* **Repeating Spoken Voice Announcements (`window.speechSynthesis`):**
+  - Utters personalized passenger announcements every 14 seconds: *"Attention passenger! Wake up! Train [X] is approaching [Station] in [Y] minutes! Please collect your luggage."*
+
+### 16.2. UI Components & Interaction Flow
+* **`StationWakeUpAlarmModal.tsx`:**
+  - Allows passengers to configure wake-up thresholds (15m, 30m, 45m, 60m), select ringtones, preview audio volume with one tap, and specify an optional backup email address.
+* **`RingingAlarmOverlay.tsx`:**
+  - A high-urgency, full-screen red/amber animated modal displayed when an alarm triggers. Features bold train metadata, expected platform, a luggage deboarding checklist, and a prominent **"I AM AWAKE • STOP ALARM"** dismissal button.
+* **`TrainDetails.tsx` Alarm Proximity Monitor:**
+  - Evaluates live train position (`bubbleStationCode`, sequence numbers, and expected arrival times) against the armed alarm station.
+  - When the train crosses into the alert window, it automatically fires the continuous audio loop, vibration, overlay, and optional Brevo emergency email.
+
+### 16.3. Station Live Board Timetable Snapshot (`StationExplorer.tsx`)
+* Features a dedicated **"Email Board"** action button in the Live Board control bar.
+* Opens an interactive modal prefilling the user's email address and allows instant dispatch of the next 2-to-8-hour timetable snapshot directly to their inbox via Brevo.
+
+### 16.4. Travel Day Morning Reminder (`PnrStatus.tsx`)
+* Integrated into the PNR verification workflow, allowing passengers to schedule automated 06:00 AM IST journey morning reminders with 1-click GPS tracking and platform guides.
+
