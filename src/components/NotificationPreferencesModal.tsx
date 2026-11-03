@@ -18,6 +18,10 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import webNotificationService from '../utils/webNotificationService';
+import CustomSoundManagerModal from './CustomSoundManagerModal';
+import LockScreenTestAlarmModal from './LockScreenTestAlarmModal';
+import alarmAudioService, { type AlarmToneType } from '../utils/alarmAudioService';
+import customAlarmSoundService from '../utils/customAlarmSoundService';
 
 interface NotificationPreferencesModalProps {
   isOpen: boolean;
@@ -63,6 +67,21 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
   // Action status
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSoundManagerOpen, setIsSoundManagerOpen] = useState(false);
+  const [isLockScreenTesterOpen, setIsLockScreenTesterOpen] = useState(false);
+  const [alarmTone, setAlarmTone] = useState<AlarmToneType>('digital_clock');
+  const [selectedCustomSoundId, setSelectedCustomSoundId] = useState<string | undefined>(undefined);
+  const [selectedSoundName, setSelectedSoundName] = useState<string>('Classic Travel Alarm');
+  const [isAlarmSounding, setIsAlarmSounding] = useState(false);
+
+  useEffect(() => {
+    customAlarmSoundService.getDefaultSound().then((sound) => {
+      if (sound) {
+        setSelectedCustomSoundId(sound.id);
+        setSelectedSoundName(sound.name);
+      }
+    });
+  }, []);
   const [errorMessage, setErrorMessage] = useState('');
 
   // Initial load from localStorage & API
@@ -398,6 +417,87 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
                     </div>
                   </div>
 
+                    {/* Dynamic Departure & Wake-Up Alarm Section */}
+                    <div className="pt-3 border-t border-slate-800/80 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs font-semibold text-white flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Departure Wake-Up Alarm & Custom Audio</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400">
+                            Sound: <strong className="text-amber-300">{selectedCustomSoundId ? `🎵 ${selectedSoundName}` : selectedSoundName}</strong>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsSoundManagerOpen(true)}
+                          className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 cursor-pointer transition"
+                        >
+                          Change / Upload MP3
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {/* 2-Min Lock Screen Test */}
+                        <button
+                          type="button"
+                          onClick={() => setIsLockScreenTesterOpen(true)}
+                          className="py-2 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-xs font-bold text-amber-300 hover:text-amber-200 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                        >
+                          <Clock className="w-3.5 h-3.5 text-amber-400" />
+                          <span>⏰ Test in 2 Mins (Lock Phone)</span>
+                        </button>
+
+                        {/* Instant Alarm Test */}
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (isAlarmSounding) {
+                              alarmAudioService.stopAlarm();
+                              setIsAlarmSounding(false);
+                              return;
+                            }
+
+                            if (webNotificationService.isSupported() && webNotificationService.getPermission() === 'default') {
+                              await webNotificationService.requestPermission();
+                            }
+
+                            let customUrl: string | undefined = undefined;
+                            let customName: string | undefined = undefined;
+                            if (selectedCustomSoundId) {
+                              const url = await customAlarmSoundService.getSoundBlobUrl(selectedCustomSoundId);
+                              if (url) {
+                                customUrl = url;
+                                customName = selectedSoundName;
+                              }
+                            }
+
+                            alarmAudioService.startContinuousAlarm({
+                              toneType: alarmTone,
+                              customSoundUrl: customUrl,
+                              customSoundName: customName,
+                              trainNumber: '12952',
+                              stationName: 'New Delhi (NDLS)',
+                              etaMinutes: 25
+                            });
+                            setIsAlarmSounding(true);
+
+                            webNotificationService.sendSampleDepartureAlert();
+                          }}
+                          className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                            isAlarmSounding
+                              ? 'bg-rose-600 text-white border-rose-400 animate-pulse'
+                              : 'bg-slate-850 hover:bg-slate-800 border-slate-700 text-slate-200 hover:text-white'
+                          }`}
+                        >
+                          <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+                          <span>{isAlarmSounding ? '🛑 Stop Alarm' : 'Instant Alarm Test'}</span>
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Instant Device Push Notifications Section */}
                     <div className="pt-3 border-t border-slate-800/80 space-y-2">
                       <div className="flex items-center justify-between">
@@ -619,7 +719,43 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
             </div>
           )}
         </div>
-      </div>
+
+      {/* Custom Audio & MP3 Upload Manager Modal */}
+      <CustomSoundManagerModal
+        isOpen={isSoundManagerOpen}
+        onClose={() => setIsSoundManagerOpen(false)}
+        selectedToneType={alarmTone}
+        selectedCustomSoundId={selectedCustomSoundId}
+        onSelectTone={(tone, customId) => {
+          setAlarmTone(tone);
+          setSelectedCustomSoundId(customId);
+          if (customId) {
+            customAlarmSoundService.getAllSounds().then((sounds) => {
+              const found = sounds.find((s) => s.id === customId);
+              if (found) setSelectedSoundName(found.name);
+            });
+          } else {
+            const names: Record<AlarmToneType, string> = {
+              digital_clock: 'Classic Travel Alarm',
+              emergency_siren: 'Emergency Alert Siren',
+              train_horn: 'Indian Railways Horn'
+            };
+            setSelectedSoundName(names[tone] || 'System Tone');
+          }
+        }}
+      />
+
+      {/* Lock Screen Countdown Test Timer Modal */}
+      <LockScreenTestAlarmModal
+        isOpen={isLockScreenTesterOpen}
+        onClose={() => setIsLockScreenTesterOpen(false)}
+        trainNumber="12952"
+        trainName="Mumbai Rajdhani"
+        stationName="New Delhi (NDLS)"
+        selectedToneType={alarmTone}
+        selectedCustomSoundId={selectedCustomSoundId}
+      />
+        </div>
     </div>
   );
 }

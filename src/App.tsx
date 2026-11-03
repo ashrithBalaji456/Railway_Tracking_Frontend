@@ -21,6 +21,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import AndroidBackButtonHandler from './components/AndroidBackButtonHandler';
 import InAppNotificationToast from './components/InAppNotificationToast';
 import ActiveAlarmBanner from './components/ActiveAlarmBanner';
+import PermissionPromptBanner from './components/PermissionPromptBanner';
 
 export default function App() {
   return (
@@ -53,6 +54,7 @@ export default function App() {
           <Footer />
           <RailAiWidget />
           <InAppNotificationToast />
+          <PermissionPromptBanner />
         </div>
       </Router>
     </LanguageProvider>
