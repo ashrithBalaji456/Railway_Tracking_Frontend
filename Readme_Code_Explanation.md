@@ -2196,3 +2196,43 @@ To reliably wake sleeping passengers on overnight train journeys without requiri
   - **PNR Journey Reminder (`sharePnrTravelReminder`):** Formats the PNR number, train details, and travel date for sharing with traveling companions or waiting relatives.
 
 
+
+---
+
+## 17. 🛡️ User Notification & Alert Preferences Center
+
+### 17.1. Architectural Overview & Component Motivation
+With multiple automated alerting capabilities implemented across the frontend—including live train delay thresholds, night travel wake-up alarms, morning PNR travel briefings, and weekly rotating digests—passengers need a unified control center to customize alerting preferences without digging through multiple settings pages.
+
+The **Alerts & Notification Preferences Center** (`NotificationPreferencesModal.tsx`) acts as an omnipresent modal dashboard accessible from anywhere in the application via the top navigation bar.
+
+### 17.2. Component Architecture (`NotificationPreferencesModal.tsx`)
+File path: `src/components/NotificationPreferencesModal.tsx`
+
+* **Tabs & Navigation:**
+  1. **Notification Rules & Channels Tab:**
+     - **Default Notification Channels:**
+       - **Primary Email:** Prefilled and synchronized with `localStorage.getItem('email')`. Used for PNR alerts, weekly gazettes, and station timetable snapshots.
+       - **WhatsApp Mobile Number:** Prefilled and synchronized with `localStorage.getItem('whatsapp_phone')`. Sanitizes and stores Indian mobile numbers to auto-fill WhatsApp sharing dialogs across Station Explorer, Train Tracking, and PNR pages.
+     - **Automated Alert Rules:**
+       - **Weekly Rail Gazette Toggle:** Allows passengers to subscribe or pause the recurring Monday/Sunday morning digest.
+       - **Travel Day Morning Reminder Toggle:** Enables or disables automated 06:00 AM IST travel morning briefings for upcoming journeys.
+       - **Station Approaching Night Guardian Toggle:** Toggles the emergency synthesized audio and full-screen flashing alarm for night travel.
+       - **Live Delay Alert Sensitivity Selector:** Configurable 15-minute, 30-minute, and 60-minute threshold selector that filters out minor schedule fluctuations.
+  2. **Active Reminders & Alarms Manager Tab:**
+     - **Station Approaching Night Guardian Status:** Directly inspects `localStorage.getItem('rail_armed_alarm')`. When an alarm is active, displays the target train number, station code, threshold minutes, and audio profile, along with an instant **"Disarm"** button.
+     - **Travel Day Morning Reminders List:** Queries `/api/v1/notifications/active-reminders` to render all scheduled upcoming journeys. Each entry displays PNR, train number and name, scheduled travel date, dispatch status badge, and an integrated **"Cancel Reminder"** button calling `DELETE /api/v1/notifications/reminders/{id}`.
+
+### 17.3. Cross-Page Data Synchronization
+When the user saves their preferences in the modal:
+1. `localStorage.setItem('email', cleanEmail)` and `localStorage.setItem('whatsapp_phone', cleanPhone)` are updated immediately in the browser runtime.
+2. An HTTP `PUT /api/v1/notifications/preferences` request updates the PostgreSQL database on the backend.
+3. Every input across `PnrStatus.tsx`, `TrainDetails.tsx`, and `StationExplorer.tsx` automatically picks up the updated email and WhatsApp contact information without requiring page reloads.
+
+### 17.4. Global Navigation Integration (`Navbar.tsx`)
+File path: `src/components/Navbar.tsx`
+
+* **Desktop Navigation Bar:**
+  - Added an **"Alerts"** bell button adjacent to the language switcher, featuring an intuitive Lucide `Bell` icon and styled glassmorphism container.
+* **Mobile Drawer Menu:**
+  - Added a dedicated **"Alerts & Preferences"** entry in the mobile responsive menu so smartphone users can adjust settings with a single tap.

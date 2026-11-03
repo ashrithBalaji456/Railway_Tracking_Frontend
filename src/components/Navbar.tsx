@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, Train, LogOut, User as UserIcon, Heart, Globe, History, AlertTriangle, BookOpen, Ticket } from 'lucide-react';
+import { Menu, X, Train, LogOut, User as UserIcon, Heart, Globe, History, AlertTriangle, BookOpen, Ticket, Bell } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import NotificationPreferencesModal from './NotificationPreferencesModal';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isPrefsOpen, setIsPrefsOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { language, setLanguage, t } = useLanguage();
@@ -74,6 +76,17 @@ export default function Navbar() {
                 <option value="bn">বাংলা 🇮🇳</option>
               </select>
             </div>
+
+            {/* Alerts & Preferences Button */}
+            <button
+              type="button"
+              onClick={() => setIsPrefsOpen(true)}
+              title="Alerts & Notification Preferences"
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-slate-950/60 border border-slate-800 text-slate-300 hover:text-indigo-400 hover:border-indigo-500/50 transition-all cursor-pointer text-xs font-semibold"
+            >
+              <Bell className="h-3.5 w-3.5 text-indigo-400" />
+              <span>Alerts</span>
+            </button>
             
             {token ? (
               <>
@@ -189,6 +202,19 @@ export default function Navbar() {
             <span>{t('navHistory')}</span>
           </Link>
 
+          {/* Mobile Alerts Center */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+              setIsPrefsOpen(true);
+            }}
+            className="w-full text-left flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-indigo-400 hover:bg-slate-800 transition-all cursor-pointer"
+          >
+            <Bell className="h-5 w-5 text-indigo-400" />
+            <span>Alerts & Preferences</span>
+          </button>
+
           {/* Mobile Language Selector */}
           <div className="px-3 py-2 border-t border-slate-800 flex items-center justify-between">
             <span className="text-sm text-slate-400 font-semibold flex items-center space-x-1.5">
@@ -257,6 +283,12 @@ export default function Navbar() {
           )}
         </div>
       )}
+
+      {/* Notification Preferences & Alerts Center Modal */}
+      <NotificationPreferencesModal
+        isOpen={isPrefsOpen}
+        onClose={() => setIsPrefsOpen(false)}
+      />
     </nav>
   );
 }
