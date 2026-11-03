@@ -13,6 +13,7 @@ import android.provider.Settings;
 import android.util.Base64;
 import android.util.Log;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.JSObject;
@@ -235,18 +236,68 @@ public class NativeAlarmPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void requestNotificationPermission(PluginCall call) {
+    public void sendTestNotification(PluginCall call) {
+        Context context = getContext();
+        String title = call.getString("title", "🔔 RailTrack Test Notification");
+        String body = call.getString("body", "Notifications are active! You will receive live train delay alerts and departure wake-up alarms.");
+
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) {
+            call.reject("NotificationManager service not available");
+            return;
+        }
+
+        String channelId = "railtrack_test_notification_channel";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            android.app.NotificationChannel channel = new android.app.NotificationChannel(
+                channelId,
+                "RailTrack Instant Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.setDescription("Test notifications and general train alerts");
+            channel.enableVibration(true);
+            nm.createNotificationChannel(channel);
+        }
+
+        Intent mainIntent = new Intent(context, MainActivity.class);
+        mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+            context,
+            2002,
+            mainIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setVibrate(new long[]{0, 300, 150, 300});
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (getActivity() != null) {
-                ActivityCompat.requestPermissions(
-                    getActivity(),
-                    new String[]{ Manifest.permission.POST_NOTIFICATIONS },
-                    2001
-                );
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                // Request it if not granted
+                if (getActivity() != null) {
+                    ActivityCompat.requestPermissions(
+                        getActivity(),
+                        new String[]{ Manifest.permission.POST_NOTIFICATIONS },
+                        2001
+                    );
+                }
+                call.reject("POST_NOTIFICATIONS permission not granted. Requested from user.");
+                return;
             }
         }
+
+        nm.notify(7701, builder.build());
+        Log.d(TAG, "Test notification dispatched successfully (ID 7701)");
+
         JSObject ret = new JSObject();
-        ret.put("requested", true);
+        ret.put("sent", true);
         call.resolve(ret);
     }
 }

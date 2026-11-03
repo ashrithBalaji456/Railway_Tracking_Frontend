@@ -13,13 +13,14 @@ import {
   VolumeX, 
   Smartphone, 
   Send,
-  AlertCircle
+  AlertCircle,
+  Bell
 } from 'lucide-react';
 import customAlarmSoundService, { type CustomAlarmSound } from '../utils/customAlarmSoundService';
 import alarmAudioService, { type AlarmToneType } from '../utils/alarmAudioService';
 import webNotificationService from '../utils/webNotificationService';
 import LockScreenTestAlarmModal from './LockScreenTestAlarmModal';
-import { isNativeApp } from '../utils/nativeAlarmBridge';
+import { isNativeApp, triggerTestNotification } from '../utils/nativeAlarmBridge';
 import api from '../services/api';
 
 interface AlarmCockpitModalProps {
@@ -39,6 +40,7 @@ export default function AlarmCockpitModal({ isOpen, onClose }: AlarmCockpitModal
   const [isAlarmSounding, setIsAlarmSounding] = useState(false);
   const [testEmail, setTestEmail] = useState(localStorage.getItem('email') || '');
   const [emailStatus, setEmailStatus] = useState<string | null>(null);
+  const [notifTestStatus, setNotifTestStatus] = useState<string | null>(null);
   const [isLockTestModalOpen, setIsLockTestModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -195,6 +197,41 @@ export default function AlarmCockpitModal({ isOpen, onClose }: AlarmCockpitModal
       setEmailStatus('✅ Sample early-morning wake-up email sent to ' + testEmail);
     } catch (e: any) {
       setEmailStatus('Failed to send test email: ' + (e.message || 'Network error'));
+    }
+  };
+
+  const handleSendTestNotification = async () => {
+    try {
+      setNotifTestStatus('Sending test notification...');
+      if (isNativeApp()) {
+        await triggerTestNotification(
+          '🔔 RailTrack Live Alert Test',
+          'Notifications are operational! You will receive live delay warnings & morning wake-up alarms.'
+        );
+      } else {
+        if (webNotificationService.isSupported() && webNotificationService.getPermission() !== 'granted') {
+          const granted = await webNotificationService.requestPermission();
+          if (!granted) {
+            setNotifTestStatus('⚠️ Notification permission not granted in browser.');
+            return;
+          }
+        }
+        webNotificationService.sendDepartureReminderAlert({
+          trainNumber: '12952',
+          trainName: 'Mumbai Rajdhani',
+          stationName: 'New Delhi (NDLS)',
+          platform: '3',
+          scheduledTime: '05:15 AM',
+          expectedTime: '05:15 AM (On-Time)',
+          delayMinutes: 0,
+          advanceMinutes: 30,
+          pnr: '4521849021'
+        });
+      }
+      setNotifTestStatus('✅ Test notification sent! Check your notification bar and lock-screen.');
+      setTimeout(() => setNotifTestStatus(null), 5000);
+    } catch (err: any) {
+      setNotifTestStatus('❌ Failed: ' + (err.message || 'Permission denied. Check device settings.'));
     }
   };
 
@@ -516,13 +553,23 @@ export default function AlarmCockpitModal({ isOpen, onClose }: AlarmCockpitModal
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setIsLockTestModalOpen(true)}
-                  className="py-3 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 transition cursor-pointer"
-                >
-                  ⏰ Open Lock-Screen Countdown Timer (2 Mins)
-                </button>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsLockTestModalOpen(true)}
+                    className="w-full sm:w-auto py-3 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 transition cursor-pointer"
+                  >
+                    ⏰ Open Lock-Screen Countdown Timer (2 Mins)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSendTestNotification}
+                    className="w-full sm:w-auto py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-850 text-indigo-300 hover:text-white border border-indigo-500/40 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Bell className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Instant Notification Test</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -530,6 +577,41 @@ export default function AlarmCockpitModal({ isOpen, onClose }: AlarmCockpitModal
           {/* TAB 3: INSTANT TEST & EMAIL PREVIEW */}
           {activeTab === 'instantTest' && (
             <div className="space-y-4">
+              {/* Notification Push Test Card */}
+              <div className="p-4 rounded-xl bg-slate-950 border border-indigo-500/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Bell className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Instant Push Notification Test</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Fires a high-priority system notification to verify lock-screen alert delivery.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSendTestNotification}
+                    className="px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-md shadow-indigo-600/30"
+                  >
+                    <Bell className="w-3.5 h-3.5" />
+                    <span>Send Test Notification</span>
+                  </button>
+                </div>
+
+                {notifTestStatus && (
+                  <div className={`p-2.5 rounded-lg text-xs font-medium border ${
+                    notifTestStatus.includes('✅') 
+                      ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+                      : notifTestStatus.includes('❌') || notifTestStatus.includes('⚠️')
+                      ? 'bg-rose-950/60 border-rose-500/40 text-rose-300'
+                      : 'bg-indigo-950/60 border-indigo-500/40 text-indigo-300 animate-pulse'
+                  }`}>
+                    {notifTestStatus}
+                  </div>
+                )}
+              </div>
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>

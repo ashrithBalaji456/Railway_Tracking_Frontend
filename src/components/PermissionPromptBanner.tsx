@@ -6,6 +6,7 @@ import {
   checkNativeAlarmPermissions, 
   requestNativeNotificationPermission,
   requestNativeOverlayPermission,
+  triggerTestNotification,
   type NativeAlarmPermissions 
 } from '../utils/nativeAlarmBridge';
 
@@ -50,7 +51,13 @@ export default function PermissionPromptBanner() {
           setNativePerms(perms);
           if (perms.notifications) {
             setGrantedSuccess(true);
-            setTimeout(() => setShowBanner(false), 3000);
+            try {
+              await triggerTestNotification(
+                '🔔 RailTrack Notifications Active',
+                'Lock-screen alerts and departure wake-up alarms are now enabled!'
+              );
+            } catch (err) {}
+            setTimeout(() => setShowBanner(false), 3500);
           }
         }
       }, 1000);
@@ -61,7 +68,8 @@ export default function PermissionPromptBanner() {
     if (granted) {
       setGrantedSuccess(true);
       webNotificationService.playAlertChime();
-      setTimeout(() => setShowBanner(false), 3000);
+      webNotificationService.sendSampleDepartureAlert();
+      setTimeout(() => setShowBanner(false), 3500);
     } else {
       localStorage.setItem('rail_notification_prompt_dismissed', 'true');
       setShowBanner(false);

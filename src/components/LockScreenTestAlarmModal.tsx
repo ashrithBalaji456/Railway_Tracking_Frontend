@@ -23,6 +23,7 @@ import {
   checkNativeAlarmPermissions, 
   requestNativeOverlayPermission, 
   requestNativeNotificationPermission,
+  triggerTestNotification,
   type NativeAlarmPermissions
 } from '../utils/nativeAlarmBridge';
 
@@ -52,6 +53,7 @@ export default function LockScreenTestAlarmModal({
     return webNotificationService.getPermission() === 'granted';
   });
   const [nativePerms, setNativePerms] = useState<NativeAlarmPermissions | null>(null);
+  const [notifSuccessMsg, setNotifSuccessMsg] = useState<string | null>(null);
 
   const workerRef = useRef<Worker | null>(null);
   const silentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -125,6 +127,42 @@ export default function LockScreenTestAlarmModal({
       }
     } catch (err) {
       console.warn('Audio anchor initialization warning:', err);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      setNotifSuccessMsg('Sending test notification...');
+      if (isNativeApp()) {
+        await triggerTestNotification(
+          `🔔 RailTrack Alert: ${trainName}`,
+          `Approaching ${stationName}. Notifications are operational on your device!`
+        );
+      } else {
+        if (webNotificationService.isSupported() && webNotificationService.getPermission() !== 'granted') {
+          const granted = await webNotificationService.requestPermission();
+          setHasPermission(granted);
+          if (!granted) {
+            setNotifSuccessMsg('⚠️ Notification permission required.');
+            return;
+          }
+        }
+        webNotificationService.sendDepartureReminderAlert({
+          trainNumber,
+          trainName,
+          stationName,
+          platform: '3',
+          scheduledTime: '05:15 AM',
+          expectedTime: '05:15 AM (On-Time)',
+          delayMinutes: 0,
+          advanceMinutes: 30,
+          pnr: '4521849021'
+        });
+      }
+      setNotifSuccessMsg('✅ Test notification sent! Check your status bar.');
+      setTimeout(() => setNotifSuccessMsg(null), 4000);
+    } catch (e: any) {
+      setNotifSuccessMsg('❌ Failed: ' + (e.message || 'Notification error'));
     }
   };
 
@@ -363,9 +401,18 @@ export default function LockScreenTestAlarmModal({
                   <span>Notifications</span>
                 </span>
                 {nativePerms?.notifications ? (
-                  <span className="text-emerald-400 font-bold flex items-center gap-1 text-[11px]">
-                    <CheckCircle2 className="w-3 h-3" /> Granted
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-400 font-bold flex items-center gap-1 text-[11px]">
+                      <CheckCircle2 className="w-3 h-3" /> Granted
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleTestNotification}
+                      className="text-[10px] font-bold bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 px-2 py-0.5 rounded cursor-pointer"
+                    >
+                      Test Push
+                    </button>
+                  </div>
                 ) : (
                   <button
                     type="button"
@@ -435,29 +482,63 @@ export default function LockScreenTestAlarmModal({
             {!isNativeApp() && (
               <div className="flex items-center justify-between text-[11px] p-2.5 bg-slate-950/60 rounded-xl border border-slate-800">
                 <span className="text-slate-400">Lock-Screen Notification Permission:</span>
-                <span className={`font-bold flex items-center gap-1 ${
-                  hasPermission ? 'text-emerald-400' : 'text-amber-400'
-                }`}>
-                  {hasPermission ? (
-                    <>
-                      <CheckCircle2 className="w-3 h-3" />
-                      <span>Granted</span>
-                    </>
-                  ) : (
-                    <span>Will Request on Start</span>
+                <div className="flex items-center gap-2">
+                  <span className={`font-bold flex items-center gap-1 ${
+                    hasPermission ? 'text-emerald-400' : 'text-amber-400'
+                  }`}>
+                    {hasPermission ? (
+                      <>
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>Granted</span>
+                      </>
+                    ) : (
+                      <span>Will Request on Start</span>
+                    )}
+                  </span>
+                  {hasPermission && (
+                    <button
+                      type="button"
+                      onClick={handleTestNotification}
+                      className="text-[10px] font-bold bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 px-2 py-0.5 rounded cursor-pointer"
+                    >
+                      Test
+                    </button>
                   )}
-                </span>
+                </div>
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={handleStartLockScreenTest}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all cursor-pointer uppercase tracking-wider"
-            >
-              <Play className="w-4 h-4 fill-current" />
-              <span>Arm Test Alarm (Rings in {testSeconds >= 60 ? `${testSeconds / 60}m` : `${testSeconds}s`})</span>
-            </button>
+            {notifSuccessMsg && (
+              <div className={`p-2.5 rounded-xl text-xs font-medium border ${
+                notifSuccessMsg.includes('✅') 
+                  ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+                  : notifSuccessMsg.includes('❌') || notifSuccessMsg.includes('⚠️')
+                  ? 'bg-rose-950/60 border-rose-500/40 text-rose-300'
+                  : 'bg-indigo-950/60 border-indigo-500/40 text-indigo-300 animate-pulse'
+              }`}>
+                {notifSuccessMsg}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleTestNotification}
+                className="py-3 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-indigo-500/40 text-indigo-300 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shrink-0"
+                title="Send an immediate test notification to check delivery"
+              >
+                <Bell className="w-4 h-4 text-indigo-400" />
+                <span>Test Notification</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleStartLockScreenTest}
+                className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all cursor-pointer uppercase tracking-wider"
+              >
+                <Play className="w-4 h-4 fill-current" />
+                <span>Arm Test Alarm ({testSeconds >= 60 ? `${testSeconds / 60}m` : `${testSeconds}s`})</span>
+              </button>
+            </div>
           </div>
         ) : (
           /* Active Armed Countdown State */

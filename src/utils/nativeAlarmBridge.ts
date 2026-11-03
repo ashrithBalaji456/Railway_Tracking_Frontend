@@ -20,6 +20,7 @@ export interface NativeAlarmPluginInterface {
   checkPermissions(): Promise<NativeAlarmPermissions>;
   requestOverlayPermission(): Promise<{ openedSettings?: boolean; alreadyGranted?: boolean }>;
   requestNotificationPermission(): Promise<{ requested: boolean }>;
+  sendTestNotification(options: { title?: string; body?: string }): Promise<{ sent: boolean }>;
 }
 
 const NativeAlarm = registerPlugin<NativeAlarmPluginInterface>('NativeAlarm');
@@ -123,4 +124,20 @@ export const requestNativeNotificationPermission = async () => {
     }
   }
   return null;
+};
+
+export const triggerTestNotification = async (title?: string, body?: string): Promise<boolean> => {
+  if (isNativeApp()) {
+    try {
+      await NativeAlarm.sendTestNotification({
+        title: title || '🔔 RailTrack Notification Test',
+        body: body || 'Real-time train delay alerts and departure alarms are operational on your device!'
+      });
+      return true;
+    } catch (e) {
+      console.warn('Native test notification error:', e);
+      throw e;
+    }
+  }
+  return false;
 };
