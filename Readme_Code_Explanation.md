@@ -2184,3 +2184,15 @@ To reliably wake sleeping passengers on overnight train journeys without requiri
 ### 16.4. Travel Day Morning Reminder (`PnrStatus.tsx`)
 * Integrated into the PNR verification workflow, allowing passengers to schedule automated 06:00 AM IST journey morning reminders with 1-click GPS tracking and platform guides.
 
+### 16.5. WhatsApp 1-Tap Instant Sharing Engine (`whatsappShareService.ts`)
+* **Architecture & Zero-Cost Model:**
+  - Implements the official WhatsApp Universal URL protocol (`https://wa.me/{cleanPhone}?text={encodedText}` and `https://api.whatsapp.com/send?text={encodedText}`).
+  - Operates 100% free with zero API key or third-party business account dependencies.
+  - Automatically cleans and validates recipient phone numbers (normalizes 10-digit Indian numbers to E.164 `91XXXXXXXXXX`).
+  - If a phone number is provided, opens the direct WhatsApp chat; if left blank, opens the native WhatsApp contact/family group picker.
+* **Rich Markdown Formatting & Capabilities:**
+  - **Station Live Board Snapshot (`shareStationLiveBoard`):** Compiles an instant mobile timetable report with station code, coverage window, upcoming train numbers, route directions, expected arrival times, delay status, and platform allocations.
+  - **Live Train GPS Status (`shareLiveTrainStatus`):** Shares the train's current intermediate location, speed in km/h, delay, next halt, and a 1-tap live map tracking link.
+  - **PNR Journey Reminder (`sharePnrTravelReminder`):** Formats the PNR number, train details, and travel date for sharing with traveling companions or waiting relatives.
+
+

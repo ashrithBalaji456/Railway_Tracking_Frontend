@@ -22,6 +22,7 @@ import {
   Send
 } from 'lucide-react';
 import api from '../services/api';
+import whatsappShareService from '../utils/whatsappShareService';
 
 interface SavedPnr {
   pnr: string;
@@ -608,6 +609,25 @@ export default function PnrStatus() {
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>{reminderTesting ? 'Dispatching...' : 'Send Sample Email'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const effectivePnr = (reminderPnr.trim() || cleanPnr || '4521849021').replace(/\D/g, '').slice(0, 10);
+                  const effectiveTrain = (reminderTrain.trim() || trainNumberInput.trim() || '12951');
+                  whatsappShareService.sharePnrTravelReminder({
+                    pnr: effectivePnr,
+                    trainNumber: effectiveTrain,
+                    trainName: reminderTrainName.trim() || undefined,
+                    travelDate: reminderDate || new Date().toISOString().split('T')[0]
+                  });
+                }}
+                title="Share this journey reminder to WhatsApp"
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-emerald-500/40 hover:border-emerald-500 bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm shadow-emerald-950/40"
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                <span>WhatsApp Share</span>
               </button>
 
               <button

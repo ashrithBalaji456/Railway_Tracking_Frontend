@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X, ArrowLeftRight, Info, Sparkles, Zap, Search, Check, RotateCw } from 'lucide-react';
+import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X, ArrowLeftRight, Info, Sparkles, Zap, Search, Check, RotateCw, MessageSquare } from 'lucide-react';
 import api, { getTrainDelayReport } from '../services/api';
 import type { TrainDelayReport } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -12,6 +12,7 @@ import { getDepartedWindowInfo } from '../utils/liveStatusUtils';
 import StationWakeUpAlarmModal, { type WakeUpAlarmConfig } from '../components/StationWakeUpAlarmModal';
 import RingingAlarmOverlay from '../components/RingingAlarmOverlay';
 import { alarmAudioService } from '../utils/alarmAudioService';
+import whatsappShareService from '../utils/whatsappShareService';
 
 interface StationSelectorDropdownProps {
   label: string;
@@ -3429,6 +3430,23 @@ export default function TrainDetails() {
             <span className="text-xs bg-slate-950 text-slate-400 px-2.5 py-1.5 rounded-lg border border-slate-800 font-bold">
               {(liveStatus.speed != null ? liveStatus.speed : 0)} km/h
             </span>
+            <button
+              type="button"
+              onClick={() => {
+                whatsappShareService.shareLiveTrainStatus({
+                  trainNumber: trainNumber || train?.trainNumber || '',
+                  trainName: train?.trainName,
+                  currentLocation: liveStatus.lastLocationInfo,
+                  speed: liveStatus.speed,
+                  delayMinutes: liveStatus.delayMinutes,
+                  nextStation: liveStatus.nextStationName
+                });
+              }}
+              className="p-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-sm"
+              title="Share live train GPS position to WhatsApp"
+            >
+              <MessageSquare className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}

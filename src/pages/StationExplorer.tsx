@@ -10,7 +10,8 @@ import { getStationDisplayName } from '../utils/stationUtils';
 import { getStationGastronomy, STATION_GASTRONOMY } from '../data/stationGastronomy';
 import { STATION_AMENITIES, type StationAmenity, getStationAmenitiesForStation, getStationCategoryDetails } from '../data/stationAmenities';
 import { getDepartedWindowInfo, formatTimeForDisplay } from '../utils/liveStatusUtils';
-import { X, Mail, Send } from 'lucide-react';
+import { X, Mail, Send, MessageSquare } from 'lucide-react';
+import whatsappShareService from '../utils/whatsappShareService';
 
 interface CachedTimetable {
   station: any;
@@ -65,6 +66,7 @@ export default function StationExplorer() {
   const [emailAddress, setEmailAddress] = useState<string>(localStorage.getItem('email') || '');
   const [emailSending, setEmailSending] = useState(false);
   const [emailStatus, setEmailStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [whatsappPhone, setWhatsappPhone] = useState<string>('');
 
   const handleSendBoardEmail = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -1121,6 +1123,24 @@ export default function StationExplorer() {
                       <span>Email Board</span>
                     </button>
 
+                    {/* Share to WhatsApp Button */}
+                    <button
+                      onClick={() => {
+                        if (!selectedStation) return;
+                        whatsappShareService.shareStationLiveBoard({
+                          stationCode: selectedStation.stationCode,
+                          stationName: selectedStation.stationName,
+                          windowHours: liveHours,
+                          trains: liveData?.trains || []
+                        });
+                      }}
+                      className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-emerald-500/40 bg-emerald-950/50 hover:bg-emerald-900/60 text-emerald-200 hover:text-white shadow-sm transition-all cursor-pointer"
+                      title="Share live station timetable snapshot to WhatsApp"
+                    >
+                      <MessageSquare className="h-3.5 w-3.5 text-emerald-400" />
+                      <span>WhatsApp</span>
+                    </button>
+
                     <div className="flex items-center space-x-2">
                       <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider shrink-0">Window:</span>
                       <div className="flex bg-slate-900 border border-slate-800 p-1 rounded-lg">
@@ -1867,6 +1887,42 @@ export default function StationExplorer() {
                 </button>
               </div>
             </form>
+
+            {/* WhatsApp Direct Option */}
+            <div className="pt-3 border-t border-slate-800 space-y-2">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Or Share via WhatsApp:</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="tel"
+                  placeholder="e.g. 9876543210 (or leave empty to pick contact)"
+                  value={whatsappPhone}
+                  onChange={(e) => setWhatsappPhone(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!selectedStation) return;
+                    whatsappShareService.shareStationLiveBoard({
+                      stationCode: selectedStation.stationCode,
+                      stationName: selectedStation.stationName,
+                      windowHours: liveHours,
+                      trains: liveData?.trains || []
+                    }, whatsappPhone);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0 shadow-lg shadow-emerald-600/20"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Send via WhatsApp</span>
+                </button>
+              </div>
+              <span className="text-[10px] text-slate-500 block">
+                Opens WhatsApp Web or mobile app with the pre-formatted timetable report ready to send.
+              </span>
+            </div>
           </div>
         </div>
       )}
