@@ -12,6 +12,7 @@ export interface ActiveAlarmInfo {
   stationName?: string;
   etaMinutes?: number;
   toneType?: AlarmToneType;
+  customSoundName?: string;
   startedAt?: number;
 }
 
@@ -22,6 +23,7 @@ class AlarmAudioService {
   private speechInterval: any = null;
   private vibrationInterval: any = null;
   private wakeLockSentinel: any = null;
+  private customAudioElement: HTMLAudioElement | null = null;
   private currentAlarmInfo: ActiveAlarmInfo | null = null;
 
   getActiveAlarmInfo(): ActiveAlarmInfo | null {
@@ -155,10 +157,38 @@ class AlarmAudioService {
   }
 
   /**
+   * Preview a 3.5-second snippet of a custom uploaded sound file
+   */
+  previewCustomSound(soundUrl: string): void {
+    this.stopAlarm();
+    try {
+      const audio = new Audio(soundUrl);
+      audio.volume = 1.0;
+      audio.play().catch((e) => console.warn('Preview custom audio failed:', e));
+      this.customAudioElement = audio;
+      setTimeout(() => {
+        if (this.customAudioElement === audio) {
+          audio.pause();
+          audio.currentTime = 0;
+          this.customAudioElement = null;
+        }
+      }, 3500);
+    } catch (e) {
+      console.warn('Error playing custom preview:', e);
+    }
+
+    if ('vibrate' in navigator) {
+      navigator.vibrate([200, 100, 200]);
+    }
+  }
+
+  /**
    * Start the continuous repeating alarm until dismissed
    */
   startContinuousAlarm(options: {
     toneType?: AlarmToneType;
+    customSoundUrl?: string;
+    customSoundName?: string;
     trainNumber?: string;
     stationName?: string;
     etaMinutes?: number;
@@ -169,12 +199,29 @@ class AlarmAudioService {
     const tone = options.toneType || 'digital_clock';
     this.acquireWakeLock();
 
-    // 1. Continuous Sound Pulses
-    this.playPulse(tone, 0.35);
-    this.alarmInterval = setInterval(() => {
-      if (!this.isAlarmPlaying) return;
+    // 1. Sound Playback (Custom MP3 or Synthetic Beeps)
+    if (options.customSoundUrl) {
+      try {
+        const audio = new Audio(options.customSoundUrl);
+        audio.loop = true;
+        audio.volume = 1.0;
+        audio.play().catch((e) => console.warn('Custom audio playback failed:', e));
+        this.customAudioElement = audio;
+      } catch (err) {
+        console.warn('Custom audio start error, falling back to synthesizer:', err);
+        this.playPulse(tone, 0.35);
+        this.alarmInterval = setInterval(() => {
+          if (!this.isAlarmPlaying) return;
+          this.playPulse(tone, 0.35);
+        }, 700);
+      }
+    } else {
       this.playPulse(tone, 0.35);
-    }, 700);
+      this.alarmInterval = setInterval(() => {
+        if (!this.isAlarmPlaying) return;
+        this.playPulse(tone, 0.35);
+      }, 700);
+    }
 
     // 2. Continuous Device Vibration
     const triggerVibration = () => {
@@ -216,6 +263,7 @@ class AlarmAudioService {
       stationName: options.stationName,
       etaMinutes: options.etaMinutes,
       toneType: tone,
+      customSoundName: options.customSoundName,
       startedAt: Date.now()
     };
 
@@ -234,6 +282,14 @@ class AlarmAudioService {
   stopAlarm(): void {
     this.isAlarmPlaying = false;
     this.currentAlarmInfo = null;
+
+    if (this.customAudioElement) {
+      try {
+        this.customAudioElement.pause();
+        this.customAudioElement.currentTime = 0;
+      } catch (e) {}
+      this.customAudioElement = null;
+    }
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(

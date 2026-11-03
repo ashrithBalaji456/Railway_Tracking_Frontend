@@ -24,6 +24,9 @@ import {
 import api from '../services/api';
 import whatsappShareService from '../utils/whatsappShareService';
 import SmartPnrPredictorCard from '../components/SmartPnrPredictorCard';
+import CustomSoundManagerModal from '../components/CustomSoundManagerModal';
+import LockScreenTestAlarmModal from '../components/LockScreenTestAlarmModal';
+import customAlarmSoundService from '../utils/customAlarmSoundService';
 import alarmAudioService, { type AlarmToneType } from '../utils/alarmAudioService';
 import webNotificationService from '../utils/webNotificationService';
 import { Volume2, VolumeX, Sunrise, MapPin, Sparkles } from 'lucide-react';
@@ -152,6 +155,19 @@ export default function PnrStatus() {
   const [reminderAdvanceMinutes, setReminderAdvanceMinutes] = useState(150);
   const [alarmTone, setAlarmTone] = useState<AlarmToneType>('digital_clock');
   const [isAlarmSounding, setIsAlarmSounding] = useState(false);
+  const [selectedCustomSoundId, setSelectedCustomSoundId] = useState<string | undefined>(undefined);
+  const [selectedSoundName, setSelectedSoundName] = useState<string>('Classic Travel Alarm');
+  const [isSoundManagerOpen, setIsSoundManagerOpen] = useState(false);
+  const [isLockScreenTesterOpen, setIsLockScreenTesterOpen] = useState(false);
+
+  useEffect(() => {
+    customAlarmSoundService.getDefaultSound().then((sound) => {
+      if (sound) {
+        setSelectedCustomSoundId(sound.id);
+        setSelectedSoundName(sound.name);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -174,9 +190,21 @@ export default function PnrStatus() {
       await webNotificationService.requestPermission();
     }
 
-    // 2. Play continuous loud alarm + screen wake lock + vibration + voice announcement
+    // 2. Play continuous loud alarm with custom audio or synthesizer
+    let customUrl: string | undefined = undefined;
+    let customName: string | undefined = undefined;
+    if (selectedCustomSoundId) {
+      const url = await customAlarmSoundService.getSoundBlobUrl(selectedCustomSoundId);
+      if (url) {
+        customUrl = url;
+        customName = selectedSoundName;
+      }
+    }
+
     alarmAudioService.startContinuousAlarm({
       toneType: alarmTone,
+      customSoundUrl: customUrl,
+      customSoundName: customName,
       trainNumber: effectiveTrain,
       stationName: reminderBoardingStation || 'Boarding Station',
       etaMinutes: reminderAdvanceMinutes
@@ -696,30 +724,52 @@ export default function PnrStatus() {
               />
             </div>
 
-            {/* Alarm Tone Picker & Preview */}
+            {/* Alarm Tone & Custom Audio Manager */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
                   <Volume2 className="w-3 h-3 text-indigo-400" />
-                  <span>Continuous Alarm Tone</span>
+                  <span>Alarm Sound / Custom MP3</span>
                 </label>
                 <button
                   type="button"
-                  onClick={() => alarmAudioService.previewTone(alarmTone)}
+                  onClick={async () => {
+                    if (selectedCustomSoundId) {
+                      const url = await customAlarmSoundService.getSoundBlobUrl(selectedCustomSoundId);
+                      if (url) {
+                        alarmAudioService.previewCustomSound(url);
+                        return;
+                      }
+                    }
+                    alarmAudioService.previewTone(alarmTone);
+                  }}
                   className="text-[10px] text-amber-400 hover:text-amber-300 font-semibold cursor-pointer underline flex items-center gap-1"
                 >
-                  <span>Preview Audio</span>
+                  <span>Preview Sound</span>
                 </button>
               </div>
-              <select
-                value={alarmTone}
-                onChange={(e) => setAlarmTone(e.target.value as AlarmToneType)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-              >
-                <option value="digital_clock">Classic Travel Alarm (Dual Beep)</option>
-                <option value="emergency_siren">Emergency Alert Siren (Urgent)</option>
-                <option value="train_horn">Indian Railways Train Horn</option>
-              </select>
+              
+              <div className="flex gap-2">
+                <div className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white flex items-center justify-between min-w-0">
+                  <span className="truncate font-semibold text-slate-200">
+                    {selectedCustomSoundId ? `🎵 ${selectedSoundName}` : selectedSoundName}
+                  </span>
+                  {selectedCustomSoundId && (
+                    <span className="text-[9px] font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded ml-2 shrink-0">
+                      CUSTOM
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsSoundManagerOpen(true)}
+                  className="px-3 py-2 bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 hover:text-white rounded-xl text-xs font-bold transition cursor-pointer shrink-0 flex items-center gap-1"
+                  title="Choose tones or upload custom MP3 audio"
+                >
+                  <span>Change / Upload</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -760,26 +810,37 @@ export default function PnrStatus() {
             </span>
 
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-              {/* Loud Alarm + Push Notification Live Tester */}
+              {/* Lock-Screen 2-Min Test Timer Button */}
+              <button
+                type="button"
+                onClick={() => setIsLockScreenTesterOpen(true)}
+                className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer border bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40 hover:border-amber-400 shadow-sm"
+                title="Start a 2-minute countdown timer to test alarm while locking your phone"
+              >
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+                <span>Test in 2 Mins (Lock Phone)</span>
+              </button>
+
+              {/* Instant Loud Alarm Tester */}
               <button
                 type="button"
                 onClick={handleToggleAlarmTest}
                 className={`flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer border ${
                   isAlarmSounding
                     ? "bg-rose-600 text-white border-rose-400 animate-pulse shadow-lg shadow-rose-600/40"
-                    : "bg-amber-950/80 hover:bg-amber-900/80 text-amber-300 border-amber-500/40 hover:border-amber-400"
+                    : "bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white border-slate-700 hover:border-slate-600"
                 }`}
-                title="Test how the loud continuous alarm and lock-screen push notification behave"
+                title="Immediately test how the continuous alarm and lock-screen push notification behave"
               >
                 {isAlarmSounding ? (
                   <>
                     <VolumeX className="w-4 h-4" />
-                    <span>Stop Loud Alarm</span>
+                    <span>Stop Alarm</span>
                   </>
                 ) : (
                   <>
                     <Volume2 className="w-4 h-4 text-amber-400" />
-                    <span>Test Wake-Up Alarm (Sound + Push)</span>
+                    <span>Instant Alarm Test</span>
                   </>
                 )}
               </button>
@@ -952,6 +1013,42 @@ export default function PnrStatus() {
           </p>
         </div>
       </div>
+
+      {/* Custom Audio & MP3 Upload Manager Modal */}
+      <CustomSoundManagerModal
+        isOpen={isSoundManagerOpen}
+        onClose={() => setIsSoundManagerOpen(false)}
+        selectedToneType={alarmTone}
+        selectedCustomSoundId={selectedCustomSoundId}
+        onSelectTone={(tone, customId) => {
+          setAlarmTone(tone);
+          setSelectedCustomSoundId(customId);
+          if (customId) {
+            customAlarmSoundService.getAllSounds().then((sounds) => {
+              const found = sounds.find((s) => s.id === customId);
+              if (found) setSelectedSoundName(found.name);
+            });
+          } else {
+            const names: Record<AlarmToneType, string> = {
+              digital_clock: 'Classic Travel Alarm',
+              emergency_siren: 'Emergency Alert Siren',
+              train_horn: 'Indian Railways Horn'
+            };
+            setSelectedSoundName(names[tone] || 'System Tone');
+          }
+        }}
+      />
+
+      {/* Lock Screen Countdown Test Timer Modal */}
+      <LockScreenTestAlarmModal
+        isOpen={isLockScreenTesterOpen}
+        onClose={() => setIsLockScreenTesterOpen(false)}
+        trainNumber={reminderTrain.trim() || trainNumberInput.trim() || '12952'}
+        trainName={reminderTrainName.trim() || 'Rajdhani Express'}
+        stationName={reminderBoardingStation.trim() || 'New Delhi (NDLS)'}
+        selectedToneType={alarmTone}
+        selectedCustomSoundId={selectedCustomSoundId}
+      />
     </div>
   );
 }

@@ -66,8 +66,13 @@ export default function ActiveAlarmBanner() {
                 Screen Wake Lock Active
               </span>
             </div>
-            <h3 className="text-sm sm:text-base font-black text-white mt-0.5 tracking-tight">
-              {trainLabel} {stationLabel}
+            <h3 className="text-sm sm:text-base font-black text-white mt-0.5 tracking-tight flex items-center justify-center sm:justify-start gap-2">
+              <span>{trainLabel} {stationLabel}</span>
+              {alarmInfo.customSoundName && (
+                <span className="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-yellow-300">
+                  🎵 {alarmInfo.customSoundName}
+                </span>
+              )}
             </h3>
           </div>
         </div>
