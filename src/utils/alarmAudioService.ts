@@ -4,7 +4,7 @@
  * screen wake locks, and repeating speech synthesizers to reliably wake passengers.
  */
 
-import { stopNativeAlarm } from './nativeAlarmBridge';
+import { stopNativeAlarm, isNativeApp, triggerTestNotification } from './nativeAlarmBridge';
 
 export type AlarmToneType = 'digital_clock' | 'emergency_siren' | 'train_horn';
 
@@ -278,6 +278,16 @@ class AlarmAudioService {
       customSoundName: options.customSoundName,
       startedAt: Date.now()
     };
+
+    // Ensure lock-screen / Android system notification shade displays the alarm
+    if (isNativeApp()) {
+      const trainTag = options.trainNumber ? `Train ${options.trainNumber}` : 'Your Scheduled Train';
+      const stationTag = options.stationName ? `at ${options.stationName}` : '';
+      triggerTestNotification(
+        `🚨 ALARM RINGING: ${trainTag} ${stationTag}`,
+        `Wake-up alarm active! Tap to open RailTracker and silence.`
+      ).catch(() => {});
+    }
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(

@@ -20,6 +20,7 @@ export interface NativeAlarmPluginInterface {
   checkPermissions(): Promise<NativeAlarmPermissions>;
   requestOverlayPermission(): Promise<{ openedSettings?: boolean; alreadyGranted?: boolean }>;
   requestNotificationPermission(): Promise<{ requested: boolean }>;
+  openNotificationSettings(): Promise<{ opened: boolean }>;
   sendTestNotification(options: { title?: string; body?: string }): Promise<{ sent: boolean }>;
 }
 
@@ -121,6 +122,17 @@ export const requestNativeNotificationPermission = async () => {
       return await NativeAlarm.requestNotificationPermission();
     } catch (e) {
       console.warn('Error requesting notification permission:', e);
+    }
+  }
+  return null;
+};
+
+export const openNativeNotificationSettings = async () => {
+  if (isNativeApp()) {
+    try {
+      return await NativeAlarm.openNotificationSettings();
+    } catch (e) {
+      console.warn('Error opening notification settings:', e);
     }
   }
   return null;

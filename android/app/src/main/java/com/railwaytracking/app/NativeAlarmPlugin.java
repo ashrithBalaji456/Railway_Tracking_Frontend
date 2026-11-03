@@ -171,6 +171,7 @@ public class NativeAlarmPlugin extends Plugin {
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm != null) {
             nm.cancel(AlarmReceiver.NOTIFICATION_ID);
+            nm.cancel(7701);
         }
 
         JSObject ret = new JSObject();
@@ -233,6 +234,47 @@ public class NativeAlarmPlugin extends Plugin {
         JSObject ret = new JSObject();
         ret.put("alreadyGranted", true);
         call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void requestNotificationPermission(PluginCall call) {
+        Context context = getContext();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                if (getActivity() != null) {
+                    ActivityCompat.requestPermissions(
+                        getActivity(),
+                        new String[]{ Manifest.permission.POST_NOTIFICATIONS },
+                        2001
+                    );
+                }
+            }
+        }
+        JSObject ret = new JSObject();
+        ret.put("requested", true);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void openNotificationSettings(PluginCall call) {
+        Context context = getContext();
+        try {
+            Intent intent = new Intent();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                intent.setAction(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+                intent.putExtra(Settings.EXTRA_APP_PACKAGE, context.getPackageName());
+            } else {
+                intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                intent.setData(Uri.parse("package:" + context.getPackageName()));
+            }
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(intent);
+            JSObject ret = new JSObject();
+            ret.put("opened", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("Could not open notification settings: " + e.getMessage());
+        }
     }
 
     @PluginMethod

@@ -5,6 +5,7 @@ import {
   isNativeApp, 
   checkNativeAlarmPermissions, 
   requestNativeNotificationPermission,
+  openNativeNotificationSettings,
   requestNativeOverlayPermission,
   triggerTestNotification,
   type NativeAlarmPermissions 
@@ -58,6 +59,8 @@ export default function PermissionPromptBanner() {
               );
             } catch (err) {}
             setTimeout(() => setShowBanner(false), 3500);
+          } else {
+            await openNativeNotificationSettings();
           }
         }
       }, 1000);
