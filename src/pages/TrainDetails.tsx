@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X, ArrowLeftRight, Info, Sparkles, Zap, Search, Check, RotateCw, MessageSquare, Mail } from 'lucide-react';
 import DisruptionAlertModal from '../components/DisruptionAlertModal';
+import FoodOnTrackModal from '../components/FoodOnTrackModal';
 import api, { getTrainDelayReport } from '../services/api';
 import type { TrainDelayReport } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -264,6 +265,7 @@ export default function TrainDetails() {
   const [ringingAlarmData, setRingingAlarmData] = useState<any | null>(null);
   const hasTriggeredAlarmRef = useRef<boolean>(false);
   const [isDisruptionModalOpen, setIsDisruptionModalOpen] = useState(false);
+  const [isFoodModalOpen, setIsFoodModalOpen] = useState(false);
 
   const [delayReport, setDelayReport] = useState<TrainDelayReport | null>(null);
   const [loadingDelay, setLoadingDelay] = useState(false);
@@ -1684,6 +1686,16 @@ export default function TrainDetails() {
                 <span>{showCoachLayout ? 'Hide Seating' : 'Coach Position'}</span>
               </button>
             )}
+
+            <button
+              onClick={() => setIsFoodModalOpen(true)}
+              className="flex items-center space-x-1.5 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold tracking-wide border cursor-pointer transition-all bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20 shadow-sm"
+              title="View Station Delicacies and Safe Meal Halts"
+            >
+              <span>🍱</span>
+              <span className="hidden sm:inline">Food on Track</span>
+              <span className="sm:hidden">Food</span>
+            </button>
 
             <button
               onClick={handleToggleFavorite}
@@ -3621,6 +3633,15 @@ export default function TrainDetails() {
         message={disruptionBannerText || 'Service exception or delay reported on this route.'}
         sourceStation={train?.sourceStationCode}
         destStation={train?.destinationStationCode}
+      />
+
+      {/* Food on Track & Meal Planner Modal */}
+      <FoodOnTrackModal
+        isOpen={isFoodModalOpen}
+        onClose={() => setIsFoodModalOpen(false)}
+        trainNumber={trainNumber || train?.trainNumber || ''}
+        trainName={train?.trainName}
+        routeStations={route?.stations || []}
       />
 </div>
   );

@@ -2490,3 +2490,22 @@ File path: `src/pages/TrainDetails.tsx`
   2. Enter your registered email address.
   3. Check your email for a 6-digit numeric OTP valid for 15 minutes.
   4. Enter the OTP and your new password on the verification screen to reset credentials.
+
+
+---
+
+#### 11. 🍱 Food on Track — Route Platform Delicacy & Safe Meal Planner
+* **What is the use:**
+  * Displays authentic Indian Railways platform gastronomy mapped to each station along the route.
+  * Calculates meal phases (Breakfast, Lunch, Evening Snacks, Dinner) from scheduled station arrival times and flags safe halts ($\ge 10$ mins) so passengers never miss their train when stepping out for hot food.
+  * Sends an offline-accessible gastronomic itinerary to the passenger's email.
+* **Component File:** `src/components/FoodOnTrackModal.tsx`
+* **Step-by-Step User Guide:**
+  1. Navigate to **Train Details** (`/train/:trainNumber`).
+  2. Click the **"🍱 Food on Track"** button in the train action bar.
+  3. Filter meals by tabs: **All Delicacies**, **Safe Halts ($\ge 10$m)**, **Breakfast**, **Lunch**, **Evening Snacks**, or **Dinner**.
+  4. Notice the safety badge next to each delicacy:
+     * 🟢 **Safe Halt (~10+ mins)**: Safe to get down on the platform to purchase.
+     * 🟡 **Quick Halt (< 10 mins)**: Advised to order via e-Catering or purchase from doorway vendor.
+  5. In the bottom dispatch card, enter your email address and click **"Send Food Itinerary to Email"**.
+  6. Receive a dark-mode IRCTC gastronomic guide formatted with high-contrast meal badges and station timing tables.
