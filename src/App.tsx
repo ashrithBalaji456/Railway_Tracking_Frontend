@@ -19,6 +19,7 @@ import BlogDetail from './pages/BlogDetail';
 import PnrStatus from './pages/PnrStatus';
 import { LanguageProvider } from './context/LanguageContext';
 import AndroidBackButtonHandler from './components/AndroidBackButtonHandler';
+import InAppNotificationToast from './components/InAppNotificationToast';
 
 export default function App() {
   return (
@@ -49,6 +50,7 @@ export default function App() {
 
           <Footer />
           <RailAiWidget />
+          <InAppNotificationToast />
         </div>
       </Router>
     </LanguageProvider>

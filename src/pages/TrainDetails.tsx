@@ -15,6 +15,7 @@ import StationWakeUpAlarmModal, { type WakeUpAlarmConfig } from '../components/S
 import RingingAlarmOverlay from '../components/RingingAlarmOverlay';
 import { alarmAudioService } from '../utils/alarmAudioService';
 import whatsappShareService from '../utils/whatsappShareService';
+import webNotificationService from '../utils/webNotificationService';
 
 interface StationSelectorDropdownProps {
   label: string;
@@ -1250,6 +1251,23 @@ export default function TrainDetails() {
     }, 1000);
     return () => clearInterval(timer);
   }, [refreshCooldown]);
+
+  // Automated live delay push notification trigger
+  useEffect(() => {
+    if (!liveStatus || liveStatus.delayMinutes === undefined) return;
+    const currentDelay = Number(liveStatus.delayMinutes) || 0;
+    if (hasAlert && currentDelay >= alertMinutes) {
+      webNotificationService.sendDelayAlert({
+        trainNumber: trainNumber || train?.trainNumber || '',
+        trainName: train?.trainName || '',
+        delayMinutes: currentDelay,
+        currentStation: liveStatus.lastLocationInfo || liveStatus.currentStationName || '',
+        scheduledArrival: liveStatus.eta || '',
+        estimatedArrival: liveStatus.actualArrival || '',
+        thresholdMinutes: alertMinutes
+      });
+    }
+  }, [liveStatus, hasAlert, alertMinutes, trainNumber, train]);
 
   const fetchLiveStatus = async (isManual = false) => {
     if (!trainNumber) return;
@@ -3391,9 +3409,28 @@ export default function TrainDetails() {
               <h3 className="text-lg text-slate-100 font-bold">Delay Alert Settings</h3>
             </div>
             
-            <div className="space-y-2">
-              <p className="text-xs text-slate-4-00 text-slate-400">Receive a warning badge when delay exceeds:</p>
+            <div className="space-y-3">
+              <p className="text-xs text-slate-400 font-medium">Receive a device notification & email when delay exceeds:</p>
+              
+              <div className="grid grid-cols-3 gap-2">
+                {[15, 30, 60].map((mins) => (
+                  <button
+                    key={mins}
+                    type="button"
+                    onClick={() => setAlertMinutes(mins)}
+                    className={`py-2 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                      alertMinutes === mins
+                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-sm'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                    }`}
+                  >
+                    {mins} mins
+                  </button>
+                ))}
+              </div>
+
               <div className="flex items-center space-x-3 bg-slate-950 border border-slate-800 p-3 rounded-lg">
+                <span className="text-xs text-slate-500 font-semibold uppercase">Custom:</span>
                 <input
                   type="number"
                   min="1"
@@ -3401,7 +3438,55 @@ export default function TrainDetails() {
                   onChange={(e) => setAlertMinutes(parseInt(e.target.value) || 1)}
                   className="bg-transparent text-slate-100 font-bold text-lg w-20 outline-none"
                 />
-                <span className="text-slate-450 text-sm">minutes</span>
+                <span className="text-slate-450 text-sm">minutes delay</span>
+              </div>
+
+              {/* Native Device Push Section */}
+              <div className="bg-slate-950/70 border border-slate-800/80 p-3 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                    <Bell className="w-3.5 h-3.5 text-amber-400" />
+                    Device Push Alert
+                  </span>
+                  {webNotificationService.getPermission() === 'granted' ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      Enabled
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const granted = await webNotificationService.requestPermission();
+                        if (granted) {
+                          webNotificationService.sendSampleDelayAlert(
+                            trainNumber || '12952',
+                            train?.trainName || '',
+                            alertMinutes
+                          );
+                        }
+                      }}
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 cursor-pointer transition"
+                    >
+                      Enable Push
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Sends instant lock-screen device notification & plays audio chime when train delay passes {alertMinutes} mins.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    webNotificationService.sendSampleDelayAlert(
+                      trainNumber || '12952',
+                      train?.trainName || 'Mumbai Rajdhani',
+                      alertMinutes || 48
+                    );
+                  }}
+                  className="w-full py-1.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-750 text-xs font-semibold text-slate-200 hover:text-white flex items-center justify-center gap-1.5 transition cursor-pointer"
+                >
+                  <span>🧪 Test Live Delay Alert</span>
+                </button>
               </div>
             </div>
 

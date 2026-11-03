@@ -2509,3 +2509,28 @@ File path: `src/pages/TrainDetails.tsx`
      * 🟡 **Quick Halt (< 10 mins)**: Advised to order via e-Catering or purchase from doorway vendor.
   5. In the bottom dispatch card, enter your email address and click **"Send Food Itinerary to Email"**.
   6. Receive a dark-mode IRCTC gastronomic guide formatted with high-contrast meal badges and station timing tables.
+
+
+---
+
+#### 12. 🚨 Live Train Delay Device Push Notification & In-App Toast System
+* **What is the use:**
+  * Delivers high-urgency, real-time lock-screen notifications directly to the passenger's mobile phone or desktop when a tracked train exceeds their configured delay threshold (e.g. $> 15$, $> 30$, or $> 60$ minutes).
+  * Synthesizes an audible 3-tone railway delay alert chime (523Hz $\to$ 659Hz $\to$ 784Hz) using the browser Web Audio API.
+  * Displays an interactive in-app toast card across all screens with a 1-tap **"View Live Train Map"** direct link.
+* **Component & Service Files:**
+  * `src/utils/webNotificationService.ts`: Native `Notification` API wrapper with permission state handling, audio synthesizer, and 15-minute alert cooldown deduplication.
+  * `src/components/InAppNotificationToast.tsx`: Floating top-screen alert toast with auto-dismiss and direct route navigation.
+  * `src/pages/TrainDetails.tsx`: Live telemetry hook evaluating `liveStatus.delayMinutes >= alertMinutes` and triggering the alert.
+  * `src/components/NotificationPreferencesModal.tsx`: Global preferences cockpit card with permission toggle and instant live test trigger.
+* **Step-by-Step User Guide:**
+  1. Open any train's tracking page (e.g. `/trains/12952`) or click the **Alerts** icon in the navbar.
+  2. In the **Delay Alert Settings** modal, select your sensitivity threshold (**15 mins**, **30 mins**, or **60 mins**).
+  3. Click **"Enable Push"** to grant browser/OS notification permissions.
+  4. Click **"🧪 Test Live Delay Alert"** to test it immediately.
+     * You will hear a pleasant 3-tone railway chime.
+     * A native system lock-screen notification will appear:
+       `⚠️ RailTrack Alert: 12952 Mumbai Rajdhani is Delayed by 48 mins`
+       `Current location: Passing Kota Jn (KOTA). Estimated arrival shifted from 08:30 AM to 09:18 AM.`
+     * An in-app toast card slides down with a **"View Live Train Map"** button.
+  5. Tapping the notification on your phone or desktop instantly opens the train's live map.

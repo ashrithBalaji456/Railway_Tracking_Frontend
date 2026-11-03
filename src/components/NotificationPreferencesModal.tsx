@@ -17,6 +17,7 @@ import {
   RotateCw
 } from 'lucide-react';
 import api from '../services/api';
+import webNotificationService from '../utils/webNotificationService';
 
 interface NotificationPreferencesModalProps {
   isOpen: boolean;
@@ -396,6 +397,57 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
                       ))}
                     </div>
                   </div>
+
+                    {/* Instant Device Push Notifications Section */}
+                    <div className="pt-3 border-t border-slate-800/80 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs font-semibold text-white flex items-center gap-1.5">
+                            <Smartphone className="w-3.5 h-3.5 text-indigo-400" />
+                            Lock-Screen Device Push Alerts
+                          </div>
+                          <div className="text-[11px] text-slate-400">
+                            Plays audio chime & shows native OS notification when delay &gt; {delayAlertThresholdMinutes}m
+                          </div>
+                        </div>
+                        {webNotificationService.getPermission() === 'granted' ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            ✓ Push Active
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const granted = await webNotificationService.requestPermission();
+                              if (granted) {
+                                webNotificationService.sendSampleDelayAlert(
+                                  '12952',
+                                  'Mumbai Rajdhani',
+                                  delayAlertThresholdMinutes
+                                );
+                              }
+                            }}
+                            className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 cursor-pointer transition"
+                          >
+                            Enable Push
+                          </button>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          webNotificationService.sendSampleDelayAlert(
+                            '12952',
+                            'Mumbai Rajdhani',
+                            delayAlertThresholdMinutes
+                          );
+                        }}
+                        className="w-full py-1.5 px-3 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-750 text-xs font-semibold text-amber-300 hover:text-amber-200 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                      >
+                        <span>🔔 Test Live Delay Notification on Device</span>
+                      </button>
+                    </div>
                 </div>
               </div>
 
