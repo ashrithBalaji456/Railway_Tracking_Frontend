@@ -6,6 +6,15 @@
 
 export type AlarmToneType = 'digital_clock' | 'emergency_siren' | 'train_horn';
 
+export interface ActiveAlarmInfo {
+  isPlaying: boolean;
+  trainNumber?: string;
+  stationName?: string;
+  etaMinutes?: number;
+  toneType?: AlarmToneType;
+  startedAt?: number;
+}
+
 class AlarmAudioService {
   private audioCtx: AudioContext | null = null;
   private isAlarmPlaying = false;
@@ -13,6 +22,11 @@ class AlarmAudioService {
   private speechInterval: any = null;
   private vibrationInterval: any = null;
   private wakeLockSentinel: any = null;
+  private currentAlarmInfo: ActiveAlarmInfo | null = null;
+
+  getActiveAlarmInfo(): ActiveAlarmInfo | null {
+    return this.currentAlarmInfo;
+  }
 
   private getAudioContext(): AudioContext {
     if (!this.audioCtx) {
@@ -195,6 +209,23 @@ class AlarmAudioService {
     this.speechInterval = setInterval(() => {
       if (this.isAlarmPlaying) speakAnnouncement();
     }, 14000);
+
+    this.currentAlarmInfo = {
+      isPlaying: true,
+      trainNumber: options.trainNumber,
+      stationName: options.stationName,
+      etaMinutes: options.etaMinutes,
+      toneType: tone,
+      startedAt: Date.now()
+    };
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('rail-alarm-state', {
+          detail: this.currentAlarmInfo
+        })
+      );
+    }
   }
 
   /**
@@ -202,6 +233,15 @@ class AlarmAudioService {
    */
   stopAlarm(): void {
     this.isAlarmPlaying = false;
+    this.currentAlarmInfo = null;
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('rail-alarm-state', {
+          detail: { isPlaying: false }
+        })
+      );
+    }
 
     if (this.alarmInterval) {
       clearInterval(this.alarmInterval);

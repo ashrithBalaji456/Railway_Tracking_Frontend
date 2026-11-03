@@ -20,12 +20,14 @@ import PnrStatus from './pages/PnrStatus';
 import { LanguageProvider } from './context/LanguageContext';
 import AndroidBackButtonHandler from './components/AndroidBackButtonHandler';
 import InAppNotificationToast from './components/InAppNotificationToast';
+import ActiveAlarmBanner from './components/ActiveAlarmBanner';
 
 export default function App() {
   return (
     <LanguageProvider>
       <Router>
         <AndroidBackButtonHandler />
+        <ActiveAlarmBanner />
         <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 selection:bg-indigo-650 selection:text-white">
           <Navbar />
           

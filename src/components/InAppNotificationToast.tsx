@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, X, ChevronRight, Bell } from 'lucide-react';
+import { AlertTriangle, X, ChevronRight, Bell, VolumeX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import alarmAudioService from '../utils/alarmAudioService';
 
 interface ToastItem {
   id: string;
@@ -66,18 +67,33 @@ export default function InAppNotificationToast() {
               {toast.body}
             </p>
 
-            {toast.url && (
-              <button
-                onClick={() => {
-                  setToasts((prev) => prev.filter((t) => t.id !== toast.id));
-                  navigate(toast.url!);
-                }}
-                className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 rounded-lg text-xs font-semibold tracking-wide transition cursor-pointer shadow-sm"
-              >
-                <span>View Live Train Map</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            )}
+            <div className="flex flex-wrap items-center gap-2 mt-2.5">
+              {toast.url && (
+                <button
+                  onClick={() => {
+                    setToasts((prev) => prev.filter((t) => t.id !== toast.id));
+                    navigate(toast.url!);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 rounded-lg text-xs font-semibold tracking-wide transition cursor-pointer shadow-sm"
+                >
+                  <span>View Live Train Map</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              {alarmAudioService.isPlaying() && (
+                <button
+                  onClick={() => {
+                    alarmAudioService.stopAlarm();
+                    setToasts((prev) => prev.filter((t) => t.id !== toast.id));
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-sm animate-pulse"
+                >
+                  <VolumeX className="w-3.5 h-3.5" />
+                  <span>Turn Off Alarm</span>
+                </button>
+              )}
+            </div>
           </div>
 
           <button
