@@ -2412,16 +2412,19 @@ File path: `src/pages/TrainDetails.tsx`
 
 ---
 
-#### 4. 🎫 IRCTC Chart Preparation Notification & Probability Predictor
-* **What is the use:** Waitlist (`WL`) and `RAC` passengers can track the exact clearance probability of their ticket and receive an email the moment IRCTC finalizes the chart so they can see their coach and berth allocations.
+#### 4. 🎫 IRCTC Chart Preparation Notification & Probability Predictor (+20-Minute Server Buffer)
+* **What is the use:** Waitlist (`WL`) and `RAC` passengers can track the exact clearance probability of their ticket and receive dual-channel notifications (device lock-screen push and Brevo email) the moment IRCTC finalizes the chart so they can see their coach and berth allocations.
+* **+20-Minute Server Upload Buffer:** Because Indian Railways PRS servers require 15–20 minutes to compile and sync passenger manifests to `irctc.co.in/online-charts`, the countdown clock and dispatch alerts incorporate an automatic 20-minute buffer (e.g. 08:20 PM) to ensure passengers never face "Chart under preparation" errors upon opening the chart.
 * **Step-by-Step User Guide:**
   1. Open **PNR Status** (`/pnr`).
   2. In the **Smart PNR Predictor & Charting Countdown** card:
      * **To predict confirmation chance:** Select your Quota (`GNWL`, `RLWL`, `PQWL`, `TQWL`, `RAC`), Class (`SL`, `3A`, etc.), Booking WL, and Current WL. View your instant percentage gauge and historical clearance insight.
      * **To track charting clock:** Switch to the **Chart Countdown Clock** tab.
-  3. Review the live countdown clock (automatically configured: 8:00 PM previous night for 5 AM–2 PM departures; 10 hours prior for afternoon/night departures; 30 minutes prior for Chart 2).
+  3. Review the live countdown clock (automatically configured: 8:00 PM previous night for 5 AM–2 PM departures; 10 hours prior for afternoon/night departures; 30 minutes prior for Chart 2, with the +20-minute upload buffer).
   4. Click **"Chime Preview"** to hear the Web Audio notification sound.
-  5. Enter your email and click **"Arm Chart Alert"** (or **"Test Email"** to preview the email).
+  5. Enter your email and click **"Arm Chart Alert"**.
+  6. Click **"Test Push Alert"** to test the native OS lock-screen push notification and chime immediately on your screen, or click **"Test Email"** to preview the email layout.
+  7. Tapping the push notification opens the official IRCTC Charting portal directly in your browser.
 
 ---
 

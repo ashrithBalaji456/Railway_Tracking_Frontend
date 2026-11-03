@@ -212,7 +212,48 @@ class WebNotificationService {
       force: true
     });
   }
+
+  /**
+   * High-Priority IRCTC Chart Preparation Alert Dispatcher
+   * Includes 20-minute upload buffer to guarantee the chart is live on IRCTC servers.
+   */
+  sendChartPreparedAlert(params: {
+    trainNumber: string;
+    trainName?: string;
+    chartType?: string;
+    pnr?: string;
+    bufferMinutes?: number;
+  }): void {
+    const { trainNumber, trainName = '', chartType = 'Chart 1', pnr, bufferMinutes = 20 } = params;
+    const displayName = trainName ? `${trainNumber} ${trainName}` : trainNumber;
+    const title = `🎫 IRCTC ${chartType} Prepared: ${displayName}`;
+    const pnrText = pnr ? ` for PNR ${pnr}` : '';
+    const body = `The reservation chart is finalized and live on IRCTC (+${bufferMinutes}m upload buffer)! Tap to check your confirmed coach & berth.${pnrText}`;
+    const url = 'https://www.irctc.co.in/online-charts/';
+
+    this.sendNotification({
+      title,
+      body,
+      tag: `chart-${trainNumber}`,
+      url,
+      playChime: true
+    });
+  }
+
+  /**
+   * Trigger an instant live demo / test chart preparation alert (+20m buffer)
+   */
+  sendSampleChartAlert(trainNumber = '12952', trainName = 'Mumbai Rajdhani', pnr = '4521098741'): void {
+    this.sendChartPreparedAlert({
+      trainNumber,
+      trainName,
+      chartType: 'Chart 1',
+      pnr,
+      bufferMinutes: 20
+    });
+  }
 }
 
 export const webNotificationService = new WebNotificationService();
 export default webNotificationService;
+

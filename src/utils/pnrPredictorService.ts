@@ -14,9 +14,11 @@ export interface ProbabilityResult {
 export interface ChartingTimelineResult {
   departureDateTime: Date;
   chart1DateTime: Date;
+  chart1LiveAvailableTime: Date;
+  chartBufferMinutes: number;
   chart2DateTime: Date;
   ruleApplied: string;
-  currentPhase: 'BOOKING' | 'CHART1_PREPARED' | 'CURRENT_BOOKING' | 'CHART2_FINALIZED';
+  currentPhase: 'BOOKING' | 'CHART1_PREPARING' | 'CHART1_PREPARED' | 'CURRENT_BOOKING' | 'CHART2_FINALIZED';
   phaseTitle: string;
   nextMilestone: string;
   nextMilestoneTime: Date;
@@ -29,6 +31,7 @@ export interface ChartingTimelineResult {
     text: string;
   };
   isChart1Ready: boolean;
+  isChart1LiveReady: boolean;
   isChart2Ready: boolean;
 }
 
@@ -209,14 +212,19 @@ class PnrPredictorService {
       ruleApplied = 'Afternoon / Night Departure • Finalized exactly 10 hours before origin departure';
     }
 
+    // Chart 1 Statutory Time + 20-minute Server Upload Buffer
+    const chartBufferMinutes = 20;
+    const chart1LiveAvailableTime = new Date(chart1DateTime.getTime() + chartBufferMinutes * 60 * 1000);
+
     // Chart 2 is always 30 minutes before departure
     const chart2DateTime = new Date(departureDateTime.getTime() - 30 * 60 * 1000);
 
     const now = new Date();
     const isChart1Ready = now.getTime() >= chart1DateTime.getTime();
+    const isChart1LiveReady = now.getTime() >= chart1LiveAvailableTime.getTime();
     const isChart2Ready = now.getTime() >= chart2DateTime.getTime();
 
-    let currentPhase: 'BOOKING' | 'CHART1_PREPARED' | 'CURRENT_BOOKING' | 'CHART2_FINALIZED';
+    let currentPhase: 'BOOKING' | 'CHART1_PREPARING' | 'CHART1_PREPARED' | 'CURRENT_BOOKING' | 'CHART2_FINALIZED';
     let phaseTitle: string;
     let nextMilestone: string;
     let nextMilestoneTime: Date;
@@ -225,12 +233,20 @@ class PnrPredictorService {
     if (!isChart1Ready) {
       currentPhase = 'BOOKING';
       phaseTitle = 'Standard Booking Phase (Waitlist Clearance Active)';
-      nextMilestone = 'Chart 1 Preparation';
-      nextMilestoneTime = chart1DateTime;
-      countdownMs = Math.max(0, chart1DateTime.getTime() - now.getTime());
+      nextMilestone = 'Chart 1 Preparation (+20m Upload Buffer)';
+      nextMilestoneTime = chart1LiveAvailableTime;
+      countdownMs = Math.max(0, chart1LiveAvailableTime.getTime() - now.getTime());
+    } else if (!isChart1LiveReady) {
+      currentPhase = 'CHART1_PREPARING';
+      const remainingSecs = Math.max(0, Math.floor((chart1LiveAvailableTime.getTime() - now.getTime()) / 1000));
+      const remainingMins = Math.ceil(remainingSecs / 60);
+      phaseTitle = `Chart 1 In Progress • Server Upload Finishing in ~${remainingMins} mins`;
+      nextMilestone = 'IRCTC Live Manifest Release';
+      nextMilestoneTime = chart1LiveAvailableTime;
+      countdownMs = Math.max(0, chart1LiveAvailableTime.getTime() - now.getTime());
     } else if (!isChart2Ready) {
       currentPhase = 'CHART1_PREPARED';
-      phaseTitle = 'Chart 1 Finalized • Current Counter Booking Open';
+      phaseTitle = 'Chart 1 Finalized & Live on IRCTC • Current Counter Booking Open';
       nextMilestone = 'Final Chart 2 Lock';
       nextMilestoneTime = chart2DateTime;
       countdownMs = Math.max(0, chart2DateTime.getTime() - now.getTime());
@@ -255,6 +271,8 @@ class PnrPredictorService {
     return {
       departureDateTime,
       chart1DateTime,
+      chart1LiveAvailableTime,
+      chartBufferMinutes,
       chart2DateTime,
       ruleApplied,
       currentPhase,
@@ -270,6 +288,7 @@ class PnrPredictorService {
         text
       },
       isChart1Ready,
+      isChart1LiveReady,
       isChart2Ready
     };
   }

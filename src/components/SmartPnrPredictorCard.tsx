@@ -11,7 +11,8 @@ import {
   TrendingUp,
   Activity,
   ShieldCheck,
-  Flame
+  Flame,
+  Bell
 } from 'lucide-react';
 import api from '../services/api';
 import {
@@ -22,6 +23,7 @@ import {
   type ChartingTimelineResult
 } from '../utils/pnrPredictorService';
 import { whatsappShareService } from '../utils/whatsappShareService';
+import webNotificationService from '../utils/webNotificationService';
 
 interface SmartPnrPredictorCardProps {
   initialPnr?: string;
@@ -162,6 +164,28 @@ export default function SmartPnrPredictorCard({
     } finally {
       setEmailTesting(false);
     }
+  };
+
+  const handleTestChartPushAlert = async () => {
+    if (webNotificationService.getPermission() !== 'granted') {
+      const granted = await webNotificationService.requestPermission();
+      if (!granted) {
+        setAlertStatus({
+          type: 'error',
+          text: 'Please allow notification permissions in your browser to receive chart preparation alerts.'
+        });
+        return;
+      }
+    }
+    webNotificationService.sendSampleChartAlert(
+      trainNumber || '12952',
+      trainName || 'Mumbai Rajdhani',
+      pnr.replace(/\D/g, '') || '4521849021'
+    );
+    setAlertStatus({
+      type: 'success',
+      text: 'Sample IRCTC Chart Finalized device notification & chime triggered with +20m upload buffer!'
+    });
   };
 
   const handleSharePredictionToWhatsApp = () => {
@@ -552,7 +576,15 @@ export default function SmartPnrPredictorCard({
             </div>
           )}
 
-          {/* Action Row: Email Alert & WhatsApp Share */}
+          {/* 20-Minute Guaranteed Upload Buffer Advisory */}
+          <div className="flex items-center gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs">
+            <Clock className="w-4 h-4 shrink-0 text-amber-400" />
+            <span>
+              <strong>+20-Minute IRCTC Server Buffer Active:</strong> Statutory charting starts at 8:00 PM (or 10h prior). To guarantee IRCTC servers have completely processed and uploaded your coach &amp; berth details without "Chart under preparation" errors, notifications dispatch with a 20-minute buffer (e.g. 08:20 PM).
+            </span>
+          </div>
+
+          {/* Action Row: Email Alert, Push Notification & WhatsApp Share */}
           <form onSubmit={handleScheduleChartAlert} className="flex flex-col sm:flex-row items-center gap-3 pt-1">
             <div className="relative flex-1 w-full">
               <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -575,6 +607,15 @@ export default function SmartPnrPredictorCard({
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>{emailTesting ? 'Testing...' : 'Test Email'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleTestChartPushAlert}
+                title="Trigger an instant lock-screen device push alert (+20m upload buffer)"
+                className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl border border-amber-500/40 bg-amber-950/70 hover:bg-amber-900 text-amber-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm shadow-amber-950/40"
+              >
+                <Bell className="w-3.5 h-3.5 text-amber-400" />
+                <span>Test Push Alert</span>
               </button>
 
               <button
