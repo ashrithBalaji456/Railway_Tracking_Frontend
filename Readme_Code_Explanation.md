@@ -2539,3 +2539,35 @@ File path: `src/pages/TrainDetails.tsx`
        `Current location: Passing Kota Jn (KOTA). Estimated arrival shifted from 08:30 AM to 09:18 AM.`
      * An in-app toast card slides down with a **"View Live Train Map"** button.
   5. Tapping the notification on your phone or desktop instantly opens the train's live map.
+
+---
+
+#### 13. 🌅 Priority 3: Smart Dynamic Departure Wake-Up Alarm & Travel Reminder Cockpit
+* **What is the use:**
+  * Solves early morning train wake-up stress (e.g., trains departing at 05:00 AM or 05:15 AM).
+  * Pairs native OS lock-screen push notifications with a continuous loud in-app siren/horn alarm, hardware vibration, and screen wake lock.
+  * If a train is delayed by e.g. 3 hours, the alarm dynamically shifts forward (e.g. from 02:30 AM to 05:30 AM) so passengers don't wake up prematurely.
+* **Component & Service Files:**
+  * `src/pages/PnrStatus.tsx`: Full dynamic wake-up alarm card with boarding station picker, scheduled departure time, advance time selector (1h, 1.5h, 2h, 2.5h Recommended, 3h), alarm tone picker, and interactive alarm tester.
+  * `src/utils/alarmAudioService.ts`: Web Audio synthesizer providing continuous looping pulses (`digital_clock`, `emergency_siren`, `train_horn`), hardware vibration patterns, screen wake lock (`navigator.wakeLock`), and recurring spoken voice wake-up announcements until dismissed.
+  * `src/utils/webNotificationService.ts`: `sendDepartureReminderAlert(...)` native lock-screen push notification and floating toast banner.
+* **Step-by-Step User Guide:**
+  1. Navigate to **PNR Status** (`/pnr`).
+  2. Scroll down to the **"🌅 Smart Departure Alarm & Travel Reminder"** card.
+  3. Enter your **10-Digit PNR**, **Train Number**, and **Boarding Station** (e.g. *New Delhi (NDLS)*).
+  4. Select your scheduled departure time (e.g. *05:15 AM*).
+  5. Select your desired advance wake-up alert pill:
+     * `1 Hour Prior`
+     * `1.5 Hours Prior`
+     * `2 Hours Prior`
+     * `2.5 Hours (Recommended)`
+     * `3 Hours Prior`
+  6. Choose your continuous alarm tone: *Travel Alarm Clock*, *Emergency Siren*, or *Train Horn*, and click **"Preview Audio"** to test volume.
+  7. Click **"🔔 Test Wake-Up Alarm (Sound + Push)"**:
+     * Your phone/desktop immediately rings a continuous loud siren alarm, vibrates, and activates screen wake lock.
+     * A native lock-screen notification appears displaying:
+       `🌅 Wake-Up Alert: 12952 Mumbai Rajdhani Departing in 2.5h!`
+       `Boarding at New Delhi (NDLS) (Platform 3). Running 180m late (Expected: 08:15 AM). Time to get ready & head to station!`
+     * The button turns into an active pulsating red **"🛑 Stop Loud Alarm"** to silence the siren with 1 tap.
+  8. Click **"Send Sample Email"** to receive the golden morning wake-up email via Brevo in your inbox.
+  9. Click **"Schedule Dynamic Alarm"** to arm the automated background poller!

@@ -304,6 +304,80 @@ class WebNotificationService {
       reason: 'Track maintenance & fog speed restrictions'
     });
   }
+
+  /**
+   * High-Priority Travel Day Departure & Wake-Up Alarm Dispatcher
+   * Fires prior to scheduled/expected departure at the passenger's specific boarding station.
+   */
+  sendDepartureReminderAlert(params: {
+    trainNumber: string;
+    trainName?: string;
+    stationName?: string;
+    platform?: string | number;
+    scheduledTime?: string;
+    expectedTime?: string;
+    delayMinutes?: number;
+    advanceMinutes?: number;
+    pnr?: string;
+  }): void {
+    const {
+      trainNumber,
+      trainName = '',
+      stationName = 'Boarding Station',
+      platform,
+      scheduledTime,
+      expectedTime,
+      delayMinutes = 0,
+      advanceMinutes = 150,
+      pnr
+    } = params;
+
+    const displayName = trainName ? trainNumber + ' ' + trainName : trainNumber;
+    const hours = (advanceMinutes / 60).toFixed(1).replace(/\.0$/, '');
+    const title = '🌅 Wake-Up Alert: ' + displayName + ' Departing in ' + hours + 'h!';
+
+    const platText = platform && platform !== 'TBA' ? ' (Platform ' + platform + ')' : '';
+    const delayInfo =
+      delayMinutes > 0
+        ? 'Running ' + delayMinutes + 'm late (Expected: ' + (expectedTime || 'Updated Time') + ')'
+        : 'On Time (Scheduled: ' + (scheduledTime || 'On Schedule') + ')';
+
+    const pnrText = pnr ? ' [PNR: ' + pnr + ']' : '';
+    const body = 'Boarding at ' + stationName + platText + '. ' + delayInfo + '. Time to get ready & head to station!' + pnrText;
+    const url = '/trains/' + trainNumber;
+
+    this.sendNotification({
+      title,
+      body,
+      tag: 'departure-' + trainNumber,
+      url,
+      playChime: true
+    });
+  }
+
+  /**
+   * Trigger an instant live demo / test wake-up departure alert
+   */
+  sendSampleDepartureAlert(
+    trainNumber = '12952',
+    trainName = 'Mumbai Rajdhani',
+    stationName = 'New Delhi (NDLS)',
+    platform = '3',
+    delayMinutes = 180,
+    advanceMinutes = 150
+  ): void {
+    this.sendDepartureReminderAlert({
+      trainNumber,
+      trainName,
+      stationName,
+      platform,
+      scheduledTime: '05:00 AM',
+      expectedTime: '08:00 AM',
+      delayMinutes,
+      advanceMinutes,
+      pnr: '4521849021'
+    });
+  }
 }
 
 export const webNotificationService = new WebNotificationService();

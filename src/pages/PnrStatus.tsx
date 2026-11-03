@@ -24,6 +24,9 @@ import {
 import api from '../services/api';
 import whatsappShareService from '../utils/whatsappShareService';
 import SmartPnrPredictorCard from '../components/SmartPnrPredictorCard';
+import alarmAudioService, { type AlarmToneType } from '../utils/alarmAudioService';
+import webNotificationService from '../utils/webNotificationService';
+import { Volume2, VolumeX, Sunrise, MapPin, Sparkles } from 'lucide-react';
 
 interface SavedPnr {
   pnr: string;
@@ -144,6 +147,55 @@ export default function PnrStatus() {
   const [reminderEmail, setReminderEmail] = useState(localStorage.getItem('email') || '');
   const [reminderLoading, setReminderLoading] = useState(false);
   const [reminderTesting, setReminderTesting] = useState(false);
+  const [reminderBoardingStation, setReminderBoardingStation] = useState('New Delhi (NDLS)');
+  const [reminderDepartureTime, setReminderDepartureTime] = useState('05:15');
+  const [reminderAdvanceMinutes, setReminderAdvanceMinutes] = useState(150);
+  const [alarmTone, setAlarmTone] = useState<AlarmToneType>('digital_clock');
+  const [isAlarmSounding, setIsAlarmSounding] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      alarmAudioService.stopAlarm();
+    };
+  }, []);
+
+  const handleToggleAlarmTest = async () => {
+    if (isAlarmSounding) {
+      alarmAudioService.stopAlarm();
+      setIsAlarmSounding(false);
+      return;
+    }
+
+    const effectivePnr = (reminderPnr.trim() || cleanPnr || '4521849021').replace(/\D/g, '').slice(0, 10);
+    const effectiveTrain = (reminderTrain.trim() || trainNumberInput.trim() || '12952');
+
+    // 1. Request notification permission if needed
+    if (webNotificationService.isSupported() && webNotificationService.getPermission() === 'default') {
+      await webNotificationService.requestPermission();
+    }
+
+    // 2. Play continuous loud alarm + screen wake lock + vibration + voice announcement
+    alarmAudioService.startContinuousAlarm({
+      toneType: alarmTone,
+      trainNumber: effectiveTrain,
+      stationName: reminderBoardingStation || 'Boarding Station',
+      etaMinutes: reminderAdvanceMinutes
+    });
+    setIsAlarmSounding(true);
+
+    // 3. Fire native lock-screen push notification & in-app toast banner
+    webNotificationService.sendDepartureReminderAlert({
+      trainNumber: effectiveTrain,
+      trainName: reminderTrainName.trim() || 'Rajdhani Express',
+      stationName: reminderBoardingStation || 'New Delhi (NDLS)',
+      platform: '3',
+      scheduledTime: reminderDepartureTime || '05:15 AM',
+      expectedTime: '08:15 AM (Delayed by 3h)',
+      delayMinutes: 180,
+      advanceMinutes: reminderAdvanceMinutes,
+      pnr: effectivePnr
+    });
+  };
   const [reminderMessage, setReminderMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Sync reminder inputs when user fills out main PNR or train
@@ -477,41 +529,50 @@ export default function PnrStatus() {
         initialTravelDate={reminderDate}
       />
 
-      {/* Travel Day Morning Reminder via Brevo */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 p-5 sm:p-7 shadow-xl space-y-5">
+      {/* Smart Dynamic Departure Wake-Up Alarm & Travel Reminder */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 p-5 sm:p-7 shadow-xl space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl border border-amber-500/30 shadow-inner">
-              <Bell className="w-5 h-5 animate-pulse" />
+            <div className="p-2.5 bg-gradient-to-br from-amber-500/20 to-orange-500/20 text-amber-400 rounded-xl border border-amber-500/30 shadow-inner">
+              <Sunrise className="w-5 h-5 animate-pulse text-amber-400" />
             </div>
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 mb-1">
-                <span>Automated Email Alert</span>
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 mb-1">
+                <Sparkles className="w-3 h-3 text-amber-400" />
+                <span>Priority 3: Dynamic Departure Wake-Up Alarm</span>
               </div>
               <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                <span>Travel Day Morning Reminder</span>
+                <span>Smart Departure Alarm & Travel Reminder</span>
               </h3>
             </div>
           </div>
-          <span className="text-xs text-slate-400 bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800 self-start sm:self-auto">
-            Dispatches at <strong className="text-amber-400">06:00 AM IST</strong> on Journey Morning
+          <span className="text-xs text-amber-300 bg-amber-950/60 border border-amber-500/30 px-3 py-1.5 rounded-lg self-start sm:self-auto font-medium flex items-center gap-1.5">
+            <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+            <span>Lock-Screen Push + Loud Continuous Alarm + Email</span>
           </span>
         </div>
 
-        <p className="text-xs text-slate-300 leading-relaxed">
-          Never miss boarding your train! Save your PNR, train number, and journey date below. On the morning of your trip, our system will automatically email you direct live train GPS coordinates, platform updates, and station board links.
-        </p>
+        {/* Dynamic Delay Shift Explanation Box */}
+        <div className="bg-slate-950/80 rounded-xl border border-indigo-500/20 p-4 space-y-2">
+          <div className="flex items-center gap-2 text-xs font-bold text-indigo-300">
+            <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>Early Morning Trains & Dynamic Delay Shift Protection:</span>
+          </div>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Catching an early morning train departing before 6:00 AM (e.g. 05:15 AM)? Choose your advance wake-up warning below (1h to 3h before departure). If your train gets delayed by <strong>3 hours</strong> (arriving at 08:15 AM instead of 05:15 AM), our live telemetry dynamically moves your alarm from <strong>02:45 AM to 05:45 AM</strong> so you enjoy uninterrupted rest!
+          </p>
+        </div>
 
         {reminderMessage && (
           <div
             className={`p-3.5 rounded-xl border text-xs flex items-start justify-between gap-3 ${
-              reminderMessage.type === 'success'
-                ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300'
-                : 'bg-rose-950/70 border-rose-500/40 text-rose-300'
+              reminderMessage.type === "success"
+                ? "bg-emerald-950/70 border-emerald-500/40 text-emerald-300"
+                : "bg-rose-950/70 border-rose-500/40 text-rose-300"
             }`}
           >
             <div className="flex items-center gap-2">
-              {reminderMessage.type === 'success' ? (
+              {reminderMessage.type === "success" ? (
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
               ) : (
                 <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
@@ -529,6 +590,7 @@ export default function PnrStatus() {
         )}
 
         <form onSubmit={handleScheduleReminder} className="space-y-4">
+          {/* Primary Journey Inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
             {/* PNR Field */}
             <div>
@@ -539,9 +601,9 @@ export default function PnrStatus() {
               <input
                 type="text"
                 maxLength={10}
-                placeholder={cleanPnr || 'e.g. 4521849021'}
+                placeholder={cleanPnr || "e.g. 4521849021"}
                 value={reminderPnr}
-                onChange={(e) => setReminderPnr(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                onChange={(e) => setReminderPnr(e.target.value.replace(/\D/g, "").slice(0, 10))}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm font-mono text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
               />
             </div>
@@ -556,9 +618,9 @@ export default function PnrStatus() {
                 <input
                   type="text"
                   maxLength={5}
-                  placeholder={trainNumberInput || '12951'}
+                  placeholder={trainNumberInput || "12952"}
                   value={reminderTrain}
-                  onChange={(e) => setReminderTrain(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                  onChange={(e) => setReminderTrain(e.target.value.replace(/\D/g, "").slice(0, 5))}
                   className="w-20 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2.5 text-sm font-bold text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 shrink-0"
                 />
                 <input
@@ -579,7 +641,7 @@ export default function PnrStatus() {
               </label>
               <input
                 type="date"
-                min={new Date().toISOString().split('T')[0]}
+                min={new Date().toISOString().split("T")[0]}
                 value={reminderDate}
                 onChange={(e) => setReminderDate(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-white focus:outline-none focus:border-indigo-500 [color-scheme:dark]"
@@ -602,50 +664,166 @@ export default function PnrStatus() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+          {/* Secondary Wake-Up & Station Configuration */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
+            {/* Boarding Station Field */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-indigo-400" />
+                <span>Your Boarding Station *</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. New Delhi (NDLS)"
+                value={reminderBoardingStation}
+                onChange={(e) => setReminderBoardingStation(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            {/* Scheduled Departure Time */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1">
+                <Clock className="w-3 h-3 text-indigo-400" />
+                <span>Scheduled Departure Time</span>
+              </label>
+              <input
+                type="text"
+                placeholder="05:15 or 05:15 AM"
+                value={reminderDepartureTime}
+                onChange={(e) => setReminderDepartureTime(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            {/* Alarm Tone Picker & Preview */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                  <Volume2 className="w-3 h-3 text-indigo-400" />
+                  <span>Continuous Alarm Tone</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => alarmAudioService.previewTone(alarmTone)}
+                  className="text-[10px] text-amber-400 hover:text-amber-300 font-semibold cursor-pointer underline flex items-center gap-1"
+                >
+                  <span>Preview Audio</span>
+                </button>
+              </div>
+              <select
+                value={alarmTone}
+                onChange={(e) => setAlarmTone(e.target.value as AlarmToneType)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+              >
+                <option value="digital_clock">Classic Travel Alarm (Dual Beep)</option>
+                <option value="emergency_siren">Emergency Alert Siren (Urgent)</option>
+                <option value="train_horn">Indian Railways Train Horn</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Advance Warning Selector Pills */}
+          <div className="pt-1">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+              Wake-Up Advance Warning Time (Before Train Arrives at Your Station):
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { minutes: 60, label: "1 Hour Prior" },
+                { minutes: 90, label: "1.5 Hours Prior" },
+                { minutes: 120, label: "2 Hours Prior" },
+                { minutes: 150, label: "2.5 Hours (Recommended)" },
+                { minutes: 180, label: "3 Hours Prior" }
+              ].map((opt) => (
+                <button
+                  key={opt.minutes}
+                  type="button"
+                  onClick={() => setReminderAdvanceMinutes(opt.minutes)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                    reminderAdvanceMinutes === opt.minutes
+                      ? "bg-indigo-600 border-indigo-400 text-white shadow-md shadow-indigo-600/30"
+                      : "bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Action Buttons & Sound Alert Tester */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-800">
             <span className="text-[11px] text-slate-400 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Cron scheduler checks active daily itineraries every morning at 06:00 AM IST.</span>
+              <span>Telemetry poller runs every 15m to synchronize delay shifts.</span>
             </span>
 
-            <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              {/* Loud Alarm + Push Notification Live Tester */}
+              <button
+                type="button"
+                onClick={handleToggleAlarmTest}
+                className={`flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer border ${
+                  isAlarmSounding
+                    ? "bg-rose-600 text-white border-rose-400 animate-pulse shadow-lg shadow-rose-600/40"
+                    : "bg-amber-950/80 hover:bg-amber-900/80 text-amber-300 border-amber-500/40 hover:border-amber-400"
+                }`}
+                title="Test how the loud continuous alarm and lock-screen push notification behave"
+              >
+                {isAlarmSounding ? (
+                  <>
+                    <VolumeX className="w-4 h-4" />
+                    <span>Stop Loud Alarm</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-4 h-4 text-amber-400" />
+                    <span>Test Wake-Up Alarm (Sound + Push)</span>
+                  </>
+                )}
+              </button>
+
+              {/* Sample Email Preview */}
               <button
                 type="button"
                 disabled={reminderTesting}
                 onClick={handleTestReminder}
                 title="Send a sample email to your inbox immediately to preview the layout"
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-slate-700 hover:border-slate-600 bg-slate-950 hover:bg-slate-850 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl border border-slate-700 hover:border-slate-600 bg-slate-950 hover:bg-slate-850 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>{reminderTesting ? 'Dispatching...' : 'Send Sample Email'}</span>
+                <span>{reminderTesting ? "Dispatching..." : "Send Sample Email"}</span>
               </button>
 
+              {/* WhatsApp Share */}
               <button
                 type="button"
                 onClick={() => {
-                  const effectivePnr = (reminderPnr.trim() || cleanPnr || '4521849021').replace(/\D/g, '').slice(0, 10);
-                  const effectiveTrain = (reminderTrain.trim() || trainNumberInput.trim() || '12951');
+                  const effectivePnr = (reminderPnr.trim() || cleanPnr || "4521849021").replace(/\D/g, "").slice(0, 10);
+                  const effectiveTrain = (reminderTrain.trim() || trainNumberInput.trim() || "12952");
                   whatsappShareService.sharePnrTravelReminder({
                     pnr: effectivePnr,
                     trainNumber: effectiveTrain,
                     trainName: reminderTrainName.trim() || undefined,
-                    travelDate: reminderDate || new Date().toISOString().split('T')[0]
+                    travelDate: reminderDate || new Date().toISOString().split("T")[0]
                   });
                 }}
                 title="Share this journey reminder to WhatsApp"
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-emerald-500/40 hover:border-emerald-500 bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm shadow-emerald-950/40"
+                className="flex-1 sm:flex-none px-3 py-2.5 rounded-xl border border-emerald-500/40 hover:border-emerald-500 bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm shadow-emerald-950/40"
               >
                 <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
-                <span>WhatsApp Share</span>
+                <span>WhatsApp</span>
               </button>
 
+              {/* Schedule Dynamic Reminder */}
               <button
                 type="submit"
                 disabled={reminderLoading}
-                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition-all cursor-pointer disabled:opacity-50"
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition-all cursor-pointer disabled:opacity-50"
               >
                 <Bell className="w-3.5 h-3.5" />
-                <span>{reminderLoading ? 'Scheduling...' : 'Schedule Morning Reminder'}</span>
+                <span>{reminderLoading ? "Scheduling..." : "Schedule Dynamic Alarm"}</span>
               </button>
             </div>
           </div>
