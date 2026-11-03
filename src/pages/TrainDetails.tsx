@@ -9,6 +9,9 @@ import { getStationDisplayName } from '../utils/stationUtils';
 import { searchHistoryService } from '../services/searchHistoryService';
 import { getStationGastronomyBadge, type StationDelicacy } from '../data/stationGastronomy';
 import { getDepartedWindowInfo } from '../utils/liveStatusUtils';
+import StationWakeUpAlarmModal, { type WakeUpAlarmConfig } from '../components/StationWakeUpAlarmModal';
+import RingingAlarmOverlay from '../components/RingingAlarmOverlay';
+import { alarmAudioService } from '../utils/alarmAudioService';
 
 interface StationSelectorDropdownProps {
   label: string;
@@ -241,6 +244,24 @@ export default function TrainDetails() {
   const [alertMinutes, setAlertMinutes] = useState(15);
   const [showAlertModal, setShowAlertModal] = useState(false);
 
+  // Station Approaching & Wake-Up Alarm State
+  const [selectedAlarmStation, setSelectedAlarmStation] = useState<any | null>(null);
+  const [armedAlarmConfig, setArmedAlarmConfig] = useState<WakeUpAlarmConfig | null>(() => {
+    try {
+      const stored = localStorage.getItem('rail_armed_alarm');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.trainNumber === trainNumber) return parsed;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return null;
+  });
+  const [isAlarmRinging, setIsAlarmRinging] = useState(false);
+  const [ringingAlarmData, setRingingAlarmData] = useState<any | null>(null);
+  const hasTriggeredAlarmRef = useRef<boolean>(false);
+
   const [delayReport, setDelayReport] = useState<TrainDelayReport | null>(null);
   const [loadingDelay, setLoadingDelay] = useState(false);
   const [selectedFareFrom, setSelectedFareFrom] = useState<string>('');
@@ -356,6 +377,96 @@ export default function TrainDetails() {
 
     return liveStatus.nextStationCode && !isSkippedStation(liveStatus.nextStationCode) ? liveStatus.nextStationCode.toUpperCase() : null;
   })();
+
+  // Monitor train position against armed wake-up alarm
+  useEffect(() => {
+    if (!armedAlarmConfig || isAlarmRinging || hasTriggeredAlarmRef.current) return;
+
+    const targetCode = armedAlarmConfig.stationCode.toUpperCase();
+    const liveStop = liveStatus?.stations?.find(
+      (ls: any) => ls.stationCode?.toUpperCase() === targetCode
+    );
+    const routeStop = route?.stations?.find(
+      (rs: any) => rs.stationCode?.toUpperCase() === targetCode
+    );
+
+    if (!liveStop && !routeStop) return;
+
+    let shouldTrigger = false;
+    let computedEta = armedAlarmConfig.triggerMinutes;
+
+    // Sequence position check
+    const currentBubbleSeq = route?.stations?.find(
+      (st: any) => st.stationCode?.toUpperCase() === bubbleStationCode
+    )?.sequenceNumber;
+    const targetSeq = (routeStop || liveStop)?.sequenceNumber;
+
+    if (currentBubbleSeq != null && targetSeq != null) {
+      const stopsDifference = targetSeq - currentBubbleSeq;
+      if (stopsDifference === 1 || stopsDifference === 0) {
+        shouldTrigger = true;
+      }
+    }
+
+    if (liveStop) {
+      const statusUpper = (liveStop.status || '').toUpperCase();
+      if (statusUpper === 'AT_STATION' || statusUpper === 'ARRIVED') {
+        shouldTrigger = true;
+      }
+
+      const expArr = liveStop.expectedArrival || routeStop?.arrivalTime;
+      if (expArr) {
+        try {
+          const [h, m] = expArr.split(':').map(Number);
+          const now = new Date();
+          const targetTime = new Date();
+          targetTime.setHours(h, m, 0, 0);
+          let diffMinutes = Math.round((targetTime.getTime() - now.getTime()) / (1000 * 60));
+          if (diffMinutes < -720) diffMinutes += 1440;
+          if (diffMinutes > 0 && diffMinutes <= armedAlarmConfig.triggerMinutes) {
+            shouldTrigger = true;
+            computedEta = diffMinutes;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
+    if (shouldTrigger) {
+      hasTriggeredAlarmRef.current = true;
+      const alarmPayload = {
+        stationCode: armedAlarmConfig.stationCode,
+        stationName: armedAlarmConfig.stationName,
+        etaMinutes: computedEta,
+        distanceKm: routeStop?.distance,
+        platform: liveStop?.platform || routeStop?.platform
+      };
+
+      setRingingAlarmData(alarmPayload);
+      setIsAlarmRinging(true);
+
+      alarmAudioService.startContinuousAlarm({
+        toneType: armedAlarmConfig.toneType,
+        trainNumber: trainNumber || train?.trainNumber,
+        stationName: armedAlarmConfig.stationName,
+        etaMinutes: computedEta
+      });
+
+      if (armedAlarmConfig.backupEmail) {
+        api.post('/api/v1/alarm/approaching', {
+          email: armedAlarmConfig.backupEmail,
+          trainNumber: trainNumber || train?.trainNumber,
+          trainName: train?.trainName,
+          stationCode: armedAlarmConfig.stationCode,
+          stationName: armedAlarmConfig.stationName,
+          etaMinutes: computedEta,
+          distanceKm: routeStop?.distance,
+          platform: liveStop?.platform || routeStop?.platform
+        }).catch((err) => console.warn('Failed to send backup alarm email:', err));
+      }
+    }
+  }, [liveStatus, bubbleStationCode, armedAlarmConfig, isAlarmRinging, route, trainNumber, train]);
 
   const disruptionBannerText = (() => {
     if (!liveStatus) return '';
@@ -2798,6 +2909,31 @@ export default function TrainDetails() {
                                 ({s.stationCode})
                               </span>
                             )}
+                            {/* Station Approaching Wake-Up Alarm Button */}
+                            {!isDeparted && !isStationCancelled && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedAlarmStation({
+                                    stationCode: s.stationCode,
+                                    stationName: s.stationName,
+                                    expectedArrival: liveStop?.expectedArrival || s.arrivalTime,
+                                    distance: s.distance,
+                                    platform: liveStop?.platform || s.platform
+                                  });
+                                }}
+                                title={armedAlarmConfig?.stationCode?.toUpperCase() === s.stationCode?.toUpperCase() ? "Wake-up alarm armed for this station! Tap to manage." : "Set night travel wake-up alarm"}
+                                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] sm:text-[9px] font-bold border transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95 ${
+                                  armedAlarmConfig?.stationCode?.toUpperCase() === s.stationCode?.toUpperCase()
+                                    ? 'bg-amber-500/25 border-amber-500 text-amber-300 animate-pulse shadow-amber-500/20'
+                                    : 'bg-slate-900/90 border-slate-700/80 text-slate-400 hover:text-amber-300 hover:border-amber-500/40'
+                                }`}
+                              >
+                                <Bell className={`w-2.5 h-2.5 ${armedAlarmConfig?.stationCode?.toUpperCase() === s.stationCode?.toUpperCase() ? 'fill-amber-400 text-amber-400' : ''}`} />
+                                <span>{armedAlarmConfig?.stationCode?.toUpperCase() === s.stationCode?.toUpperCase() ? 'Alarm Armed' : 'Set Alarm'}</span>
+                              </button>
+                            )}
                             {isStationCancelled && (
                               <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[9px] font-bold px-1.5 py-0.2 rounded shadow-sm">
                                 Cancelled at this station
@@ -3382,6 +3518,70 @@ export default function TrainDetails() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Armed Alarm Status Floating Pill */}
+      {armedAlarmConfig && !isAlarmRinging && (
+        <div className="fixed top-20 right-4 sm:right-8 z-40 bg-gradient-to-r from-amber-950/90 to-slate-900/90 backdrop-blur-md border border-amber-500/50 px-3.5 py-2 rounded-2xl shadow-xl flex items-center gap-3 animate-fadeIn">
+          <div className="p-1.5 bg-amber-500/20 text-amber-400 rounded-lg animate-pulse">
+            <Bell className="w-4 h-4 fill-amber-400" />
+          </div>
+          <div className="text-left">
+            <div className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">Night Alarm Armed</div>
+            <div className="text-xs text-white font-bold">{armedAlarmConfig.stationName} ({armedAlarmConfig.stationCode})</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              alarmAudioService.stopAlarm();
+              setArmedAlarmConfig(null);
+              localStorage.removeItem('rail_armed_alarm');
+            }}
+            className="text-[10px] text-slate-400 hover:text-rose-400 font-bold ml-1 cursor-pointer underline"
+          >
+            Disarm
+          </button>
+        </div>
+      )}
+
+      {/* Station Approaching Wake-Up Alarm Configuration Modal */}
+      {selectedAlarmStation && (
+        <StationWakeUpAlarmModal
+          isOpen={Boolean(selectedAlarmStation)}
+          onClose={() => setSelectedAlarmStation(null)}
+          trainNumber={trainNumber || train?.trainNumber || ''}
+          trainName={train?.trainName}
+          station={selectedAlarmStation}
+          currentArmedConfig={armedAlarmConfig}
+          onArmAlarm={(cfg) => {
+            setArmedAlarmConfig(cfg);
+            localStorage.setItem('rail_armed_alarm', JSON.stringify({ ...cfg, trainNumber: trainNumber || train?.trainNumber }));
+          }}
+          onDisarmAlarm={() => {
+            setArmedAlarmConfig(null);
+            localStorage.removeItem('rail_armed_alarm');
+          }}
+        />
+      )}
+
+      {/* Full-Screen Ringing Wake-Up Alarm Overlay */}
+      {isAlarmRinging && ringingAlarmData && (
+        <RingingAlarmOverlay
+          isOpen={isAlarmRinging}
+          onDismiss={() => {
+            alarmAudioService.stopAlarm();
+            setIsAlarmRinging(false);
+            setArmedAlarmConfig(null);
+            localStorage.removeItem('rail_armed_alarm');
+          }}
+          trainNumber={trainNumber || train?.trainNumber || ''}
+          trainName={train?.trainName}
+          stationName={ringingAlarmData.stationName}
+          stationCode={ringingAlarmData.stationCode}
+          etaMinutes={ringingAlarmData.etaMinutes}
+          distanceKm={ringingAlarmData.distanceKm}
+          platform={ringingAlarmData.platform}
+        />
       )}
     </div>
   );
