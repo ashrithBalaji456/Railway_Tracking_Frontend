@@ -2571,3 +2571,25 @@ File path: `src/pages/TrainDetails.tsx`
      * The button turns into an active pulsating red **"🛑 Stop Loud Alarm"** to silence the siren with 1 tap.
   8. Click **"Send Sample Email"** to receive the golden morning wake-up email via Brevo in your inbox.
   9. Click **"Schedule Dynamic Alarm"** to arm the automated background poller!
+
+---
+
+#### 14. 🎵 Custom Alarm Ringtones (MP3/WAV) & 2-Minute Lock-Screen Test Countdown
+* **What is the use:**
+  * Allows passengers to personalize their wake-up alarm sound by uploading their own preferred audio tracks (MP3, WAV, M4A, AAC up to 20MB).
+  * Manages favorites, sets system-wide default ringtones, and provides instant audio deletion stored locally in browser **IndexedDB** (`railtrack_alarm_sounds_db`).
+  * Features a **Lock-Screen Countdown Test Timer (30s, 1m, 2m, 5m)** so passengers can arm an alarm, **lock their phone**, and observe the exact behavior of the lock-screen push notification and continuous loud sound.
+* **Component & Service Files:**
+  * `src/utils/customAlarmSoundService.ts`: IndexedDB database wrapper with `getAllSounds()`, `saveSound(file)`, `setDefault(id)`, `toggleFavorite(id)`, `deleteSound(id)`, and `getSoundBlobUrl(id)`.
+  * `src/components/CustomSoundManagerModal.tsx`: Interactive audio cockpit for previewing built-in tones, uploading MP3 tracks, starring favorites, setting defaults, and removing tracks.
+  * `src/components/LockScreenTestAlarmModal.tsx`: Configurable countdown timer (30s, 1m, 2m, 5m) with background wake lock, live ticking countdown badge, native lock-screen push dispatcher, and loud looping playback of the user's custom MP3.
+  * `src/components/ActiveAlarmBanner.tsx`: Displays the track name (`🎵 Custom: MorningAlarm.mp3`) alongside the instant `[🛑 TURN OFF ALARM]` and `[Snooze 5m]` controls.
+* **Step-by-Step User Guide:**
+  1. Open **PNR Status** (`/pnr`) and scroll to the **Smart Departure Alarm** card.
+  2. Click **"Change / Upload"** next to the sound selector.
+  3. Click **"Upload Audio (MP3 / WAV / M4A)"** and select your song or ringtone file.
+  4. Preview the audio with the **Play** button, click **"Star"** to favorite it, or click **"Set Default"**. Click **"Done"**.
+  5. Click **"⏰ Test in 2 Mins (Lock Phone)"**.
+  6. Select **"2 Minutes (Recommended)"** and click **"Arm Test Alarm"**.
+  7. **Lock your phone screen** and place your device on your desk.
+  8. When 2 minutes elapse, your phone will light up with a native lock-screen notification and continuously blast your custom MP3 with vibration until you tap **"🛑 Turn Off Alarm"**!
