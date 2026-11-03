@@ -15,8 +15,13 @@ import {
   ArrowRight,
   HelpCircle,
   Copy,
-  Check
+  Check,
+  Mail,
+  Bell,
+  Calendar,
+  Send
 } from 'lucide-react';
+import api from '../services/api';
 
 interface SavedPnr {
   pnr: string;
@@ -123,6 +128,113 @@ export default function PnrStatus() {
   const handleOpenOfficial = (url: string) => {
     handleSavePnr();
     window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  // Travel Day Morning Reminder state
+  const [reminderPnr, setReminderPnr] = useState('');
+  const [reminderTrain, setReminderTrain] = useState('');
+  const [reminderTrainName, setReminderTrainName] = useState('');
+  const [reminderDate, setReminderDate] = useState(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  });
+  const [reminderEmail, setReminderEmail] = useState(localStorage.getItem('email') || '');
+  const [reminderLoading, setReminderLoading] = useState(false);
+  const [reminderTesting, setReminderTesting] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Sync reminder inputs when user fills out main PNR or train
+  useEffect(() => {
+    if (isValidPnr && !reminderPnr) {
+      setReminderPnr(cleanPnr);
+    }
+  }, [cleanPnr, isValidPnr]);
+
+  useEffect(() => {
+    if (trainNumberInput && !reminderTrain) {
+      setReminderTrain(trainNumberInput);
+    }
+  }, [trainNumberInput]);
+
+  const handleScheduleReminder = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const effectivePnr = reminderPnr.trim() || cleanPnr;
+    const cleanEffectivePnr = effectivePnr.replace(/\D/g, '').slice(0, 10);
+    if (cleanEffectivePnr.length !== 10) {
+      setReminderMessage({ type: 'error', text: 'Please provide a valid 10-digit PNR number.' });
+      return;
+    }
+    const effectiveTrain = reminderTrain.trim() || trainNumberInput.trim();
+    if (!effectiveTrain) {
+      setReminderMessage({ type: 'error', text: 'Please provide your 5-digit Train Number.' });
+      return;
+    }
+    if (!reminderDate) {
+      setReminderMessage({ type: 'error', text: 'Please select your scheduled journey date.' });
+      return;
+    }
+    if (!reminderEmail.trim() || !reminderEmail.includes('@')) {
+      setReminderMessage({ type: 'error', text: 'Please enter a valid recipient email address.' });
+      return;
+    }
+
+    try {
+      setReminderLoading(true);
+      setReminderMessage(null);
+      const res: any = await api.post('/api/v1/pnr/reminder', {
+        pnr: cleanEffectivePnr,
+        trainNumber: effectiveTrain,
+        trainName: reminderTrainName.trim() || undefined,
+        travelDate: reminderDate,
+        email: reminderEmail.trim()
+      });
+      setReminderMessage({
+        type: 'success',
+        text: res.message || `Travel reminder scheduled! We will send you an automated morning alert on ${reminderDate}.`
+      });
+    } catch (err: any) {
+      setReminderMessage({
+        type: 'error',
+        text: err.response?.data?.message || err.message || 'Failed to schedule travel reminder.'
+      });
+    } finally {
+      setReminderLoading(false);
+    }
+  };
+
+  const handleTestReminder = async () => {
+    const effectivePnr = (reminderPnr.trim() || cleanPnr || '4521849021').replace(/\D/g, '').slice(0, 10);
+    const targetPnr = effectivePnr.length === 10 ? effectivePnr : '4521849021';
+    const effectiveTrain = (reminderTrain.trim() || trainNumberInput.trim() || '12951');
+
+    if (!reminderEmail.trim() || !reminderEmail.includes('@')) {
+      setReminderMessage({ type: 'error', text: 'Please enter a valid recipient email address first.' });
+      return;
+    }
+
+    try {
+      setReminderTesting(true);
+      setReminderMessage(null);
+      const res: any = await api.post('/api/v1/pnr/reminder/test', {
+        pnr: targetPnr,
+        trainNumber: effectiveTrain,
+        trainName: reminderTrainName.trim() || 'Rajdhani Express',
+        travelDate: reminderDate || new Date().toISOString().split('T')[0],
+        email: reminderEmail.trim()
+      });
+      setReminderMessage({
+        type: 'success',
+        text: res.message || `Sample morning reminder email dispatched to ${reminderEmail.trim()}! Please check your inbox.`
+      });
+    } catch (err: any) {
+      setReminderMessage({
+        type: 'error',
+        text: err.response?.data?.message || err.message || 'Failed to send test reminder email.'
+      });
+    } finally {
+      setReminderTesting(false);
+    }
   };
 
   return (
@@ -353,6 +465,162 @@ export default function PnrStatus() {
             Track Live
           </button>
         </div>
+      </div>
+
+      {/* Travel Day Morning Reminder via Brevo */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 p-5 sm:p-7 shadow-xl space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl border border-amber-500/30 shadow-inner">
+              <Bell className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 mb-1">
+                <span>Automated Email Alert</span>
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <span>Travel Day Morning Reminder</span>
+              </h3>
+            </div>
+          </div>
+          <span className="text-xs text-slate-400 bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800 self-start sm:self-auto">
+            Dispatches at <strong className="text-amber-400">06:00 AM IST</strong> on Journey Morning
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-300 leading-relaxed">
+          Never miss boarding your train! Save your PNR, train number, and journey date below. On the morning of your trip, our system will automatically email you direct live train GPS coordinates, platform updates, and station board links.
+        </p>
+
+        {reminderMessage && (
+          <div
+            className={`p-3.5 rounded-xl border text-xs flex items-start justify-between gap-3 ${
+              reminderMessage.type === 'success'
+                ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300'
+                : 'bg-rose-950/70 border-rose-500/40 text-rose-300'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {reminderMessage.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              )}
+              <span>{reminderMessage.text}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReminderMessage(null)}
+              className="text-xs underline hover:opacity-80 cursor-pointer shrink-0"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        <form onSubmit={handleScheduleReminder} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            {/* PNR Field */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1">
+                <Ticket className="w-3 h-3 text-indigo-400" />
+                <span>10-Digit PNR *</span>
+              </label>
+              <input
+                type="text"
+                maxLength={10}
+                placeholder={cleanPnr || 'e.g. 4521849021'}
+                value={reminderPnr}
+                onChange={(e) => setReminderPnr(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm font-mono text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            {/* Train Number Field */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1">
+                <Train className="w-3 h-3 text-indigo-400" />
+                <span>Train Number & Name *</span>
+              </label>
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  maxLength={5}
+                  placeholder={trainNumberInput || '12951'}
+                  value={reminderTrain}
+                  onChange={(e) => setReminderTrain(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                  className="w-20 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2.5 text-sm font-bold text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 shrink-0"
+                />
+                <input
+                  type="text"
+                  placeholder="Exp Name (optional)"
+                  value={reminderTrainName}
+                  onChange={(e) => setReminderTrainName(e.target.value)}
+                  className="flex-1 min-w-0 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            {/* Travel Date */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-indigo-400" />
+                <span>Journey Date *</span>
+              </label>
+              <input
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
+                value={reminderDate}
+                onChange={(e) => setReminderDate(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-white focus:outline-none focus:border-indigo-500 [color-scheme:dark]"
+              />
+            </div>
+
+            {/* Recipient Email */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1">
+                <Mail className="w-3 h-3 text-indigo-400" />
+                <span>Alert Recipient Email *</span>
+              </label>
+              <input
+                type="email"
+                placeholder="you@domain.com"
+                value={reminderEmail}
+                onChange={(e) => setReminderEmail(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+            <span className="text-[11px] text-slate-400 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Cron scheduler checks active daily itineraries every morning at 06:00 AM IST.</span>
+            </span>
+
+            <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              <button
+                type="button"
+                disabled={reminderTesting}
+                onClick={handleTestReminder}
+                title="Send a sample email to your inbox immediately to preview the layout"
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-slate-700 hover:border-slate-600 bg-slate-950 hover:bg-slate-850 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>{reminderTesting ? 'Dispatching...' : 'Send Sample Email'}</span>
+              </button>
+
+              <button
+                type="submit"
+                disabled={reminderLoading}
+                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <Bell className="w-3.5 h-3.5" />
+                <span>{reminderLoading ? 'Scheduling...' : 'Schedule Morning Reminder'}</span>
+              </button>
+            </div>
+          </div>
+        </form>
       </div>
 
       {/* Saved / Recent PNR Searches */}
