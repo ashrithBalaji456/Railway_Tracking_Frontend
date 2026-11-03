@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Train, Building2, Trash2, AlertCircle, Bell, Clock, RefreshCw } from 'lucide-react';
+import { Heart, Train, Building2, Trash2, AlertCircle, Bell, Clock, RefreshCw, Mail, CheckCircle2 } from 'lucide-react';
 import api from '../services/api';
 
 export default function Favorites() {
@@ -11,6 +11,8 @@ export default function Favorites() {
   const [loading, setLoading] = useState(true);
   const [alertsLoading, setAlertsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [testingAlertId, setTestingAlertId] = useState<number | null>(null);
+  const [testSuccessMessage, setTestSuccessMessage] = useState<string>('');
   
   const navigate = useNavigate();
 
@@ -72,6 +74,20 @@ export default function Favorites() {
       }
     } catch (err: any) {
       alert(err.message || 'Failed to delete alert setting');
+    }
+  };
+
+  const handleTestAlert = async (id: number) => {
+    setTestingAlertId(id);
+    setTestSuccessMessage('');
+    try {
+      const response: any = await api.post(`/api/v1/alerts/${id}/test`);
+      setTestSuccessMessage(response.message || 'Test delay alert email sent to your inbox!');
+      setTimeout(() => setTestSuccessMessage(''), 6000);
+    } catch (err: any) {
+      alert(err.message || 'Failed to send test alert email');
+    } finally {
+      setTestingAlertId(null);
     }
   };
 
@@ -241,6 +257,13 @@ export default function Favorites() {
             </div>
 
             <div className="p-6">
+              {testSuccessMessage && (
+                <div className="mb-4 bg-emerald-950/50 border border-emerald-800/60 p-3 rounded-lg flex items-center space-x-2 text-emerald-300 text-xs">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                  <span>{testSuccessMessage}</span>
+                </div>
+              )}
+
               {alerts.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {alerts.map((a) => (
@@ -269,19 +292,31 @@ export default function Favorites() {
                         </button>
                       </div>
 
-                      {/* Warnings notification flags */}
+                      {/* Warnings notification flags & test email trigger */}
                       <div className="pt-2 border-t border-slate-850/65 flex items-center justify-between text-xs">
                         <span className="text-slate-450">Current delay: <span className="font-bold text-slate-200">{a.currentDelay} mins</span></span>
                         
-                        {a.triggered ? (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-red-950/60 border border-red-800/40 text-red-400 uppercase tracking-wider animate-pulse">
-                            ⚠️ DELAY WARNING
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 uppercase tracking-wider">
-                            ✅ Normal Run
-                          </span>
-                        )}
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleTestAlert(a.id)}
+                            disabled={testingAlertId === a.id}
+                            className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-300 transition-colors cursor-pointer disabled:opacity-50"
+                            title="Send sample alert to your email via Brevo"
+                          >
+                            <Mail className="h-3 w-3" />
+                            <span>{testingAlertId === a.id ? 'Sending...' : 'Test Email'}</span>
+                          </button>
+
+                          {a.triggered ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-red-950/60 border border-red-800/40 text-red-400 uppercase tracking-wider animate-pulse">
+                              ⚠️ DELAY WARNING
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 uppercase tracking-wider">
+                              ✅ Normal Run
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
