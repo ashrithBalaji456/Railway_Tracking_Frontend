@@ -15,15 +15,12 @@ export default function PermissionPromptBanner() {
   const [nativePerms, setNativePerms] = useState<NativeAlarmPermissions | null>(null);
 
   useEffect(() => {
-    const isDismissed = localStorage.getItem('rail_notification_prompt_dismissed');
-    if (isDismissed) return;
-
     if (isNativeApp()) {
       checkNativeAlarmPermissions().then((perms) => {
         if (perms) {
           setNativePerms(perms);
           if (!perms.notifications || !perms.overlay) {
-            const timer = setTimeout(() => setShowBanner(true), 1200);
+            const timer = setTimeout(() => setShowBanner(true), 800);
             return () => clearTimeout(timer);
           }
         }
@@ -32,6 +29,8 @@ export default function PermissionPromptBanner() {
     }
 
     // Web fallback
+    const isDismissed = localStorage.getItem('rail_notification_prompt_dismissed');
+    if (isDismissed) return;
     if (!webNotificationService.isSupported()) return;
     const currentPermission = webNotificationService.getPermission();
     if (currentPermission === 'default') {

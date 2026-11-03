@@ -4,6 +4,8 @@
  * allowing custom alarm ringtones, defaults, favorites, and instant playback.
  */
 
+import { syncCustomAudioToNative, clearNativeCustomAudio } from './nativeAlarmBridge';
+
 export interface CustomAlarmSound {
   id: string;
   name: string;
@@ -110,8 +112,10 @@ class CustomAlarmSoundService {
       const store = tx.objectStore(STORE_NAME);
       const req = store.add(soundItem);
 
-      req.onsuccess = () => {
+      req.onsuccess = async () => {
         this.notifyChange();
+        // Immediately sync to native Android storage so AlarmManager/MediaPlayer can play it offline & locked!
+        await syncCustomAudioToNative(soundItem.blob);
         resolve(soundItem);
       };
       req.onerror = () => reject(req.error);
@@ -129,14 +133,20 @@ class CustomAlarmSoundService {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
 
+      let targetBlob: Blob | null = null;
       all.forEach((item) => {
-        item.isDefault = item.id === id;
+        const isTarget = item.id === id;
+        item.isDefault = isTarget;
+        if (isTarget) targetBlob = item.blob;
         store.put(item);
       });
 
-      tx.oncomplete = () => {
+      tx.oncomplete = async () => {
         localStorage.setItem('rail_default_custom_sound_id', id);
         this.notifyChange();
+        if (targetBlob) {
+          await syncCustomAudioToNative(targetBlob);
+        }
         resolve();
       };
       tx.onerror = () => reject(tx.error);
@@ -189,11 +199,15 @@ class CustomAlarmSoundService {
       const store = tx.objectStore(STORE_NAME);
       const req = store.delete(id);
 
-      req.onsuccess = () => {
+      req.onsuccess = async () => {
         if (localStorage.getItem('rail_default_custom_sound_id') === id) {
           localStorage.removeItem('rail_default_custom_sound_id');
         }
         this.notifyChange();
+        const remaining = await this.getAllSounds();
+        if (remaining.length === 0) {
+          await clearNativeCustomAudio();
+        }
         resolve();
       };
       req.onerror = () => reject(req.error);

@@ -4,6 +4,8 @@
  * screen wake locks, and repeating speech synthesizers to reliably wake passengers.
  */
 
+import { stopNativeAlarm } from './nativeAlarmBridge';
+
 export type AlarmToneType = 'digital_clock' | 'emergency_siren' | 'train_horn';
 
 export interface ActiveAlarmInfo {
@@ -325,6 +327,9 @@ class AlarmAudioService {
     }
 
     this.releaseWakeLock();
+
+    // Silence native Android MediaPlayer and cancel persistent lock-screen notification
+    stopNativeAlarm();
   }
 
   isPlaying(): boolean {

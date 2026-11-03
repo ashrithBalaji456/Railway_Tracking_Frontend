@@ -13,6 +13,10 @@ export interface NativeAlarmPluginInterface {
     seconds: number;
   }>;
   cancelAlarm(): Promise<{ cancelled: boolean }>;
+  setCustomAlarmAudio(options: { base64: string }): Promise<{ saved: boolean; path: string; size: number }>;
+  clearCustomAlarmAudio(): Promise<{ cleared: boolean }>;
+  stopAlarm(): Promise<{ stopped: boolean }>;
+  isAlarmPlaying(): Promise<{ isPlaying: boolean }>;
   checkPermissions(): Promise<NativeAlarmPermissions>;
   requestOverlayPermission(): Promise<{ openedSettings?: boolean; alreadyGranted?: boolean }>;
   requestNotificationPermission(): Promise<{ requested: boolean }>;
@@ -44,6 +48,48 @@ export const cancelNativeAlarm = async () => {
     }
   }
   return null;
+};
+
+export const stopNativeAlarm = async () => {
+  if (isNativeApp()) {
+    try {
+      return await NativeAlarm.stopAlarm();
+    } catch (e) {
+      console.warn('Could not stop native alarm:', e);
+    }
+  }
+  return null;
+};
+
+export const syncCustomAudioToNative = async (blob: Blob): Promise<boolean> => {
+  if (!isNativeApp()) return false;
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      try {
+        const resultStr = reader.result as string;
+        const base64data = resultStr.includes(',') ? resultStr.split(',')[1] : resultStr;
+        await NativeAlarm.setCustomAlarmAudio({ base64: base64data });
+        console.log('Successfully synced custom audio to Android native storage');
+        resolve(true);
+      } catch (err) {
+        console.warn('Failed to sync custom audio to native:', err);
+        resolve(false);
+      }
+    };
+    reader.onerror = () => resolve(false);
+    reader.readAsDataURL(blob);
+  });
+};
+
+export const clearNativeCustomAudio = async () => {
+  if (isNativeApp()) {
+    try {
+      await NativeAlarm.clearCustomAlarmAudio();
+    } catch (err) {
+      console.warn('Failed to clear native custom audio:', err);
+    }
+  }
 };
 
 export const checkNativeAlarmPermissions = async (): Promise<NativeAlarmPermissions | null> => {

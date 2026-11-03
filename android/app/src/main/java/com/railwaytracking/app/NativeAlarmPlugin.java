@@ -2,6 +2,7 @@ package com.railwaytracking.app;
 
 import android.Manifest;
 import android.app.AlarmManager;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -9,6 +10,8 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
+import android.util.Base64;
+import android.util.Log;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -19,6 +22,9 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 
+import java.io.File;
+import java.io.FileOutputStream;
+
 @CapacitorPlugin(
     name = "NativeAlarm",
     permissions = {
@@ -27,6 +33,7 @@ import com.getcapacitor.annotation.Permission;
 )
 public class NativeAlarmPlugin extends Plugin {
 
+    private static final String TAG = "NativeAlarmPlugin";
     private static final int ALARM_REQ_CODE = 8801;
 
     @PluginMethod
@@ -76,14 +83,18 @@ public class NativeAlarmPlugin extends Plugin {
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
             }
 
+            Log.d(TAG, "Exact alarm scheduled in " + seconds + " seconds (" + triggerAtMillis + " ms)");
+
             JSObject ret = new JSObject();
             ret.put("scheduled", true);
             ret.put("triggerAtMillis", triggerAtMillis);
             ret.put("seconds", seconds);
             call.resolve(ret);
         } catch (SecurityException se) {
+            Log.e(TAG, "SecurityException scheduling exact alarm: " + se.getMessage());
             call.reject("Exact alarm permission required: " + se.getMessage());
         } catch (Exception e) {
+            Log.e(TAG, "Exception scheduling alarm: " + e.getMessage());
             call.reject("Failed scheduling alarm: " + e.getMessage());
         }
     }
@@ -104,6 +115,72 @@ public class NativeAlarmPlugin extends Plugin {
         }
         JSObject ret = new JSObject();
         ret.put("cancelled", true);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void setCustomAlarmAudio(PluginCall call) {
+        String base64Data = call.getString("base64");
+        if (base64Data == null || base64Data.isEmpty()) {
+            call.reject("base64 audio data required");
+            return;
+        }
+
+        try {
+            byte[] audioBytes = Base64.decode(base64Data, Base64.DEFAULT);
+            File audioFile = new File(getContext().getFilesDir(), "custom_alarm_sound.mp3");
+            try (FileOutputStream fos = new FileOutputStream(audioFile)) {
+                fos.write(audioBytes);
+                fos.flush();
+            }
+            Log.d(TAG, "Saved custom alarm audio: " + audioFile.getAbsolutePath() + " (" + audioBytes.length + " bytes)");
+
+            JSObject ret = new JSObject();
+            ret.put("saved", true);
+            ret.put("path", audioFile.getAbsolutePath());
+            ret.put("size", audioBytes.length);
+            call.resolve(ret);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed saving custom audio: " + e.getMessage());
+            call.reject("Failed to save audio file: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void clearCustomAlarmAudio(PluginCall call) {
+        try {
+            File audioFile = new File(getContext().getFilesDir(), "custom_alarm_sound.mp3");
+            if (audioFile.exists()) {
+                audioFile.delete();
+            }
+            Log.d(TAG, "Cleared custom alarm audio; restored default ringtone");
+            JSObject ret = new JSObject();
+            ret.put("cleared", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("Failed clearing custom audio: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void stopAlarm(PluginCall call) {
+        Context context = getContext();
+        AlarmSoundPlayer.getInstance().stopAlarm(context);
+
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm != null) {
+            nm.cancel(AlarmReceiver.NOTIFICATION_ID);
+        }
+
+        JSObject ret = new JSObject();
+        ret.put("stopped", true);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void isAlarmPlaying(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("isPlaying", AlarmSoundPlayer.getInstance().isPlaying());
         call.resolve(ret);
     }
 

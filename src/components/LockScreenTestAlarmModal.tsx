@@ -18,6 +18,8 @@ import {
   isNativeApp, 
   scheduleNativeAlarm, 
   cancelNativeAlarm, 
+  stopNativeAlarm,
+  syncCustomAudioToNative,
   checkNativeAlarmPermissions, 
   requestNativeOverlayPermission, 
   requestNativeNotificationPermission,
@@ -137,30 +139,46 @@ export default function LockScreenTestAlarmModal({
       setHasPermission(granted);
     }
 
-    // 2. Acquire screen wake lock
+    // 2. Pre-fetch custom sound blob URL and sync to native Android storage BEFORE timer starts!
+    let preloadedCustomUrl: string | undefined = undefined;
+    let preloadedCustomName: string | undefined = undefined;
+
+    if (selectedCustomSoundId) {
+      preloadedCustomUrl = (await customAlarmSoundService.getSoundBlobUrl(selectedCustomSoundId)) || undefined;
+      const sounds = await customAlarmSoundService.getAllSounds();
+      const found = sounds.find((s) => s.id === selectedCustomSoundId);
+      if (found) {
+        preloadedCustomName = found.name;
+        if (isNativeApp() && found.blob) {
+          await syncCustomAudioToNative(found.blob);
+        }
+      }
+    }
+
+    // 3. Acquire screen wake lock
     await alarmAudioService.acquireWakeLock();
 
-    // 3. If running in Native Android app, schedule exact AlarmManager wake-up alarm!
+    // 4. If running in Native Android app, schedule exact AlarmManager wake-up alarm!
     if (isNativeApp()) {
       try {
         await scheduleNativeAlarm(
           testSeconds,
           `🌅 RailTrack: ${trainName} Departure!`,
-          `Approaching ${stationName}. Tap to open and silence alarm.`
+          `Approaching ${stationName}. Tap to open or silence alarm.`
         );
       } catch (e) {
         console.warn('Native alarm schedule fallback to web worker:', e);
       }
     }
 
-    // 4. Start background audio anchor so Android/iOS doesn't freeze the timer when screen is locked
+    // 5. Start background audio anchor so Android/iOS doesn't freeze the timer when screen is locked
     startBackgroundAudioAnchor();
 
-    // 5. Set state
+    // 6. Set state
     setSecondsRemaining(testSeconds);
     setIsArmed(true);
 
-    // 6. Create Web Worker to run timer on an independent background thread
+    // 7. Create Web Worker to run timer on an independent background thread
     const workerScript = `
       let target = Date.now() + ${testSeconds} * 1000;
       let interval = setInterval(function() {
@@ -179,28 +197,17 @@ export default function LockScreenTestAlarmModal({
     const worker = new Worker(workerUrl);
     workerRef.current = worker;
 
-    worker.onmessage = async (e) => {
+    worker.onmessage = (e) => {
       if (e.data.type === 'tick') {
         setSecondsRemaining(e.data.remaining);
       } else if (e.data.type === 'complete') {
-        // TIMER HIT 00:00! Clean up anchor and fire the alarm
-        cleanupBackgroundKeepAlive();
+        // TIMER HIT 00:00!
+        if (workerRef.current) {
+          workerRef.current.terminate();
+          workerRef.current = null;
+        }
         setIsArmed(false);
         setSecondsRemaining(null);
-
-        // Fetch custom sound blob URL if configured
-        let customUrl: string | undefined = undefined;
-        let customName: string | undefined = undefined;
-
-        if (selectedCustomSoundId) {
-          const url = await customAlarmSoundService.getSoundBlobUrl(selectedCustomSoundId);
-          if (url) {
-            customUrl = url;
-            const sounds = await customAlarmSoundService.getAllSounds();
-            const found = sounds.find((s) => s.id === selectedCustomSoundId);
-            if (found) customName = found.name;
-          }
-        }
 
         // TRIGGER ALARM:
         // 1. Lock-screen OS push notification
@@ -216,15 +223,24 @@ export default function LockScreenTestAlarmModal({
           pnr: '4521849021'
         });
 
-        // 2. Play continuous loud alarm with custom audio or synthesizer
+        // 2. Play continuous loud alarm with preloaded custom audio or synthesizer
         alarmAudioService.startContinuousAlarm({
           toneType: selectedToneType,
-          customSoundUrl: customUrl,
-          customSoundName: customName,
+          customSoundUrl: preloadedCustomUrl,
+          customSoundName: preloadedCustomName,
           trainNumber,
           stationName,
           etaMinutes: 25
         });
+
+        // Release silent audio anchor now that loud alarm has taken over
+        if (silentAudioRef.current) {
+          try {
+            silentAudioRef.current.pause();
+            silentAudioRef.current.src = '';
+          } catch (err) {}
+          silentAudioRef.current = null;
+        }
       }
     };
   };
@@ -232,7 +248,9 @@ export default function LockScreenTestAlarmModal({
   const handleCancelTimer = () => {
     if (isNativeApp()) {
       cancelNativeAlarm();
+      stopNativeAlarm();
     }
+    alarmAudioService.stopAlarm();
     cleanupBackgroundKeepAlive();
     setIsArmed(false);
     setSecondsRemaining(null);
