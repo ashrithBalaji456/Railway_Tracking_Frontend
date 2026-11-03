@@ -66,6 +66,15 @@ export const getJourneyOverlay = async (requestBody: any): Promise<any> => {
   return api.post('/api/v1/journey/overlay', requestBody);
 };
 
+export const emailJourneyItinerary = async (payload: {
+  recipientEmail?: string;
+  recipientName?: string;
+  travelDate?: string;
+  journey: any;
+}): Promise<any> => {
+  return api.post('/api/v1/journey/email-itinerary', payload);
+};
+
 export const getBlogs = async (category?: string, query?: string): Promise<any> => {
   const params = new URLSearchParams();
   if (category && category !== 'All') params.append('category', category);

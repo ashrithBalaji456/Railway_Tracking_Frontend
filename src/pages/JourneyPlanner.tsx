@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MapPin, ArrowRight, RefreshCw, AlertTriangle, Clock, Calendar, HelpCircle, Train, Navigation, ArrowLeft, TrendingUp, ArrowUpDown } from 'lucide-react';
-import api, { getJourneyOverlay } from '../services/api';
+import { MapPin, ArrowRight, RefreshCw, AlertTriangle, Clock, Calendar, HelpCircle, Train, Navigation, ArrowLeft, TrendingUp, ArrowUpDown, Mail, CheckCircle2 } from 'lucide-react';
+import api, { getJourneyOverlay, emailJourneyItinerary } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
 import { searchHistoryService } from '../services/searchHistoryService';
@@ -28,6 +28,58 @@ export default function JourneyPlanner() {
   const [showOverlay, setShowOverlay] = useState(false);
   const [overlayData, setOverlayData] = useState<Record<string, number>>({});
   const [loadingOverlay, setLoadingOverlay] = useState(false);
+
+  // Email Itinerary Modal State
+  const [emailModalJourney, setEmailModalJourney] = useState<any | null>(null);
+  const [emailInput, setEmailInput] = useState('');
+  const [emailStatus, setEmailStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  const handleOpenEmailModal = (journey: any) => {
+    const savedEmail = localStorage.getItem('email') || '';
+    setEmailInput(savedEmail);
+    setEmailStatus(null);
+    setEmailModalJourney(journey);
+  };
+
+  const handleSendItineraryEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailInput.trim() || !emailModalJourney) return;
+
+    setIsSendingEmail(true);
+    setEmailStatus(null);
+    try {
+      const response: any = await emailJourneyItinerary({
+        recipientEmail: emailInput.trim(),
+        recipientName: localStorage.getItem('username') || undefined,
+        travelDate: travelDate || undefined,
+        journey: emailModalJourney,
+      });
+
+      if (response.success || response.status === 200) {
+        setEmailStatus({
+          type: 'success',
+          message: `Itinerary sent to ${emailInput.trim()} via Brevo!`,
+        });
+        setTimeout(() => {
+          setEmailModalJourney(null);
+          setEmailStatus(null);
+        }, 2200);
+      } else {
+        setEmailStatus({
+          type: 'error',
+          message: response.message || 'Failed to dispatch email.',
+        });
+      }
+    } catch (err: any) {
+      setEmailStatus({
+        type: 'error',
+        message: err.message || 'Failed to dispatch email.',
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
 
   // Debounced Autocomplete for Source Station
   useEffect(() => {
@@ -560,7 +612,18 @@ export default function JourneyPlanner() {
                       <span className={`px-2.5 py-1 rounded-full text-[9px] font-extrabold ${j.direct ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
                         {j.direct ? t('directTrain') : t('connectingTrain')}
                       </span>
-                      <span className="text-indigo-400 bg-indigo-500/5 border border-indigo-500/10 px-2 py-0.5 rounded-md font-extrabold">{formatDuration(j.totalDurationMinutes)}</span>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEmailModal(j)}
+                          className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-300 flex items-center space-x-1.5 transition-all cursor-pointer shadow-sm hover:border-indigo-400/40"
+                          title="Email this itinerary to yourself or family via Brevo"
+                        >
+                          <Mail className="h-3 w-3" />
+                          <span>Email Itinerary</span>
+                        </button>
+                        <span className="text-indigo-400 bg-indigo-500/5 border border-indigo-500/10 px-2 py-0.5 rounded-md font-extrabold">{formatDuration(j.totalDurationMinutes)}</span>
+                      </div>
                     </div>
 
                     <div className="flex flex-col md:flex-row items-stretch md:items-center gap-6">
@@ -710,6 +773,89 @@ export default function JourneyPlanner() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Email Itinerary Modal */}
+      {emailModalJourney && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <div className="inline-flex items-center space-x-1.5 text-xs font-bold text-indigo-400 uppercase tracking-widest">
+                  <Mail className="h-3.5 w-3.5" />
+                  <span>Email Travel Itinerary</span>
+                </div>
+                <h3 className="text-lg font-extrabold text-white">
+                  {emailModalJourney.originStationCode} ➔ {emailModalJourney.destinationStationCode}
+                </h3>
+              </div>
+              <button
+                onClick={() => setEmailModalJourney(null)}
+                className="text-slate-500 hover:text-white text-sm p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed">
+              We will send a formatted travel memo with departure/arrival timings, transfer halts, and a live tracking link via Brevo.
+            </p>
+
+            {emailStatus && (
+              <div className={`p-3 rounded-lg text-xs flex items-center space-x-2 ${
+                emailStatus.type === 'success'
+                  ? 'bg-emerald-950/60 border border-emerald-800/60 text-emerald-300'
+                  : 'bg-rose-950/60 border border-rose-800/60 text-rose-300'
+              }`}>
+                {emailStatus.type === 'success' && <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />}
+                <span>{emailStatus.message}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSendItineraryEmail} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Recipient Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  placeholder="e.g. passenger@gmail.com"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 outline-none focus:border-indigo-500 transition-colors"
+                />
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEmailModalJourney(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSendingEmail}
+                  className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 transition-colors flex items-center space-x-1.5 cursor-pointer shadow-lg shadow-indigo-600/20"
+                >
+                  {isSendingEmail ? (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      <span>Sending...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="h-3.5 w-3.5" />
+                      <span>Send Memo</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
