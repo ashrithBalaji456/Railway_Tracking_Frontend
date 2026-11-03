@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, Train, LogOut, User as UserIcon, Heart, Globe, History, AlertTriangle, BookOpen, Ticket, Bell } from 'lucide-react';
+import { Menu, X, Train, LogOut, User as UserIcon, Heart, Globe, History, AlertTriangle, BookOpen, Ticket, Bell, Clock } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import NotificationPreferencesModal from './NotificationPreferencesModal';
+import AlarmCockpitModal from './AlarmCockpitModal';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isPrefsOpen, setIsPrefsOpen] = useState(false);
+  const [isAlarmCockpitOpen, setIsAlarmCockpitOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { language, setLanguage, t } = useLanguage();
@@ -76,6 +78,17 @@ export default function Navbar() {
                 <option value="bn">বাংলা 🇮🇳</option>
               </select>
             </div>
+
+            {/* Alarms & Sound Center Button */}
+            <button
+              type="button"
+              onClick={() => setIsAlarmCockpitOpen(true)}
+              title="Train Alarms, Custom MP3 Ringtones & 2-Min Lock-Screen Tester"
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:text-amber-200 hover:bg-amber-500/20 transition-all cursor-pointer text-xs font-bold"
+            >
+              <Clock className="h-3.5 w-3.5 text-amber-400" />
+              <span>Alarms</span>
+            </button>
 
             {/* Alerts & Preferences Button */}
             <button
@@ -202,6 +215,19 @@ export default function Navbar() {
             <span>{t('navHistory')}</span>
           </Link>
 
+          {/* Mobile Alarms Center */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+              setIsAlarmCockpitOpen(true);
+            }}
+            className="w-full text-left flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium text-amber-300 hover:text-amber-200 hover:bg-slate-800 transition-all cursor-pointer"
+          >
+            <Clock className="h-5 w-5 text-amber-400" />
+            <span>Alarms & Custom MP3 Ringtones</span>
+          </button>
+
           {/* Mobile Alerts Center */}
           <button
             type="button"
@@ -288,6 +314,12 @@ export default function Navbar() {
       <NotificationPreferencesModal
         isOpen={isPrefsOpen}
         onClose={() => setIsPrefsOpen(false)}
+      />
+
+      {/* Alarms & Custom Audio Cockpit Modal */}
+      <AlarmCockpitModal
+        isOpen={isAlarmCockpitOpen}
+        onClose={() => setIsAlarmCockpitOpen(false)}
       />
     </nav>
   );

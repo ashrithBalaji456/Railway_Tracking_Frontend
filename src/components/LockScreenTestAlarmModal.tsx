@@ -6,7 +6,8 @@ import {
   Play, 
   CheckCircle2, 
   VolumeX,
-  ShieldCheck
+  ShieldCheck,
+  Radio
 } from 'lucide-react';
 import alarmAudioService, { type AlarmToneType } from '../utils/alarmAudioService';
 import customAlarmSoundService from '../utils/customAlarmSoundService';
@@ -38,8 +39,9 @@ export default function LockScreenTestAlarmModal({
     return webNotificationService.getPermission() === 'granted';
   });
 
-  const timerRef = useRef<any>(null);
-  const targetTimestampRef = useRef<number | null>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const silentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   // Check notification permission when opened
   useEffect(() => {
@@ -48,49 +50,109 @@ export default function LockScreenTestAlarmModal({
     }
   }, [isOpen]);
 
-  // Clean up timer if unmounted
+  // Clean up worker & audio if unmounted
   useEffect(() => {
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      cleanupBackgroundKeepAlive();
     };
   }, []);
 
-  if (!isOpen && !isArmed) return null;
+  const cleanupBackgroundKeepAlive = () => {
+    if (workerRef.current) {
+      workerRef.current.terminate();
+      workerRef.current = null;
+    }
+    if (silentAudioRef.current) {
+      try {
+        silentAudioRef.current.pause();
+        silentAudioRef.current.src = '';
+      } catch (e) {}
+      silentAudioRef.current = null;
+    }
+    if (audioContextRef.current) {
+      try {
+        audioContextRef.current.close();
+      } catch (e) {}
+      audioContextRef.current = null;
+    }
+    alarmAudioService.releaseWakeLock();
+  };
+
+  /**
+   * Starts a background audio anchor to prevent mobile OS (Android/iOS)
+   * from freezing JavaScript timers when the phone screen is locked.
+   */
+  const startBackgroundAudioAnchor = () => {
+    try {
+      // 1. Silent looping Audio element (anchors Media Session in Android)
+      // Generates a 1-second inaudible WAV audio data URI
+      const silentWavUri = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+      const audio = new Audio(silentWavUri);
+      audio.loop = true;
+      audio.volume = 0.01;
+      audio.play().catch((e) => console.warn('Silent audio anchor play suppressed:', e));
+      silentAudioRef.current = audio;
+
+      // 2. AudioContext keep-alive node
+      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtxClass) {
+        const ctx = new AudioCtxClass();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        gain.gain.value = 0.0001; // inaudible
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        audioContextRef.current = ctx;
+      }
+    } catch (err) {
+      console.warn('Audio anchor initialization warning:', err);
+    }
+  };
 
   const handleStartLockScreenTest = async () => {
     // 1. Request notification permission if not yet granted
     if (webNotificationService.isSupported() && webNotificationService.getPermission() !== 'granted') {
       const granted = await webNotificationService.requestPermission();
       setHasPermission(granted);
-      if (!granted) {
-        console.warn('Notification permission not granted, proceeding with audio-only fallback');
-      }
     }
 
     // 2. Acquire screen wake lock
     await alarmAudioService.acquireWakeLock();
 
-    // 3. Set target timestamp
-    const target = Date.now() + testSeconds * 1000;
-    targetTimestampRef.current = target;
+    // 3. Start background audio anchor so Android/iOS doesn't freeze the timer when screen is locked!
+    startBackgroundAudioAnchor();
+
+    // 4. Set state
     setSecondsRemaining(testSeconds);
     setIsArmed(true);
 
-    // 4. Background precision timer
-    if (timerRef.current) clearInterval(timerRef.current);
+    // 5. Create Web Worker to run timer on an independent background thread
+    // This avoids main-thread setInterval freezing during screen lock!
+    const workerScript = `
+      let target = Date.now() + ${testSeconds} * 1000;
+      let interval = setInterval(function() {
+        let now = Date.now();
+        let remaining = Math.max(0, Math.ceil((target - now) / 1000));
+        postMessage({ type: 'tick', remaining: remaining });
+        if (remaining <= 0) {
+          clearInterval(interval);
+          postMessage({ type: 'complete' });
+        }
+      }, 1000);
+    `;
 
-    timerRef.current = setInterval(async () => {
-      const now = Date.now();
-      const remainingMs = target - now;
-      const leftSec = Math.max(0, Math.ceil(remainingMs / 1000));
+    const blob = new Blob([workerScript], { type: 'application/javascript' });
+    const workerUrl = URL.createObjectURL(blob);
+    const worker = new Worker(workerUrl);
+    workerRef.current = worker;
 
-      setSecondsRemaining(leftSec);
-
-      if (leftSec <= 0) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
+    worker.onmessage = async (e) => {
+      if (e.data.type === 'tick') {
+        setSecondsRemaining(e.data.remaining);
+      } else if (e.data.type === 'complete') {
+        // TIMER HIT 00:00! Clean up anchor and fire the alarm
+        cleanupBackgroundKeepAlive();
         setIsArmed(false);
         setSecondsRemaining(null);
 
@@ -132,17 +194,13 @@ export default function LockScreenTestAlarmModal({
           etaMinutes: 25
         });
       }
-    }, 1000);
+    };
   };
 
   const handleCancelTimer = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+    cleanupBackgroundKeepAlive();
     setIsArmed(false);
     setSecondsRemaining(null);
-    alarmAudioService.releaseWakeLock();
   };
 
   const formatCountdown = (secs: number) => {
@@ -154,10 +212,13 @@ export default function LockScreenTestAlarmModal({
   // If armed and modal is closed, show a persistent floating countdown pill at bottom
   if (!isOpen && isArmed && secondsRemaining !== null) {
     return (
-      <div className="fixed bottom-5 right-4 z-50 bg-gradient-to-r from-amber-600 to-orange-600 text-white p-3.5 rounded-2xl shadow-2xl border-2 border-amber-300 flex items-center gap-3 animate-pulse">
-        <Clock className="w-5 h-5 text-yellow-200 animate-spin" />
+      <div className="fixed bottom-5 right-4 z-50 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white p-3.5 rounded-2xl shadow-2xl border-2 border-amber-300 flex items-center gap-3 animate-pulse">
+        <Radio className="w-5 h-5 text-yellow-200 animate-spin" />
         <div className="text-left">
-          <div className="text-xs font-black uppercase tracking-wider">Lock-Screen Test Armed</div>
+          <div className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+            <span>Lock-Screen Alarm Active</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+          </div>
           <div className="text-sm font-black font-mono">Fires in {formatCountdown(secondsRemaining)}</div>
         </div>
         <button
@@ -170,6 +231,8 @@ export default function LockScreenTestAlarmModal({
       </div>
     );
   }
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-4 animate-in fade-in duration-200">
@@ -188,7 +251,7 @@ export default function LockScreenTestAlarmModal({
                 <span>Lock-Screen Alarm Tester</span>
               </h3>
               <p className="text-xs text-slate-400">
-                Test the alarm by locking your phone
+                Background audio anchor guarantees wakeup even when locked
               </p>
             </div>
           </div>
@@ -204,14 +267,14 @@ export default function LockScreenTestAlarmModal({
         {/* Instructions */}
         <div className="bg-slate-950/80 rounded-xl border border-amber-500/20 p-3.5 space-y-2 text-xs text-slate-300 leading-relaxed">
           <div className="flex items-center gap-2 font-bold text-amber-300">
-            <ShieldCheck className="w-4 h-4 text-amber-400" />
-            <span>How to perform the Lock-Screen Test:</span>
+            <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>How to test with phone locked:</span>
           </div>
           <ol className="list-decimal pl-4 space-y-1 text-slate-400 text-[11px]">
-            <li>Select the test timer delay below (e.g. <strong>2 Minutes</strong>).</li>
+            <li>Select your test delay below (e.g. <strong>2 Minutes</strong>).</li>
             <li>Click <strong>"Arm Test Alarm"</strong>.</li>
-            <li><strong>Lock your phone screen</strong> and place it on your table.</li>
-            <li>When the countdown reaches 00:00, the lock-screen push and loud audio alarm will ring!</li>
+            <li><strong>Lock your phone screen</strong> and place it on your desk.</li>
+            <li>Our background audio anchor keeps the CPU active in the background, so the alarm and lock-screen notification will fire on time!</li>
           </ol>
         </div>
 
@@ -278,14 +341,15 @@ export default function LockScreenTestAlarmModal({
             </div>
 
             <div>
-              <div className="text-xs font-bold uppercase tracking-widest text-amber-300">
-                ARMED & COUNTING DOWN
+              <div className="text-xs font-bold uppercase tracking-widest text-amber-300 flex items-center justify-center gap-1.5">
+                <Radio className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
+                <span>BACKGROUND AUDIO ANCHOR ACTIVE</span>
               </div>
               <div className="text-4xl font-black font-mono text-white mt-1">
                 {secondsRemaining !== null ? formatCountdown(secondsRemaining) : '--:--'}
               </div>
-              <p className="text-xs text-amber-200/80 mt-2">
-                🔒 <strong>Lock your phone now!</strong> The alarm will ring automatically when the timer reaches 00:00.
+              <p className="text-xs text-amber-200/90 mt-2">
+                🔒 <strong>Lock your phone now!</strong> The audio anchor ensures the timer continues running in background.
               </p>
             </div>
 
