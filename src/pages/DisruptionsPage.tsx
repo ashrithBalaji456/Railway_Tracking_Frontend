@@ -11,10 +11,12 @@ import {
   Train as TrainIcon, 
   CheckCircle2,
   Calendar,
-  Info
+  Info,
+  Mail
 } from 'lucide-react';
 import { getDisruptions, getDisruptionsSummary, getTrainsBetween } from '../services/api';
 import type { TrainException, TrainExceptionSummary, TrainBetweenStations } from '../types';
+import DisruptionAlertModal from '../components/DisruptionAlertModal';
 
 export default function DisruptionsPage() {
   const navigate = useNavigate();
@@ -31,6 +33,15 @@ export default function DisruptionsPage() {
   const [altError, setAltError] = useState<string>('');
   const [altTrains, setAltTrains] = useState<TrainBetweenStations[]>([]);
   const [activeException, setActiveException] = useState<TrainException | null>(null);
+
+  // Modal for Disruption Email Alert
+  const [alertModalOpen, setAlertModalOpen] = useState<boolean>(false);
+  const [alertException, setAlertException] = useState<TrainException | null>(null);
+
+  const handleOpenAlertModal = (ex: TrainException) => {
+    setAlertException(ex);
+    setAlertModalOpen(true);
+  };
 
   useEffect(() => {
     fetchSummary();
@@ -513,6 +524,15 @@ export default function DisruptionsPage() {
                     Live Telemetry & Route
                   </button>
 
+                  <button
+                    onClick={() => handleOpenAlertModal(ex)}
+                    title="Email me disruption alerts & TDR refund advice for this train"
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 transition cursor-pointer"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Email Advisory</span>
+                  </button>
+
                   {(isCancelled || isDiverted) && (
                     <button
                       onClick={() => handleFindAlternatives(ex)}
@@ -632,6 +652,25 @@ export default function DisruptionsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Disruption Email Alert Subscription Modal */}
+      {alertException && (
+        <DisruptionAlertModal
+          isOpen={alertModalOpen}
+          onClose={() => {
+            setAlertModalOpen(false);
+            setAlertException(null);
+          }}
+          trainNumber={alertException.trainNumber}
+          trainName={alertException.trainName}
+          disruptionType={alertException.primaryType || alertException.status || alertException.type || 'DISRUPTED'}
+          message={alertException.message || alertException.description}
+          sourceStation={alertException.sourceStationName || alertException.sourceStationCode}
+          destStation={alertException.destinationStationName || alertException.destinationStationCode}
+          alternativeRoute={alertException.alternativeRoute}
+          effectiveDate={alertException.startDate}
+        />
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X, ArrowLeftRight, Info, Sparkles, Zap, Search, Check, RotateCw, MessageSquare } from 'lucide-react';
+import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X, ArrowLeftRight, Info, Sparkles, Zap, Search, Check, RotateCw, MessageSquare, Mail } from 'lucide-react';
+import DisruptionAlertModal from '../components/DisruptionAlertModal';
 import api, { getTrainDelayReport } from '../services/api';
 import type { TrainDelayReport } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -262,6 +263,7 @@ export default function TrainDetails() {
   const [isAlarmRinging, setIsAlarmRinging] = useState(false);
   const [ringingAlarmData, setRingingAlarmData] = useState<any | null>(null);
   const hasTriggeredAlarmRef = useRef<boolean>(false);
+  const [isDisruptionModalOpen, setIsDisruptionModalOpen] = useState(false);
 
   const [delayReport, setDelayReport] = useState<TrainDelayReport | null>(null);
   const [loadingDelay, setLoadingDelay] = useState(false);
@@ -1602,6 +1604,13 @@ export default function TrainDetails() {
             <span className="truncate sm:whitespace-normal">{disruptionBannerText}</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setIsDisruptionModalOpen(true)}
+              className="px-2.5 py-1 rounded bg-black/20 hover:bg-black/30 text-[11px] font-bold uppercase tracking-wider text-white transition flex items-center gap-1 cursor-pointer"
+            >
+              <Mail className="w-3 h-3" />
+              <span>Email Advisory</span>
+            </button>
             <button
               onClick={() => navigate('/disruptions')}
               className="hidden sm:inline-block px-2.5 py-1 rounded bg-black/20 hover:bg-black/30 text-[11px] font-bold uppercase tracking-wider text-white transition"
@@ -3601,7 +3610,19 @@ export default function TrainDetails() {
           platform={ringingAlarmData.platform}
         />
       )}
-    </div>
+    
+      {/* Disruption Email Advisory Modal */}
+      <DisruptionAlertModal
+        isOpen={isDisruptionModalOpen}
+        onClose={() => setIsDisruptionModalOpen(false)}
+        trainNumber={trainNumber || train?.trainNumber || ''}
+        trainName={train?.trainName}
+        disruptionType={liveStatus?.isCancelled ? 'CANCELLED' : 'DIVERTED / SLOWDOWN'}
+        message={disruptionBannerText || 'Service exception or delay reported on this route.'}
+        sourceStation={train?.sourceStationCode}
+        destStation={train?.destinationStationCode}
+      />
+</div>
   );
 }
 

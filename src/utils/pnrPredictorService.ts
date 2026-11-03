@@ -317,3 +317,4 @@ class PnrPredictorService {
 
 export const pnrPredictorService = new PnrPredictorService();
 export default pnrPredictorService;
+

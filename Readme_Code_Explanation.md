@@ -2294,3 +2294,36 @@ File path: `src/components/SmartPnrPredictorCard.tsx`
 File path: `src/pages/PnrStatus.tsx`
 
 * Positioned prominently directly above the Travel Day Morning Reminder form, dynamically receiving the user's active PNR, train number, and journey date from the lookup input fields.
+
+---
+
+## 19. 🚨 Route Disruption & Weather Safety Advisory Alerts
+
+### 19.1. Overview & Component Architecture
+To protect passengers from stranded journeys, unexpected route diversions, and weather cancellations without relying on paid messaging gateways, RailTrack integrates an automated Brevo email alert system and in-app safety advisory cockpit.
+
+### 19.2. Disruption Alert Modal (`DisruptionAlertModal.tsx`)
+File path: `src/components/DisruptionAlertModal.tsx`
+
+* **Card Metadata:**
+  - Displays train service details, high-contrast severity badge (`CANCELLED` in crimson, `DIVERTED` in amber), origin-to-destination stations, and effective date.
+  - Highlights the official **Diverted Route** if the train is operating via an alternative chord or loop line.
+  - Formats the railway's official operational notice.
+* **IRCTC Passenger Rights Guidance:**
+  - Summarizes official guidelines for automated 100% refunds on cancelled e-tickets and 72-hour TDR filing rules for diverted journeys where passengers decline travel.
+* **Email Subscription & Test Dispatch:**
+  - Automatically pre-fills the passenger's saved email from `localStorage.getItem('email')`.
+  - **"Arm Disruption Alert"**: Posts to `/api/v1/disruptions/alert` to register automated updates.
+  - **"Send Sample Email"**: Posts to `/api/v1/disruptions/alert/test` for an instant inbox layout preview.
+
+### 19.3. Disruptions Page Integration (`DisruptionsPage.tsx`)
+File path: `src/pages/DisruptionsPage.tsx`
+
+* On every disruption card, adjacent to **"Live Telemetry & Route"** and **"Find Alternatives"**, an **"Email Advisory"** button is embedded with a clean Mail icon.
+* Clicking opens `DisruptionAlertModal` pre-populated with that specific train's cancellation or diversion parameters.
+
+### 19.4. Live Train Tracking Integration (`TrainDetails.tsx`)
+File path: `src/pages/TrainDetails.tsx`
+
+* When tracking a train that has active service exceptions or cancellations, the top **Disruption Alert Banner** includes a dedicated **"Email Advisory"** button alongside the standard "Details" link.
+* Allows passengers tracking an affected train to arm email updates or test dispatch the advisory memo with a single click.
