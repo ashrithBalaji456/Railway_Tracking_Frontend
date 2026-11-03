@@ -207,6 +207,12 @@ class AlarmAudioService {
         const audio = new Audio(options.customSoundUrl);
         audio.loop = true;
         audio.volume = 1.0;
+        audio.onended = () => {
+          if (this.isAlarmPlaying) {
+            audio.currentTime = 0;
+            audio.play().catch(() => {});
+          }
+        };
         audio.play().catch((e) => console.warn('Custom audio playback failed:', e));
         this.customAudioElement = audio;
       } catch (err) {
@@ -235,29 +241,33 @@ class AlarmAudioService {
     this.vibrationInterval = setInterval(triggerVibration, 3000);
 
     // 3. Spoken Voice Wake-Up Announcement
-    const speakAnnouncement = () => {
-      if (!('speechSynthesis' in window) || !this.isAlarmPlaying) return;
-      try {
-        const text = `Attention passenger! Wake up! Train ${options.trainNumber || ''} is approaching ${options.stationName || 'your destination station'} in approximately ${options.etaMinutes || 25} minutes. Please prepare your luggage!`;
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.05;
-        utterance.pitch = 1.1;
-        utterance.volume = 1.0;
-        window.speechSynthesis.speak(utterance);
-      } catch (err) {
-        console.warn('Speech synthesis error:', err);
-      }
-    };
+    // ONLY run speech synthesis for synthetic beeps (digital_clock / emergency_siren / train_horn)
+    // NEVER run speech synthesis when a custom song is playing, so Android OS audio focus does NOT kill the song after 2 seconds!
+    if (!options.customSoundUrl) {
+      const speakAnnouncement = () => {
+        if (!('speechSynthesis' in window) || !this.isAlarmPlaying) return;
+        try {
+          const text = `Attention passenger! Wake up! Train ${options.trainNumber || ''} is approaching ${options.stationName || 'your destination station'} in approximately ${options.etaMinutes || 25} minutes. Please prepare your luggage!`;
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.rate = 1.05;
+          utterance.pitch = 1.1;
+          utterance.volume = 1.0;
+          window.speechSynthesis.speak(utterance);
+        } catch (err) {
+          console.warn('Speech synthesis error:', err);
+        }
+      };
 
-    // First voice announcement after 2 seconds of loud alarm
-    setTimeout(() => {
-      if (this.isAlarmPlaying) speakAnnouncement();
-    }, 2000);
+      // First voice announcement after 2 seconds of synthetic alarm beeps
+      setTimeout(() => {
+        if (this.isAlarmPlaying) speakAnnouncement();
+      }, 2000);
 
-    this.speechInterval = setInterval(() => {
-      if (this.isAlarmPlaying) speakAnnouncement();
-    }, 14000);
+      this.speechInterval = setInterval(() => {
+        if (this.isAlarmPlaying) speakAnnouncement();
+      }, 14000);
+    }
 
     this.currentAlarmInfo = {
       isPlaying: true,

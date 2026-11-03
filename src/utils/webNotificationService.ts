@@ -4,6 +4,8 @@
  * with Web Audio API chime synthesis for high-priority railway alerts.
  */
 
+import { isNativeApp, triggerTestNotification } from './nativeAlarmBridge';
+
 export interface RailNotificationPayload {
   title: string;
   body: string;
@@ -110,7 +112,15 @@ class WebNotificationService {
       );
     }
 
-    // 3. Fire Native OS / Browser Notification if permission granted
+    // 3. Dispatch Native Android System Notification when running inside Android App
+    if (isNativeApp()) {
+      triggerTestNotification(title, body).catch((e) => {
+        console.warn('Native notification dispatch failed:', e);
+      });
+      return;
+    }
+
+    // 4. Fire Native OS / Browser Notification if permission granted
     if (this.isSupported() && Notification.permission === 'granted') {
       try {
         const notification = new Notification(title, {
