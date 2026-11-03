@@ -2428,13 +2428,15 @@ File path: `src/pages/TrainDetails.tsx`
 
 ---
 
-#### 5. 🚨 Route Disruption & Weather Safety Advisory Alert
-* **What is the use:** Keeps passengers informed if their train is cancelled, diverted via an alternative route, or delayed due to fog or monsoon conditions, and outlines instructions for claiming a 100% fare refund.
+#### 5. 🚨 Route Disruption & Weather Safety Advisory Alert (Dual-Channel Push + Email)
+* **What is the use:** Keeps passengers immediately informed via lock-screen device push notifications and Brevo emails if their train is cancelled, diverted via an alternative route, or delayed due to fog or monsoon conditions, and outlines instructions for claiming a 100% IRCTC fare refund.
 * **Step-by-Step User Guide:**
   1. Open the **Disruptions** page (`/disruptions`) or view any train displaying a red disruption banner in Live Tracking.
-  2. Click the **"Email Advisory"** button on the disrupted train card.
+  2. Click the **"Email Advisory"** or **"Disruption Advisory"** button on the disrupted train card.
   3. Inspect the disruption reason, diverted route, and official IRCTC TDR refund guidelines.
-  4. Confirm your email and click **"Arm Disruption Alert"** (or **"Send Sample Email"** for an instant preview).
+  4. Confirm your email and click **"Arm Disruption Alert"**.
+  5. Click **"Test Push Alert"** to test the native OS lock-screen push notification and audio chime on your device immediately, or **"Sample Email"** for an inbox preview.
+  6. Tapping the push notification opens the disruption dashboard and alternate trains locator directly.
 
 ---
 

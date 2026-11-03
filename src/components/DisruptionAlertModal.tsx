@@ -10,9 +10,11 @@ import {
   GitFork,
   Calendar,
   ShieldCheck,
-  RotateCw
+  RotateCw,
+  Bell
 } from 'lucide-react';
 import api from '../services/api';
+import webNotificationService from '../utils/webNotificationService';
 
 interface DisruptionAlertModalProps {
   isOpen: boolean;
@@ -131,6 +133,30 @@ export default function DisruptionAlertModal({
     } finally {
       setTesting(false);
     }
+  };
+
+  const handleTestPushAlert = async () => {
+    if (webNotificationService.getPermission() !== 'granted') {
+      const granted = await webNotificationService.requestPermission();
+      if (!granted) {
+        setStatus({
+          type: 'error',
+          text: 'Please allow notification permissions in your browser to receive route disruption alerts.'
+        });
+        return;
+      }
+    }
+    webNotificationService.sendDisruptionAlert({
+      trainNumber,
+      trainName: trainName || 'Express',
+      disruptionType: cleanType,
+      affectedSection: sourceStation && destStation ? `${sourceStation} - ${destStation}` : 'En Route Sector',
+      reason: message || 'Track maintenance & fog speed restrictions'
+    });
+    setStatus({
+      type: 'success',
+      text: 'Sample Route Disruption lock-screen push notification & chime triggered!'
+    });
   };
 
   return (
@@ -289,7 +315,7 @@ export default function DisruptionAlertModal({
                 disabled={testing}
                 onClick={handleTestEmail}
                 title="Send a sample email to preview the layout"
-                className="px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                className="px-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
               >
                 {testing ? (
                   <>
@@ -299,9 +325,19 @@ export default function DisruptionAlertModal({
                 ) : (
                   <>
                     <Send className="w-3.5 h-3.5" />
-                    <span>Send Sample Email</span>
+                    <span>Sample Email</span>
                   </>
                 )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleTestPushAlert}
+                title="Trigger an instant lock-screen device push alert"
+                className="px-3.5 py-2.5 rounded-xl border border-amber-500/40 bg-amber-950/70 hover:bg-amber-900 text-amber-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm shadow-amber-950/40"
+              >
+                <Bell className="w-3.5 h-3.5 text-amber-400" />
+                <span>Test Push Alert</span>
               </button>
 
               <button

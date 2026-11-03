@@ -252,6 +252,58 @@ class WebNotificationService {
       bufferMinutes: 20
     });
   }
+
+  /**
+   * Route Disruption & Weather Safety Advisory Alert Dispatcher
+   */
+  sendDisruptionAlert(params: {
+    trainNumber: string;
+    trainName?: string;
+    disruptionType?: string;
+    affectedSection?: string;
+    reason?: string;
+  }): void {
+    const {
+      trainNumber,
+      trainName = '',
+      disruptionType = 'DIVERTED',
+      affectedSection,
+      reason
+    } = params;
+    const displayName = trainName ? `${trainNumber} ${trainName}` : trainNumber;
+    const cleanType = disruptionType.toUpperCase().includes('CANCEL')
+      ? 'Cancelled'
+      : disruptionType.toUpperCase().includes('DIVERT')
+      ? 'Diverted'
+      : 'Rescheduled';
+
+    const title = `🚨 Route Advisory: Train ${displayName} is ${cleanType}`;
+    const sectionText = affectedSection ? ` on ${affectedSection}.` : '.';
+    const reasonText = reason ? ` (${reason})` : '';
+    const body = `Service exception reported${sectionText}${reasonText} Tap to view alternate routes & 100% IRCTC TDR refund guidelines.`;
+    const url = `/disruptions?train=${trainNumber}`;
+
+    this.sendNotification({
+      title,
+      body,
+      tag: `disruption-${trainNumber}`,
+      url,
+      playChime: true
+    });
+  }
+
+  /**
+   * Trigger an instant live demo / test disruption alert
+   */
+  sendSampleDisruptionAlert(trainNumber = '12626', trainName = 'Kerala Express'): void {
+    this.sendDisruptionAlert({
+      trainNumber,
+      trainName,
+      disruptionType: 'DIVERTED',
+      affectedSection: 'Bhopal Jn (BPL) - Itarsi Jn (ET)',
+      reason: 'Track maintenance & fog speed restrictions'
+    });
+  }
 }
 
 export const webNotificationService = new WebNotificationService();
