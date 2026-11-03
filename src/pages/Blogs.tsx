@@ -12,9 +12,11 @@ import {
   Check,
   Bookmark,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Mail,
+  Send
 } from 'lucide-react';
-import { getBlogs, getBlogCategories } from '../services/api';
+import api, { getBlogs, getBlogCategories } from '../services/api';
 import type { BlogArticle } from '../types';
 import { FALLBACK_BLOGS, BLOG_CATEGORIES } from '../data/fallbackBlogs';
 import { getSavedArticleSlugs, toggleSaveArticle } from '../utils/bookmarkUtils';
@@ -30,6 +32,27 @@ export default function Blogs() {
   const [featuredIndex, setFeaturedIndex] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  const [newsletterEmail, setNewsletterEmail] = useState<string>(localStorage.getItem('email') || '');
+  const [newsletterLoading, setNewsletterLoading] = useState<boolean>(false);
+  const [newsletterMsg, setNewsletterMsg] = useState<string | null>(null);
+
+  const handleSubscribeNewsletter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newsletterEmail.trim()) return;
+
+    setNewsletterLoading(true);
+    setNewsletterMsg(null);
+    try {
+      const res: any = await api.post(`/api/v1/blogs/newsletter/test?email=${encodeURIComponent(newsletterEmail.trim())}`);
+      setNewsletterMsg(res.message || 'This week’s curated edition was sent to your inbox!');
+      setTimeout(() => setNewsletterMsg(null), 6000);
+    } catch (err: any) {
+      alert(err.message || 'Could not dispatch weekly newsletter.');
+    } finally {
+      setNewsletterLoading(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -606,6 +629,58 @@ export default function Blogs() {
             ))}
           </div>
         )}
+
+        {/* Weekly Rail Gazette Newsletter Banner */}
+        <div className="mt-16 bg-gradient-to-r from-indigo-950/60 via-slate-900 to-indigo-950/40 border border-indigo-500/20 rounded-2xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="max-w-2xl mx-auto text-center space-y-4">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-bold uppercase tracking-widest">
+              <Mail className="w-3.5 h-3.5" />
+              <span>Weekly Rail Gazette</span>
+            </div>
+
+            <h3 className="text-xl sm:text-2xl font-black text-white tracking-wide">
+              Fresh Rail Stories & Travel Hacks, Delivered Every Monday
+            </h3>
+
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed max-w-lg mx-auto">
+              Our smart rotation curates a fresh blend of heritage journeys, scenic hill routes, and traveler tips each week without repeating stories.
+            </p>
+
+            {newsletterMsg && (
+              <div className="p-3 bg-emerald-950/60 border border-emerald-800/60 rounded-xl text-emerald-300 text-xs flex items-center justify-center space-x-2">
+                <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{newsletterMsg}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubscribeNewsletter} className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 max-w-md mx-auto">
+              <input
+                type="email"
+                required
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-xs text-slate-200 outline-none transition-colors"
+              />
+              <button
+                type="submit"
+                disabled={newsletterLoading}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center space-x-1.5 transition-all shadow-lg shadow-indigo-600/20 cursor-pointer shrink-0"
+              >
+                {newsletterLoading ? (
+                  <span>Sending...</span>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Get Weekly Issue</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
 
       </div>
     </div>
