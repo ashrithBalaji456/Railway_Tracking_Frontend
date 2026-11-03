@@ -16,9 +16,7 @@ import {
   Save,
   RotateCw
 } from 'lucide-react';
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+import api from '../services/api';
 
 interface NotificationPreferencesModalProps {
   isOpen: boolean;
@@ -100,17 +98,16 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
 
   const fetchPreferences = async (userEmail: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(`${API_BASE_URL}/api/v1/notifications/preferences`, {
-        params: { email: userEmail },
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      const res: any = await api.get('/api/v1/notifications/preferences', {
+        params: { email: userEmail }
       });
-      if (res.data) {
-        if (res.data.whatsappPhone) setWhatsappPhone(res.data.whatsappPhone);
-        if (res.data.weeklyDigestEnabled !== undefined) setWeeklyDigestEnabled(res.data.weeklyDigestEnabled);
-        if (res.data.delayAlertThresholdMinutes !== undefined) setDelayAlertThresholdMinutes(res.data.delayAlertThresholdMinutes);
-        if (res.data.travelReminderEnabled !== undefined) setTravelReminderEnabled(res.data.travelReminderEnabled);
-        if (res.data.stationWakeUpAlarmEnabled !== undefined) setStationWakeUpAlarmEnabled(res.data.stationWakeUpAlarmEnabled);
+      const data = res?.data || res;
+      if (data) {
+        if (data.whatsappPhone) setWhatsappPhone(data.whatsappPhone);
+        if (data.weeklyDigestEnabled !== undefined) setWeeklyDigestEnabled(data.weeklyDigestEnabled);
+        if (data.delayAlertThresholdMinutes !== undefined) setDelayAlertThresholdMinutes(data.delayAlertThresholdMinutes);
+        if (data.travelReminderEnabled !== undefined) setTravelReminderEnabled(data.travelReminderEnabled);
+        if (data.stationWakeUpAlarmEnabled !== undefined) setStationWakeUpAlarmEnabled(data.stationWakeUpAlarmEnabled);
       }
     } catch (err) {
       console.warn('Could not load remote notification preferences:', err);
@@ -120,12 +117,11 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
   const fetchActiveReminders = async (userEmail: string) => {
     setRemindersLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(`${API_BASE_URL}/api/v1/notifications/active-reminders`, {
-        params: { email: userEmail },
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      const res: any = await api.get('/api/v1/notifications/active-reminders', {
+        params: { email: userEmail }
       });
-      setReminders(res.data || []);
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      setReminders(list);
     } catch (err) {
       console.warn('Could not load active reminders:', err);
     } finally {
@@ -153,30 +149,22 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
         localStorage.setItem('whatsapp_phone', cleanPhone);
       }
 
-      // 2. Sync to Backend
-      const token = localStorage.getItem('token');
-      await axios.put(
-        `${API_BASE_URL}/api/v1/notifications/preferences`,
-        {
-          email: cleanEmail,
-          whatsappPhone: cleanPhone,
-          weeklyDigestEnabled,
-          delayAlertThresholdMinutes,
-          travelReminderEnabled,
-          stationWakeUpAlarmEnabled
-        },
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
-        }
-      );
+      // 2. Sync to Backend using central api client (points to Render in production)
+      await api.put('/api/v1/notifications/preferences', {
+        email: cleanEmail,
+        whatsappPhone: cleanPhone,
+        weeklyDigestEnabled,
+        delayAlertThresholdMinutes,
+        travelReminderEnabled,
+        stationWakeUpAlarmEnabled
+      });
 
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
       // Refresh reminders with the updated email
       fetchActiveReminders(cleanEmail);
-    } catch (err: unknown) {
-      const errorObj = err as { response?: { data?: { message?: string } } };
-      setErrorMessage(errorObj?.response?.data?.message || 'Failed to save preferences. Please check your connection.');
+    } catch (err: any) {
+      setErrorMessage(err?.response?.data?.message || err?.message || 'Failed to save preferences. Please check your connection.');
     } finally {
       setSaveLoading(false);
     }
@@ -184,10 +172,8 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
 
   const handleCancelReminder = async (id: number) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_BASE_URL}/api/v1/notifications/reminders/${id}`, {
-        params: { email: email.trim().toLowerCase() },
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      await api.delete(`/api/v1/notifications/reminders/${id}`, {
+        params: { email: email.trim().toLowerCase() }
       });
       setReminders(prev => prev.filter(r => r.id !== id));
     } catch (err) {
