@@ -19,6 +19,7 @@ import customAlarmSoundService, { type CustomAlarmSound } from '../utils/customA
 import alarmAudioService, { type AlarmToneType } from '../utils/alarmAudioService';
 import webNotificationService from '../utils/webNotificationService';
 import LockScreenTestAlarmModal from './LockScreenTestAlarmModal';
+import { isNativeApp } from '../utils/nativeAlarmBridge';
 import api from '../services/api';
 
 interface AlarmCockpitModalProps {
@@ -481,15 +482,30 @@ export default function AlarmCockpitModal({ isOpen, onClose }: AlarmCockpitModal
           {/* TAB 2: LOCK-SCREEN TEST (2 MINS) */}
           {activeTab === 'lockTest' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-slate-950/80 border border-amber-500/30 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
-                  <Smartphone className="w-4 h-4 text-amber-400" />
-                  <span>Lock-Screen Background Keep-Alive Audio Anchor:</span>
+              {isNativeApp() ? (
+                <div className="p-4 rounded-xl bg-slate-950/80 border border-indigo-500/30 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-indigo-300">
+                    <span className="flex items-center gap-2">
+                      <Smartphone className="w-4 h-4 text-indigo-400" />
+                      <span>Android Native Alarm Engine Active</span>
+                    </span>
+                    <span className="text-[10px] bg-indigo-500/20 px-2 py-0.5 rounded text-indigo-200">Capacitor Native</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Uses Android&apos;s system <strong>AlarmManager.setExactAndAllowWhileIdle()</strong> to bypass Android Doze mode and ring reliably even when your phone is locked or deep-sleeping!
+                  </p>
                 </div>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Mobile browsers (Chrome / Safari) normally freeze JavaScript timers when you lock your screen. Our <strong>background audio anchor</strong> registers an active media session so your phone does NOT suspend the timer!
-                </p>
-              </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-slate-950/80 border border-amber-500/30 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                    <Smartphone className="w-4 h-4 text-amber-400" />
+                    <span>Lock-Screen Background Keep-Alive Audio Anchor:</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Mobile browsers normally freeze JavaScript timers when you lock your screen. Our <strong>background audio anchor</strong> registers an active media session so your phone does NOT suspend the timer!
+                  </p>
+                </div>
+              )}
 
               <div className="p-4 rounded-2xl bg-amber-950/30 border border-amber-500/40 text-center space-y-3">
                 <Clock className="w-10 h-10 text-amber-400 mx-auto animate-pulse" />
@@ -615,3 +631,4 @@ export default function AlarmCockpitModal({ isOpen, onClose }: AlarmCockpitModal
     </div>
   );
 }
+

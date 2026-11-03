@@ -1,23 +1,41 @@
 import { useState, useEffect } from 'react';
-import { Bell, ShieldCheck, X, CheckCircle2 } from 'lucide-react';
+import { Bell, ShieldCheck, X, CheckCircle2, Smartphone, ExternalLink } from 'lucide-react';
 import webNotificationService from '../utils/webNotificationService';
+import { 
+  isNativeApp, 
+  checkNativeAlarmPermissions, 
+  requestNativeNotificationPermission,
+  requestNativeOverlayPermission,
+  type NativeAlarmPermissions 
+} from '../utils/nativeAlarmBridge';
 
 export default function PermissionPromptBanner() {
   const [showBanner, setShowBanner] = useState(false);
   const [grantedSuccess, setGrantedSuccess] = useState(false);
+  const [nativePerms, setNativePerms] = useState<NativeAlarmPermissions | null>(null);
 
   useEffect(() => {
-    // Only show if browser supports notifications, permission is 'default', and user hasn't dismissed it
-    if (!webNotificationService.isSupported()) return;
-
-    const currentPermission = webNotificationService.getPermission();
     const isDismissed = localStorage.getItem('rail_notification_prompt_dismissed');
+    if (isDismissed) return;
 
-    if (currentPermission === 'default' && !isDismissed) {
-      // Show banner after 1.5 seconds on first visit
-      const timer = setTimeout(() => {
-        setShowBanner(true);
-      }, 1500);
+    if (isNativeApp()) {
+      checkNativeAlarmPermissions().then((perms) => {
+        if (perms) {
+          setNativePerms(perms);
+          if (!perms.notifications || !perms.overlay) {
+            const timer = setTimeout(() => setShowBanner(true), 1200);
+            return () => clearTimeout(timer);
+          }
+        }
+      });
+      return;
+    }
+
+    // Web fallback
+    if (!webNotificationService.isSupported()) return;
+    const currentPermission = webNotificationService.getPermission();
+    if (currentPermission === 'default') {
+      const timer = setTimeout(() => setShowBanner(true), 1500);
       return () => clearTimeout(timer);
     }
   }, []);
@@ -25,18 +43,38 @@ export default function PermissionPromptBanner() {
   if (!showBanner) return null;
 
   const handleRequestPermission = async () => {
+    if (isNativeApp()) {
+      await requestNativeNotificationPermission();
+      setTimeout(async () => {
+        const perms = await checkNativeAlarmPermissions();
+        if (perms) {
+          setNativePerms(perms);
+          if (perms.notifications) {
+            setGrantedSuccess(true);
+            setTimeout(() => setShowBanner(false), 3000);
+          }
+        }
+      }, 1000);
+      return;
+    }
+
     const granted = await webNotificationService.requestPermission();
     if (granted) {
       setGrantedSuccess(true);
       webNotificationService.playAlertChime();
-      setTimeout(() => {
-        setShowBanner(false);
-      }, 3000);
+      setTimeout(() => setShowBanner(false), 3000);
     } else {
-      // Denied or closed
       localStorage.setItem('rail_notification_prompt_dismissed', 'true');
       setShowBanner(false);
     }
+  };
+
+  const handleRequestOverlay = async () => {
+    await requestNativeOverlayPermission();
+    setTimeout(async () => {
+      const perms = await checkNativeAlarmPermissions();
+      if (perms) setNativePerms(perms);
+    }, 1500);
   };
 
   const handleDismiss = () => {
@@ -71,7 +109,7 @@ export default function PermissionPromptBanner() {
                   <span>Lock-Screen Alerts</span>
                 </div>
                 <h4 className="text-sm font-bold text-white leading-snug">
-                  Enable Real-Time Train Alerts & Alarms?
+                  {isNativeApp() ? 'Enable Android Alarm & Notification Permissions' : 'Enable Real-Time Train Alerts & Alarms?'}
                 </h4>
               </div>
             </div>
@@ -87,10 +125,12 @@ export default function PermissionPromptBanner() {
           </div>
 
           <p className="text-xs text-slate-300 leading-relaxed">
-            Get instant delay warnings, IRCTC chart preparation notifications, and departure wake-up alarms even when your phone is locked.
+            {isNativeApp()
+              ? 'Allow RailTrack to post urgent train notifications and display the alarm screen over your lock screen when your departure is near.'
+              : 'Get instant delay warnings, IRCTC chart preparation notifications, and departure wake-up alarms even when your phone is locked.'}
           </p>
 
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
             <button
               type="button"
               onClick={handleRequestPermission}
@@ -100,10 +140,22 @@ export default function PermissionPromptBanner() {
               <span>Enable Notifications</span>
             </button>
 
+            {isNativeApp() && !nativePerms?.overlay && (
+              <button
+                type="button"
+                onClick={handleRequestOverlay}
+                className="py-2 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>Display Over Apps</span>
+                <ExternalLink className="w-3 h-3" />
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleDismiss}
-              className="py-2 px-3 rounded-xl bg-slate-950 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold transition cursor-pointer"
+              className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-bold transition cursor-pointer"
             >
               Later
             </button>
@@ -113,4 +165,3 @@ export default function PermissionPromptBanner() {
     </div>
   );
 }
-

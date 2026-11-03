@@ -7,11 +7,22 @@ import {
   CheckCircle2, 
   VolumeX,
   ShieldCheck,
-  Radio
+  Radio,
+  ExternalLink,
+  Bell
 } from 'lucide-react';
 import alarmAudioService, { type AlarmToneType } from '../utils/alarmAudioService';
 import customAlarmSoundService from '../utils/customAlarmSoundService';
 import webNotificationService from '../utils/webNotificationService';
+import { 
+  isNativeApp, 
+  scheduleNativeAlarm, 
+  cancelNativeAlarm, 
+  checkNativeAlarmPermissions, 
+  requestNativeOverlayPermission, 
+  requestNativeNotificationPermission,
+  type NativeAlarmPermissions
+} from '../utils/nativeAlarmBridge';
 
 interface LockScreenTestAlarmModalProps {
   isOpen: boolean;
@@ -38,15 +49,21 @@ export default function LockScreenTestAlarmModal({
   const [hasPermission, setHasPermission] = useState(() => {
     return webNotificationService.getPermission() === 'granted';
   });
+  const [nativePerms, setNativePerms] = useState<NativeAlarmPermissions | null>(null);
 
   const workerRef = useRef<Worker | null>(null);
   const silentAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  // Check notification permission when opened
+  // Check notification & native permissions when opened
   useEffect(() => {
     if (isOpen) {
       setHasPermission(webNotificationService.getPermission() === 'granted');
+      if (isNativeApp()) {
+        checkNativeAlarmPermissions().then((perms) => {
+          if (perms) setNativePerms(perms);
+        });
+      }
     }
   }, [isOpen]);
 
@@ -85,7 +102,6 @@ export default function LockScreenTestAlarmModal({
   const startBackgroundAudioAnchor = () => {
     try {
       // 1. Silent looping Audio element (anchors Media Session in Android)
-      // Generates a 1-second inaudible WAV audio data URI
       const silentWavUri = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
       const audio = new Audio(silentWavUri);
       audio.loop = true;
@@ -111,8 +127,12 @@ export default function LockScreenTestAlarmModal({
   };
 
   const handleStartLockScreenTest = async () => {
-    // 1. Request notification permission if not yet granted
-    if (webNotificationService.isSupported() && webNotificationService.getPermission() !== 'granted') {
+    // 1. Check & request permissions
+    if (isNativeApp()) {
+      if (!nativePerms?.notifications) {
+        await requestNativeNotificationPermission();
+      }
+    } else if (webNotificationService.isSupported() && webNotificationService.getPermission() !== 'granted') {
       const granted = await webNotificationService.requestPermission();
       setHasPermission(granted);
     }
@@ -120,15 +140,27 @@ export default function LockScreenTestAlarmModal({
     // 2. Acquire screen wake lock
     await alarmAudioService.acquireWakeLock();
 
-    // 3. Start background audio anchor so Android/iOS doesn't freeze the timer when screen is locked!
+    // 3. If running in Native Android app, schedule exact AlarmManager wake-up alarm!
+    if (isNativeApp()) {
+      try {
+        await scheduleNativeAlarm(
+          testSeconds,
+          `🌅 RailTrack: ${trainName} Departure!`,
+          `Approaching ${stationName}. Tap to open and silence alarm.`
+        );
+      } catch (e) {
+        console.warn('Native alarm schedule fallback to web worker:', e);
+      }
+    }
+
+    // 4. Start background audio anchor so Android/iOS doesn't freeze the timer when screen is locked
     startBackgroundAudioAnchor();
 
-    // 4. Set state
+    // 5. Set state
     setSecondsRemaining(testSeconds);
     setIsArmed(true);
 
-    // 5. Create Web Worker to run timer on an independent background thread
-    // This avoids main-thread setInterval freezing during screen lock!
+    // 6. Create Web Worker to run timer on an independent background thread
     const workerScript = `
       let target = Date.now() + ${testSeconds} * 1000;
       let interval = setInterval(function() {
@@ -198,9 +230,28 @@ export default function LockScreenTestAlarmModal({
   };
 
   const handleCancelTimer = () => {
+    if (isNativeApp()) {
+      cancelNativeAlarm();
+    }
     cleanupBackgroundKeepAlive();
     setIsArmed(false);
     setSecondsRemaining(null);
+  };
+
+  const handleGrantOverlay = async () => {
+    await requestNativeOverlayPermission();
+    setTimeout(async () => {
+      const p = await checkNativeAlarmPermissions();
+      if (p) setNativePerms(p);
+    }, 1500);
+  };
+
+  const handleGrantNotifications = async () => {
+    await requestNativeNotificationPermission();
+    setTimeout(async () => {
+      const p = await checkNativeAlarmPermissions();
+      if (p) setNativePerms(p);
+    }, 1500);
   };
 
   const formatCountdown = (secs: number) => {
@@ -251,7 +302,7 @@ export default function LockScreenTestAlarmModal({
                 <span>Lock-Screen Alarm Tester</span>
               </h3>
               <p className="text-xs text-slate-400">
-                Background audio anchor guarantees wakeup even when locked
+                {isNativeApp() ? 'Native Android AlarmManager + Audio Anchor' : 'Background Audio Anchor + Web Worker'}
               </p>
             </div>
           </div>
@@ -272,11 +323,66 @@ export default function LockScreenTestAlarmModal({
           </div>
           <ol className="list-decimal pl-4 space-y-1 text-slate-400 text-[11px]">
             <li>Select your test delay below (e.g. <strong>2 Minutes</strong>).</li>
-            <li>Click <strong>"Arm Test Alarm"</strong>.</li>
+            <li>Click <strong>&quot;Arm Test Alarm&quot;</strong>.</li>
             <li><strong>Lock your phone screen</strong> and place it on your desk.</li>
-            <li>Our background audio anchor keeps the CPU active in the background, so the alarm and lock-screen notification will fire on time!</li>
+            <li>When the countdown reaches 00:00, the native alarm and audio player will wake up your screen and ring!</li>
           </ol>
         </div>
+
+        {/* Android Native Permissions Cockpit if running inside Android App */}
+        {isNativeApp() && (
+          <div className="bg-slate-950/90 rounded-xl border border-indigo-500/30 p-3 space-y-2.5">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-300 flex items-center justify-between">
+              <span>Android App Permissions</span>
+              <span className="text-[10px] bg-indigo-500/20 px-1.5 py-0.5 rounded text-indigo-200">Capacitor Native</span>
+            </div>
+
+            <div className="space-y-1.5 text-xs">
+              {/* Notification Permission */}
+              <div className="flex items-center justify-between bg-slate-900/80 px-2.5 py-1.5 rounded-lg border border-slate-800">
+                <span className="text-slate-300 flex items-center gap-1.5">
+                  <Bell className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Notifications</span>
+                </span>
+                {nativePerms?.notifications ? (
+                  <span className="text-emerald-400 font-bold flex items-center gap-1 text-[11px]">
+                    <CheckCircle2 className="w-3 h-3" /> Granted
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleGrantNotifications}
+                    className="text-[10px] font-bold bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-0.5 rounded cursor-pointer"
+                  >
+                    Enable
+                  </button>
+                )}
+              </div>
+
+              {/* Display over other apps (Overlay) */}
+              <div className="flex items-center justify-between bg-slate-900/80 px-2.5 py-1.5 rounded-lg border border-slate-800">
+                <span className="text-slate-300 flex items-center gap-1.5">
+                  <Smartphone className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Display Over Other Apps</span>
+                </span>
+                {nativePerms?.overlay ? (
+                  <span className="text-emerald-400 font-bold flex items-center gap-1 text-[11px]">
+                    <CheckCircle2 className="w-3 h-3" /> Granted
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleGrantOverlay}
+                    className="text-[10px] font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Grant in Settings</span>
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Timer Duration Selection */}
         {!isArmed ? (
@@ -307,22 +413,24 @@ export default function LockScreenTestAlarmModal({
               ))}
             </div>
 
-            {/* Notification Permission Indicator */}
-            <div className="flex items-center justify-between text-[11px] p-2.5 bg-slate-950/60 rounded-xl border border-slate-800">
-              <span className="text-slate-400">Lock-Screen Notification Permission:</span>
-              <span className={`font-bold flex items-center gap-1 ${
-                hasPermission ? 'text-emerald-400' : 'text-amber-400'
-              }`}>
-                {hasPermission ? (
-                  <>
-                    <CheckCircle2 className="w-3 h-3" />
-                    <span>Granted</span>
-                  </>
-                ) : (
-                  <span>Will Request on Start</span>
-                )}
-              </span>
-            </div>
+            {/* Notification Permission Indicator for Web */}
+            {!isNativeApp() && (
+              <div className="flex items-center justify-between text-[11px] p-2.5 bg-slate-950/60 rounded-xl border border-slate-800">
+                <span className="text-slate-400">Lock-Screen Notification Permission:</span>
+                <span className={`font-bold flex items-center gap-1 ${
+                  hasPermission ? 'text-emerald-400' : 'text-amber-400'
+                }`}>
+                  {hasPermission ? (
+                    <>
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>Granted</span>
+                    </>
+                  ) : (
+                    <span>Will Request on Start</span>
+                  )}
+                </span>
+              </div>
+            )}
 
             <button
               type="button"
@@ -343,13 +451,13 @@ export default function LockScreenTestAlarmModal({
             <div>
               <div className="text-xs font-bold uppercase tracking-widest text-amber-300 flex items-center justify-center gap-1.5">
                 <Radio className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
-                <span>BACKGROUND AUDIO ANCHOR ACTIVE</span>
+                <span>{isNativeApp() ? 'ANDROID ALARMMANAGER ARMED' : 'BACKGROUND AUDIO ANCHOR ACTIVE'}</span>
               </div>
               <div className="text-4xl font-black font-mono text-white mt-1">
                 {secondsRemaining !== null ? formatCountdown(secondsRemaining) : '--:--'}
               </div>
               <p className="text-xs text-amber-200/90 mt-2">
-                🔒 <strong>Lock your phone now!</strong> The audio anchor ensures the timer continues running in background.
+                🔒 <strong>Lock your phone now!</strong> The alarm will fire even with the screen off and locked.
               </p>
             </div>
 
