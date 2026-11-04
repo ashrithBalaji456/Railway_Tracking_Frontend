@@ -57,7 +57,9 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
             return;
         }
 
-        // 2. Query backend live API asynchronously
+        // 2. Query backend live API with Android goAsync() to prevent OS killing the process
+        final PendingResult pendingResult = goAsync();
+
         executor.execute(() -> {
             try {
                 StringBuilder urlBuilder = new StringBuilder(backendUrl)
@@ -72,8 +74,8 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                 URL url = new URL(urlBuilder.toString());
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
-                conn.setConnectTimeout(10000);
-                conn.setReadTimeout(12000);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
                 conn.setRequestProperty("Accept", "application/json");
 
                 int responseCode = conn.getResponseCode();
@@ -165,13 +167,30 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                         Log.d(TAG, "Train timing steady. Shift delta: " + (shiftDifference / 1000) + "s. No change needed.");
                     }
 
-                    // Dynamically calculate next sync interval:
-                    // If target is within 35 minutes, poll in 5 minutes; else poll in 15 minutes
+                    // Dynamically calculate next sync interval with 3-minute pre-flight check:
                     long remainingToTarget = newTargetMillis - System.currentTimeMillis();
-                    long nextDelay = (remainingToTarget <= (35 * 60 * 1000L) && remainingToTarget > (6 * 60 * 1000L))
-                            ? (5 * 60 * 1000L)
-                            : (15 * 60 * 1000L);
+                    long nextDelay;
+                    if (remainingToTarget <= (3 * 60 * 1000L)) {
+                        if (remainingToTarget <= 0) {
+                            // Target reached or surpassed (train arrived earlier): trigger alarm ASAP!
+                            Log.d(TAG, "Pre-flight check: target reached or train running early! Triggering alarm now.");
+                            triggerAlarmNow(context, stationName, trainNumber, triggerMinutes);
+                            return;
+                        }
+                        // Within 3 minutes of scheduled alarm: let AlarmClock ring in remaining seconds
+                        nextDelay = remainingToTarget;
+                    } else if (remainingToTarget <= (8 * 60 * 1000L)) {
+                        // 3 to 8 minutes away: schedule exact 3-minute pre-flight check!
+                        nextDelay = remainingToTarget - (3 * 60 * 1000L);
+                    } else if (remainingToTarget <= (35 * 60 * 1000L)) {
+                        // 8 to 35 minutes away: check every 5 minutes
+                        nextDelay = 5 * 60 * 1000L;
+                    } else {
+                        // Far away (> 35 mins): check every 15 minutes
+                        nextDelay = 15 * 60 * 1000L;
+                    }
 
+                    Log.d(TAG, "Next adaptive sync scheduled in " + (nextDelay / 60000) + "m (" + (nextDelay / 1000) + "s)");
                     AdaptiveAlarmManager.getInstance().scheduleNextSync(context, nextDelay);
                 } else {
                     Log.d(TAG, "Target station not in live list or timing absent. Retrying in 15 mins.");
@@ -181,6 +200,8 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
             } catch (Exception e) {
                 Log.w(TAG, "Adaptive sync network check failed: " + e.getMessage() + ". Will retry in 15 mins.");
                 AdaptiveAlarmManager.getInstance().scheduleNextSync(context, 15 * 60 * 1000L);
+            } finally {
+                pendingResult.finish();
             }
         });
     }

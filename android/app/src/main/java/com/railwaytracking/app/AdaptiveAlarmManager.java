@@ -73,8 +73,20 @@ public class AdaptiveAlarmManager {
         // 1. Schedule exact system alarm clock
         scheduleAlarmClock(context, targetTriggerMillis, stationName, trainNumber, triggerMinutes);
 
-        // 2. Schedule first adaptive periodic background sync (in 15 minutes)
-        scheduleNextSync(context, 15 * 60 * 1000L);
+        // 2. Schedule adaptive periodic background sync with 3-minute pre-flight check
+        long timeUntilTarget = targetTriggerMillis - System.currentTimeMillis();
+        long initialSyncDelay;
+        if (timeUntilTarget <= (3 * 60 * 1000L)) {
+            initialSyncDelay = Math.max(30 * 1000L, timeUntilTarget);
+        } else if (timeUntilTarget <= (8 * 60 * 1000L)) {
+            // Target is 3-8 mins away: schedule pre-flight check for exactly 3 mins prior
+            initialSyncDelay = timeUntilTarget - (3 * 60 * 1000L);
+        } else if (timeUntilTarget <= (35 * 60 * 1000L)) {
+            initialSyncDelay = 5 * 60 * 1000L;
+        } else {
+            initialSyncDelay = 15 * 60 * 1000L;
+        }
+        scheduleNextSync(context, initialSyncDelay);
     }
 
     public void scheduleAlarmClock(
