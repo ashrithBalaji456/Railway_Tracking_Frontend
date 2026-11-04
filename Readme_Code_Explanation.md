@@ -2741,3 +2741,30 @@ flowchart TD
 * Vercel cannot touch or rewrite compiled native Android Java classes on a user's phone. Therefore:
   * Pure UI/React styling updates deployed to Vercel reflect immediately on web and in web-routed apps.
   * Native background services, exact alarm permissions, and audio foreground managers **must be installed directly via the updated APK**.
+
+
+---
+
+### 16.5. 🔄 Adaptive Background Sync Engine: Automatic Delay-Shift Rescheduling
+
+#### 1. Why Static Alarms Fail on Real Railways
+If a train is running 2 hours late and a passenger arms an alarm for 1 hour before arrival:
+* **The Static Flaw:** A standard timer sets an alarm clock for the initial calculated time. If the train is subsequently stopped at an outer signal and delayed by another 2 hours, a static timer rings 3 hours too early!
+* **The Adaptive Fix:** RailTrack's **Adaptive Background Sync Engine** continuously synchronizes with live train telemetry while the phone is locked, ensuring the alarm always reflects the train's actual physical arrival.
+
+#### 2. Component Architecture
+* **[`AdaptiveAlarmManager.java`](file:///C:/Users/ashri/SpringNew/Train_Stuff/Railway_Tracking_App/Frontend/android/app/src/main/java/com/railwaytracking/app/AdaptiveAlarmManager.java):**
+  * Persists active alarm parameters (train number, target station, warning window, expected arrival, backend URL) into Android `SharedPreferences`.
+  * Computes exact target trigger timestamps:
+    $$\\text{targetTriggerMillis} = \\text{ExpectedArrivalMillis} - (\\text{triggerMinutes} \\times 60 \\times 1000)$$
+  * Arms the system `AlarmManager.setAlarmClock()` and registers the 15-minute background synchronization heartbeat.
+* **[`AdaptiveSyncReceiver.java`](file:///C:/Users/ashri/SpringNew/Train_Stuff/Railway_Tracking_App/Frontend/android/app/src/main/java/com/railwaytracking/app/AdaptiveSyncReceiver.java):**
+  * Wakes up every 15 minutes (or every 5 minutes when within 35 minutes of destination).
+  * Executes an asynchronous HTTP GET to `/api/v1/trains/{trainNumber}/live`.
+  * If the station status changes to `AT_STATION` or `ARRIVED`, it fires `AlarmForegroundService` immediately.
+  * If the live expected arrival shifted by $\\ge 3$ minutes:
+    1. Cancels the obsolete system alarm timestamp.
+    2. Reschedules `AlarmManager.setAlarmClock()` to the new target time.
+    3. Dispatches a notification: *"🚆 Train Schedule Updated: Train delayed (+Xm). Wake-up alarm automatically shifted to HH:MM."*
+* **[`nativeAlarmBridge.ts`](file:///C:/Users/ashri/SpringNew/Train_Stuff/Railway_Tracking_App/Frontend/src/utils/nativeAlarmBridge.ts):**
+  * Exports `armAdaptiveNativeAlarm` and wires `TrainDetails.tsx` directly to Android's JNI bridge.
