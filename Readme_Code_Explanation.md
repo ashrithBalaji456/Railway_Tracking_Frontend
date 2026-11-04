@@ -2816,3 +2816,48 @@ sequenceDiagram
 * However, Java files (`AdaptiveAlarmManager.java`, `AdaptiveSyncReceiver.java`, `NativeAlarmPlugin.java`) and Android OS configurations (`AndroidManifest.xml`) compile into **native Dalvik/ART bytecode (`classes.dex`)** inside the compiled APK file.
 * Android's OS security sandbox prevents external websites from injecting native Java services into an installed mobile app.
 * Therefore, whenever native background receivers, alarm managers, or foreground audio services are introduced or updated, **the updated APK (`app-debug.apk`) must be installed directly on the Android device**.
+
+
+---
+
+### 16.6. 🚆 The Multi-Rake Long-Distance Problem & Rake Start Date Binding
+
+#### 1. The Multi-Rake Dilemma in Indian Railways
+On ultra-long-distance daily routes (such as **12792 Danapur $\\rightarrow$ Secunderabad Express**, **12626 Kerala Express**, **12622 Tamil Nadu Express**, or **12802 Purushottam Express**), the train takes between **30 and 44 hours** to complete its journey.
+* Because the journey spans **multiple calendar days**, there are **two to three physical train rakes with the exact same train number (e.g. 12792) running simultaneously on the tracks at any given moment!**
+* **The Scenario:**
+  * **Rake 1 (Started Yesterday from Danapur):** Currently running through Maharashtra/Telangana near Balharshah (BPQ), approaching Mancherial (MCI) and Secunderabad (SC).
+  * **Rake 2 (Started Today from Danapur):** Just departed Danapur (DNR) in Bihar, **1,500 km away**!
+* **The Danger:** If an alarm only arms by train number (`"12792"`), the background worker might query the newly started Rake 2 in Bihar instead of Rake 1 in Balharshah. The passenger at Mancherial would never get their alarm!
+
+#### 2. The Solution: Unique `(TrainNumber, JourneyStartDate)` Composite Key
+In Indian Railways (CRIS / NTES), trains are uniquely identified by their **Train Number + Origin Start Date**:
+* Rake 1 (near Balharshah) = `Train 12792, Origin Date: 2026-11-03`
+* Rake 2 (in Danapur) = `Train 12792, Origin Date: 2026-11-04`
+
+```mermaid
+flowchart TD
+    Screen["Passenger Views Train 12792 approaching Balharshah"] --> Live["Live Feed has startDate = 2026-11-03 (Yesterday's Rake)"]
+    Live --> Arm["Passenger Arms Alarm for Mancherial (MCI)"]
+    
+    Arm --> Lock["Lock in effectiveJourneyDate = liveStatus.startDate<br/>(e.g., '2026-11-03')"]
+    Lock --> Native["Pass to AdaptiveAlarmManager & Save in SharedPreferences"]
+    
+    subgraph Background Sync Heartbeat (Every 15m)
+        Worker["AdaptiveSyncReceiver wakes up"]
+        Worker --> API["GET /api/v1/trains/12792/live?journeyDate=2026-11-03"]
+        API --> Server["Spring Boot TrainServiceImpl.java"]
+        Server --> Check{"startDate matches 2026-11-03?"}
+        Check -- Yes --> TargetRake["Returns Live Status for Rake 1 (near Balharshah / Mancherial)"]
+        Check -- No --> Reject["Rejects Today's Danapur Rake"]
+    end
+    
+    TargetRake --> Calculate["Calculates accurate ETA for Mancherial arrival!"]
+```
+
+---
+
+#### Q9: If a train has multiple active rakes on the tracks on the same day (e.g., Danapur Express near Balharshah vs. Danapur), how does the alarm track the right train?
+* **Origin Departure Date (`startDate`):** Every physical rake is bound to the exact calendar date it departed from its origin station.
+* **Client Binding:** When you arm the alarm, RailTrack captures `liveStatus.startDate` (e.g. `"2026-11-03"`) from the rake you are currently viewing and permanently embeds it into the alarm configuration.
+* **Background Isolation:** All subsequent 15-minute background synchronization calls explicitly include `?journeyDate=YYYY-MM-DD`. This prevents any confusion with today's newly departed rake in Bihar, ensuring the alarm monitors the rake passing through Balharshah and approaching your boarding station at Mancherial!
