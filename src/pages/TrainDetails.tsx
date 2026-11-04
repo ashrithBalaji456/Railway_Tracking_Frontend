@@ -401,40 +401,65 @@ export default function TrainDetails() {
     let shouldTrigger = false;
     let computedEta = armedAlarmConfig.triggerMinutes;
 
-    // Sequence position check
-    const currentBubbleSeq = route?.stations?.find(
-      (st: any) => st.stationCode?.toUpperCase() === bubbleStationCode
-    )?.sequenceNumber;
-    const targetSeq = (routeStop || liveStop)?.sequenceNumber;
-
-    if (currentBubbleSeq != null && targetSeq != null) {
-      const stopsDifference = targetSeq - currentBubbleSeq;
-      if (stopsDifference === 1 || stopsDifference === 0) {
-        shouldTrigger = true;
+    // 1. Dynamic live ETA calculation (handles delay, slack time, and speed variations automatically)
+    let diffMinutes: number | null = null;
+    const expArr = liveStop?.expectedArrival || routeStop?.arrivalTime;
+    if (expArr) {
+      try {
+        const [h, m] = expArr.split(':').map(Number);
+        const now = new Date();
+        const targetTime = new Date();
+        targetTime.setHours(h, m, 0, 0);
+        let diff = Math.round((targetTime.getTime() - now.getTime()) / (1000 * 60));
+        if (diff < -720) diff += 1440;
+        diffMinutes = diff;
+        if (diffMinutes > 0 && diffMinutes <= armedAlarmConfig.triggerMinutes) {
+          shouldTrigger = true;
+          computedEta = diffMinutes;
+        }
+      } catch (e) {
+        // ignore
       }
     }
 
+    // 2. Physical arrival at target station
     if (liveStop) {
       const statusUpper = (liveStop.status || '').toUpperCase();
       if (statusUpper === 'AT_STATION' || statusUpper === 'ARRIVED') {
         shouldTrigger = true;
       }
+    }
 
-      const expArr = liveStop.expectedArrival || routeStop?.arrivalTime;
-      if (expArr) {
-        try {
-          const [h, m] = expArr.split(':').map(Number);
-          const now = new Date();
-          const targetTime = new Date();
-          targetTime.setHours(h, m, 0, 0);
-          let diffMinutes = Math.round((targetTime.getTime() - now.getTime()) / (1000 * 60));
-          if (diffMinutes < -720) diffMinutes += 1440;
-          if (diffMinutes > 0 && diffMinutes <= armedAlarmConfig.triggerMinutes) {
-            shouldTrigger = true;
-            computedEta = diffMinutes;
-          }
-        } catch (e) {
-          // ignore
+    // 3. Station sequence & proximity guard:
+    // Indian Railways timetable routes only list scheduled commercial stopping stations.
+    // In long-distance superfast/Rajdhani runs, trains may travel 200-450 km non-stop between halts.
+    // We must NEVER fire "1 stop away" blindly if the train is still hours or hundreds of kilometers away!
+    const currentBubbleStation = route?.stations?.find(
+      (st: any) => st.stationCode?.toUpperCase() === bubbleStationCode
+    );
+    const currentBubbleSeq = currentBubbleStation?.sequenceNumber;
+    const targetSeq = (routeStop || liveStop)?.sequenceNumber;
+
+    const currentDist = currentBubbleStation?.distance;
+    const targetDist = routeStop?.distance ?? liveStop?.distance;
+    const distanceRemaining = (currentDist != null && targetDist != null) ? (targetDist - currentDist) : null;
+
+    if (currentBubbleSeq != null && targetSeq != null) {
+      const stopsDifference = targetSeq - currentBubbleSeq;
+      if (stopsDifference === 0) {
+        // Train is already at the target station sequence
+        shouldTrigger = true;
+      } else if (stopsDifference === 1) {
+        // "1 stop away" is only valid if the train is physically close (<= 35 km)
+        // OR the dynamic ETA is within the warning threshold (e.g. <= max(triggerMinutes, 45)).
+        const isDistanceClose = distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= 35;
+        const isTimeClose = diffMinutes != null && diffMinutes > 0 && diffMinutes <= Math.max(armedAlarmConfig.triggerMinutes, 45);
+
+        // If neither distance nor time telemetry is provided by API feed, use as fallback
+        const noTelemetryAvailable = distanceRemaining == null && diffMinutes == null;
+
+        if (isDistanceClose || isTimeClose || noTelemetryAvailable) {
+          shouldTrigger = true;
         }
       }
     }
