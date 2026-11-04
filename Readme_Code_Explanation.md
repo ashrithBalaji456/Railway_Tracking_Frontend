@@ -2768,3 +2768,51 @@ If a train is running 2 hours late and a passenger arms an alarm for 1 hour befo
     3. Dispatches a notification: *"🚆 Train Schedule Updated: Train delayed (+Xm). Wake-up alarm automatically shifted to HH:MM."*
 * **[`nativeAlarmBridge.ts`](file:///C:/Users/ashri/SpringNew/Train_Stuff/Railway_Tracking_App/Frontend/src/utils/nativeAlarmBridge.ts):**
   * Exports `armAdaptiveNativeAlarm` and wires `TrainDetails.tsx` directly to Android's JNI bridge.
+
+
+#### 3. Real-World Case Study: How a 12:00 AM Alarm Shifts to 1:00 AM (PendingIntent Overwrite Mechanism)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Passenger as 🛌 Sleeping Passenger
+    participant Android as 🤖 Android OS AlarmManager
+    participant Sync as 🔄 AdaptiveSyncReceiver
+    participant NTES as 📡 RailRadar Telemetry
+
+    Note over Passenger, Android: 10:00 PM: Passenger arms alarm for 12:00 AM (Expected Arrival 1:00 AM, 1h Warning)
+    Android->>Android: Registered ALARM_REQ_CODE (8801) at 12:00 AM (RTC)
+    
+    Note over Passenger, Sync: 11:15 PM: Train hits fog delay (+60m)! New Arrival: 2:00 AM
+    Sync->>NTES: Periodic 15m Heartbeat (GET /live)
+    NTES-->>Sync: Live Arrival shifted to 02:00 AM!
+    
+    rect rgb(30, 20, 50)
+    Note over Sync, Android: ⚠️ ATOMIC OVERWRITE IN ANDROID OS:<br/>Re-registers ALARM_REQ_CODE (8801) for 01:00 AM!<br/>The 12:00 AM timer is completely ERASED from OS memory.
+    end
+    
+    Sync->>Passenger: Heads-Up: "Train delayed +1h. Alarm shifted from 12:00 AM to 01:00 AM."
+    
+    Note over Passenger, Android: 12:00 AM ARRIVES: Complete Silence! (0 alarms fire)
+    Note over Passenger, Android: 01:00 AM ARRIVES: 🔔 LOUD ALARM RINGS! Wakes Passenger 1h before true arrival!
+```
+
+---
+
+#### Q7: If an alarm was set for 12:00 AM, and the train gets delayed by 1 hour (moving to 1:00 AM), why will the 12:00 AM alarm NOT ring? How is it removed?
+* **Android OS `PendingIntent` Mechanism:**
+  * In Android's system `AlarmManager`, scheduled alarms are indexed by their unique Request Code:
+    ```java
+    PendingIntent.getBroadcast(context, ALARM_REQ_CODE, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    ```
+  * In Android OS, `ALARM_REQ_CODE = 8801` is a single slot in the operating system's internal alarm table.
+  * When `AdaptiveSyncReceiver` detects the 1-hour delay shift, it calls `AlarmManager.setAlarmClock()` using the **same Request Code (8801)** with the new timestamp (01:00 AM).
+  * **Result in Android OS:** The previous 12:00 AM timestamp is **atomically overwritten and replaced**. There are never duplicate alarms. When 12:00 AM passes, Android checks its registry, finds no alarm for 12:00 AM, and stays completely silent. The alarm only rings when 01:00 AM arrives!
+
+---
+
+#### Q8: When native Java changes are made to the Android app, why is APK re-installation required?
+* Web assets (React JSX/TSX, CSS styles, images) deployed to Vercel update web users instantly.
+* However, Java files (`AdaptiveAlarmManager.java`, `AdaptiveSyncReceiver.java`, `NativeAlarmPlugin.java`) and Android OS configurations (`AndroidManifest.xml`) compile into **native Dalvik/ART bytecode (`classes.dex`)** inside the compiled APK file.
+* Android's OS security sandbox prevents external websites from injecting native Java services into an installed mobile app.
+* Therefore, whenever native background receivers, alarm managers, or foreground audio services are introduced or updated, **the updated APK (`app-debug.apk`) must be installed directly on the Android device**.
