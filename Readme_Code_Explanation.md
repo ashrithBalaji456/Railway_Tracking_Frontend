@@ -2861,3 +2861,97 @@ flowchart TD
 * **Origin Departure Date (`startDate`):** Every physical rake is bound to the exact calendar date it departed from its origin station.
 * **Client Binding:** When you arm the alarm, RailTrack captures `liveStatus.startDate` (e.g. `"2026-11-03"`) from the rake you are currently viewing and permanently embeds it into the alarm configuration.
 * **Background Isolation:** All subsequent 15-minute background synchronization calls explicitly include `?journeyDate=YYYY-MM-DD`. This prevents any confusion with today's newly departed rake in Bihar, ensuring the alarm monitors the rake passing through Balharshah and approaching your boarding station at Mancherial!
+
+---
+
+### 16.7. 🛡️ Native Lifecycle Stability, Active Reminders Schema, and Route Preservation
+
+#### 1. Issue Analysis & Architectural Resolutions
+
+```mermaid
+flowchart TD
+    subgraph Issue1["1. Blank Screen in Active Reminders"]
+        A1["User opens Active Reminders tab"] --> B1["armedAlarm.tone.replace() called"]
+        B1 --> C1{"armedAlarm.tone is undefined?<br/>(Stored as toneType)"}
+        C1 -- Yes --> D1["💥 TypeError crashes React render tree into blank screen"]
+        C1 -- Fix --> E1["Fallback: (armedAlarm.toneType || armedAlarm.tone || 'digital_clock').replace()"]
+    end
+
+    subgraph Issue2["2. Alarm Rings Milliseconds & App Closes"]
+        A2["AlarmManager fires hardware alarm"] --> B2["AlarmForegroundService.onStartCommand"]
+        B2 --> C2["startActivity with FLAG_ACTIVITY_CLEAR_TOP"]
+        C2 --> D2["💥 Android terminates MainActivity / BridgeActivity<br/>MediaPlayer killed immediately after 20ms"]
+        C2 -- Fix --> E2["Replace with FLAG_ACTIVITY_SINGLE_TOP + !isInteractive guard.<br/>Keeps app alive and ringing smoothly!"]
+    end
+
+    subgraph Issue3["3. Login Always Redirects to /"]
+        A3["User attempts protected action on /favorites"] --> B3["ProtectedRoute redirects to /login"]
+        B3 --> C3{"State preserved in location.state?"}
+        C3 -- Was Missing --> D3["Hardcoded navigate('/') loses user's place"]
+        C3 -- Fix --> E3["state={{ from: location }} + navigate(from, { replace: true })"]
+    end
+```
+
+---
+
+#### Q10: Why did the "Active Reminders & Alarms" tab show a completely blank dark screen?
+* **The Root Cause:** In `NotificationPreferencesModal.tsx`, the component attempted to format the tone label using:
+  ```typescript
+  armedAlarm.tone.replace('_', ' ')
+  ```
+  However, `StationWakeUpAlarmModal.tsx` stores the configuration into `localStorage` (`rail_armed_alarm`) using the key **`toneType`** (or in older code, `tone`). Because `armedAlarm.tone` was `undefined`, accessing `.replace()` threw an uncaught JavaScript runtime exception:
+  `TypeError: Cannot read properties of undefined (reading 'replace')`
+  In React, an unhandled exception inside a modal's render phase collapses the entire React component tree, leaving the user with an empty, dark background.
+* **The Fix:**
+  1. Updated the TypeScript interface `ArmedAlarmState` to accept both key variants:
+     ```typescript
+     triggerMinutes?: number;
+     thresholdMinutes?: number;
+     toneType?: string;
+     tone?: string;
+     ```
+  2. Applied safe fallbacks across the component:
+     ```typescript
+     (armedAlarm.toneType || armedAlarm.tone || 'digital_clock').replace(/_/g, ' ')
+     ```
+  3. Added proper cleanup on disarm: calls both `cancelNativeAlarm()` and `alarmAudioService.stopAlarm()`.
+
+---
+
+#### Q11: Why did the alarm only ring for a few milliseconds and then immediately close/kill the app?
+* **The Root Cause:** In `AlarmForegroundService.java`, when the alarm triggered, the service attempted to bring the application to the foreground so the user could dismiss it:
+  ```java
+  Intent mainIntent = new Intent(this, MainActivity.class);
+  mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+  startActivity(mainIntent);
+  ```
+  In Capacitor / Android:
+  - `MainActivity` extends `BridgeActivity` and is already configured as `android:launchMode="singleTask"`.
+  - Supplying `FLAG_ACTIVITY_CLEAR_TOP` when `MainActivity` is already alive forces Android to **destroy and terminate the current activity instance**.
+  - As a result, the OS tore down the process, killing both the React WebView and the native `AlarmSoundPlayer` / `MediaPlayer` within 20–50 milliseconds of playback starting.
+* **The Fix:**
+  1. Changed `FLAG_ACTIVITY_CLEAR_TOP` to `Intent.FLAG_ACTIVITY_SINGLE_TOP`:
+     ```java
+     mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+     ```
+  2. Added an interactive power-manager check: `startActivity` is now only invoked when the phone's screen is turned off (`!pm.isInteractive()`) to wake up the screen and display the keyguard dismiss window. If the user is already actively using their phone, it displays the high-priority heads-up banner notification without aggressively resetting the running activity.
+  3. Disabled Web Speech API synthesis (`window.speechSynthesis`) on native mobile platforms to prevent WebView engine audio collisions with the native Android media stream.
+
+---
+
+#### Q12: Why did logging in always return the user to the home screen instead of staying on their current page?
+* **The Root Cause:**
+  1. `ProtectedRoute.tsx` was doing a bare `<Navigate to="/login" replace />`, which stripped out the path the user was originally trying to access.
+  2. In `Login.tsx`, upon receiving a 200 OK from the authentication endpoint, the code executed a hardcoded `navigate('/')`.
+* **The Fix:**
+  1. `ProtectedRoute.tsx` now captures the current URL and forwards it via navigation state:
+     ```tsx
+     <Navigate to="/login" state={{ from: location }} replace />
+     ```
+  2. `Login.tsx` reads `location.state?.from?.pathname` and navigates directly back to that target route:
+     ```tsx
+     const from = (location.state as any)?.from?.pathname || '/';
+     navigate(from, { replace: true });
+     ```
+  Now, if a user clicks on "My Bookings" or "Favorites" or arms a feature requiring authentication, logging in immediately returns them to where they were.
+
