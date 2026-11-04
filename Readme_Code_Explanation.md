@@ -3223,6 +3223,32 @@ flowchart TD
        - **2 Hours (120 mins):** Fires at **102 km away**.
      - Even if the railway data feed loses internet timestamps, the distance trigger ensures the passenger gets their full 1 to 2 hour advance notice!
 
+---
+
+#### Q19: Why was the alarm modal and Active Reminders section displaying "Classic Digital" tone even after the user uploaded an MP3 and set it as Default in Alarm Center? How is default custom audio handled now?
+* **The Problem:**
+  - In "Alarm Center & Audio Settings", the user uploaded a custom MP3 (e.g. `Khaleja Epic Orchestra BGM`) and marked it as **Default**.
+  - However, when opening the "Station Approaching Wake-Up Alarm" modal on any train details page, the modal only showed the 3 built-in synthesizers (`Classic Digital`, `Emergency Siren`, `Locomotive Horn`) and defaulted to `Classic Digital`.
+  - In the "Active Reminders & Alarms" list, it displayed `Tone: Digital Clock` instead of the user's default custom audio!
+* **The Root Cause:**
+  1. `StationWakeUpAlarmModal.tsx` was written before the custom audio IndexedDB service was created. It had no listener or initial fetch for `customAlarmSoundService.getDefaultSound()`.
+  2. It hardcoded `const [toneType, setToneType] = useState('digital_clock')`, completely ignoring the user's default audio preference.
+  3. `NotificationPreferencesModal.tsx` only read `armedAlarm.toneType`, formatting it as `digital_clock` $\rightarrow$ `Digital Clock`.
+* **The Unified Resolution:**
+  1. **Automatic Default Sound Detection:**
+     - On opening `StationWakeUpAlarmModal.tsx`, it immediately queries `customAlarmSoundService.getDefaultSound()`.
+     - If the user has a default uploaded audio (e.g. `Khaleja Epic Orchestra BGM`), it displays a highlighted **"DEFAULT AUDIO ACTIVE"** card with audio name, file size, and an instant **"Preview"** button.
+     - It selects the default custom audio by default!
+  2. **Alerts & Preferences Synchronization:**
+     - When saving/arming, the modal passes:
+       `toneType: 'custom'`, `customSoundId`, and `customSoundName: "Khaleja Epic Orchestra BGM"`.
+     - `NotificationPreferencesModal.tsx` displays:
+       `Tone: 🎵 Khaleja Epic Orchestra BGM (Default)`!
+  3. **Foreground & Background Audio Playback:**
+     - In native Android storage, `syncCustomAudioToNative` writes the user's default audio to `custom_alarm_sound.mp3`, which `AlarmSoundPlayer` loops continuously on `STREAM_ALARM`.
+     - In the foreground React app, `TrainDetails.tsx` resolves the default sound's blob URL and plays the full custom MP3 through HTML5 Audio!
+
+
 
 
 

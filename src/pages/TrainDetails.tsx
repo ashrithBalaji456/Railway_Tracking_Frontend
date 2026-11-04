@@ -13,7 +13,8 @@ import { getStationGastronomyBadge, type StationDelicacy } from '../data/station
 import { getDepartedWindowInfo, formatDelayDisplay } from '../utils/liveStatusUtils';
 import StationWakeUpAlarmModal, { type WakeUpAlarmConfig } from '../components/StationWakeUpAlarmModal';
 import RingingAlarmOverlay from '../components/RingingAlarmOverlay';
-import { alarmAudioService } from '../utils/alarmAudioService';
+import { alarmAudioService, type AlarmToneType } from '../utils/alarmAudioService';
+import customAlarmSoundService from '../utils/customAlarmSoundService';
 import { armAdaptiveNativeAlarm, cancelNativeAlarm } from '../utils/nativeAlarmBridge';
 import whatsappShareService from '../utils/whatsappShareService';
 import webNotificationService from '../utils/webNotificationService';
@@ -475,11 +476,28 @@ export default function TrainDetails() {
       setRingingAlarmData(alarmPayload);
       setIsAlarmRinging(true);
 
-      alarmAudioService.startContinuousAlarm({
-        toneType: armedAlarmConfig.toneType,
-        trainNumber: trainNumber || train?.trainNumber,
-        stationName: armedAlarmConfig.stationName,
-        etaMinutes: computedEta
+      customAlarmSoundService.getDefaultSound().then(async (defSound) => {
+        let customUrl: string | undefined = undefined;
+        if (defSound) {
+          try {
+            customUrl = (await customAlarmSoundService.getSoundBlobUrl(defSound.id)) || undefined;
+          } catch (e) {}
+        }
+        alarmAudioService.startContinuousAlarm({
+          toneType: armedAlarmConfig.toneType === 'custom' ? undefined : (armedAlarmConfig.toneType as AlarmToneType),
+          customSoundUrl: customUrl,
+          customSoundName: armedAlarmConfig.customSoundName || defSound?.name,
+          trainNumber: trainNumber || train?.trainNumber,
+          stationName: armedAlarmConfig.stationName,
+          etaMinutes: computedEta
+        });
+      }).catch(() => {
+        alarmAudioService.startContinuousAlarm({
+          toneType: armedAlarmConfig.toneType === 'custom' ? 'digital_clock' : (armedAlarmConfig.toneType as AlarmToneType),
+          trainNumber: trainNumber || train?.trainNumber,
+          stationName: armedAlarmConfig.stationName,
+          etaMinutes: computedEta
+        });
       });
 
       if (armedAlarmConfig.backupEmail) {

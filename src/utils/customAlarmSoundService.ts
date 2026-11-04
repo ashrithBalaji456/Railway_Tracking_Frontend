@@ -99,7 +99,7 @@ class CustomAlarmSoundService {
 
     const soundItem: CustomAlarmSound = {
       id,
-      name: file.name.replace(/\\.[^/.]+$/, ''), // Clean file name without extension
+      name: file.name.replace(/\.[^/.]+$/, ''), // Clean file name without extension
       blob: file,
       sizeBytes: file.size,
       isDefault: isFirst,
@@ -113,6 +113,10 @@ class CustomAlarmSoundService {
       const req = store.add(soundItem);
 
       req.onsuccess = async () => {
+        if (isFirst) {
+          localStorage.setItem('rail_default_custom_sound_id', id);
+          localStorage.setItem('rail_default_custom_sound_name', soundItem.name);
+        }
         this.notifyChange();
         // Immediately sync to native Android storage so AlarmManager/MediaPlayer can play it offline & locked!
         await syncCustomAudioToNative(soundItem.blob);
@@ -134,15 +138,22 @@ class CustomAlarmSoundService {
       const store = tx.objectStore(STORE_NAME);
 
       let targetBlob: Blob | null = null;
+      let targetName = '';
       all.forEach((item) => {
         const isTarget = item.id === id;
         item.isDefault = isTarget;
-        if (isTarget) targetBlob = item.blob;
+        if (isTarget) {
+          targetBlob = item.blob;
+          targetName = item.name;
+        }
         store.put(item);
       });
 
       tx.oncomplete = async () => {
         localStorage.setItem('rail_default_custom_sound_id', id);
+        if (targetName) {
+          localStorage.setItem('rail_default_custom_sound_name', targetName);
+        }
         this.notifyChange();
         if (targetBlob) {
           await syncCustomAudioToNative(targetBlob);
@@ -202,6 +213,7 @@ class CustomAlarmSoundService {
       req.onsuccess = async () => {
         if (localStorage.getItem('rail_default_custom_sound_id') === id) {
           localStorage.removeItem('rail_default_custom_sound_id');
+          localStorage.removeItem('rail_default_custom_sound_name');
         }
         this.notifyChange();
         const remaining = await this.getAllSounds();

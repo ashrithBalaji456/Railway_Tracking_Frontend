@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Bell, 
   Volume2, 
@@ -7,15 +7,21 @@ import {
   ShieldCheck, 
   X, 
   Mail, 
-  Smartphone
+  Smartphone,
+  Music,
+  Play,
+  Check
 } from 'lucide-react';
 import { alarmAudioService, type AlarmToneType } from '../utils/alarmAudioService';
+import customAlarmSoundService, { type CustomAlarmSound } from '../utils/customAlarmSoundService';
 
 export interface WakeUpAlarmConfig {
   stationCode: string;
   stationName: string;
   triggerMinutes: number;
-  toneType: AlarmToneType;
+  toneType: AlarmToneType | 'custom';
+  customSoundId?: string;
+  customSoundName?: string;
   backupEmail?: string;
   armedAt: string;
 }
@@ -50,23 +56,60 @@ export default function StationWakeUpAlarmModal({
   const [triggerMinutes, setTriggerMinutes] = useState<number>(
     currentArmedConfig?.triggerMinutes || 30
   );
-  const [toneType, setToneType] = useState<AlarmToneType>(
-    currentArmedConfig?.toneType || 'digital_clock'
-  );
+  const [selectedSoundMode, setSelectedSoundMode] = useState<AlarmToneType | 'custom'>(() => {
+    if (currentArmedConfig?.customSoundName || currentArmedConfig?.toneType === 'custom') {
+      return 'custom';
+    }
+    return (currentArmedConfig?.toneType as AlarmToneType) || 'custom';
+  });
+  const [customSound, setCustomSound] = useState<CustomAlarmSound | null>(null);
   const [backupEmail, setBackupEmail] = useState<string>(
     currentArmedConfig?.backupEmail || localStorage.getItem('email') || ''
   );
   const [isPreviewing, setIsPreviewing] = useState(false);
+  const [previewingCustom, setPreviewingCustom] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    customAlarmSoundService.getDefaultSound().then((def) => {
+      if (!isMounted) return;
+      setCustomSound(def);
+      if (!currentArmedConfig) {
+        if (def) {
+          setSelectedSoundMode('custom');
+        } else {
+          setSelectedSoundMode('digital_clock');
+        }
+      }
+    }).catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [currentArmedConfig]);
 
   if (!isOpen) return null;
 
   const isAlreadyArmedForThisStation =
     currentArmedConfig?.stationCode?.toUpperCase() === station.stationCode?.toUpperCase();
 
-  const handlePreviewTone = () => {
+  const handlePreviewTone = (tone: AlarmToneType) => {
     setIsPreviewing(true);
-    alarmAudioService.previewTone(toneType);
+    alarmAudioService.previewTone(tone);
     setTimeout(() => setIsPreviewing(false), 2200);
+  };
+
+  const handlePreviewCustom = async () => {
+    if (!customSound) return;
+    setPreviewingCustom(true);
+    try {
+      const url = await customAlarmSoundService.getSoundBlobUrl(customSound.id);
+      if (url) {
+        alarmAudioService.previewCustomSound(url);
+      }
+    } catch (e) {
+      console.warn('Error previewing custom sound:', e);
+    }
+    setTimeout(() => setPreviewingCustom(false), 3500);
   };
 
   const handleSaveAndArm = () => {
@@ -75,11 +118,14 @@ export default function StationWakeUpAlarmModal({
     }
     alarmAudioService.acquireWakeLock();
 
+    const isCustom = selectedSoundMode === 'custom' && !!customSound;
     onArmAlarm({
       stationCode: station.stationCode,
       stationName: station.stationName,
       triggerMinutes,
-      toneType,
+      toneType: isCustom ? 'custom' : (selectedSoundMode as AlarmToneType),
+      customSoundId: isCustom ? customSound?.id : undefined,
+      customSoundName: isCustom ? customSound?.name : undefined,
       backupEmail: backupEmail.trim() || undefined,
       armedAt: new Date().toISOString()
     });
@@ -172,42 +218,109 @@ export default function StationWakeUpAlarmModal({
         </div>
 
         {/* Ringtone Selection & Preview */}
-        <div className="space-y-2">
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-            <Volume2 className="w-3.5 h-3.5 text-amber-400" />
-            <span>Alarm Ringtone (Web Audio Synthesizer):</span>
+        <div className="space-y-2.5">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+              <span>Alarm Sound:</span>
+            </span>
+            {customSound && (
+              <span className="text-[10px] text-amber-300 font-semibold flex items-center gap-1">
+                <Music className="w-3 h-3" /> Default Audio Active
+              </span>
+            )}
           </label>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { id: 'digital_clock', label: 'Classic Digital', desc: 'Loud pulsing beeps' },
-              { id: 'emergency_siren', label: 'Emergency Siren', desc: 'Oscillating sweep' },
-              { id: 'train_horn', label: 'Locomotive Horn', desc: 'Dual-tone brass' }
-            ].map((tone) => (
-              <button
-                key={tone.id}
-                type="button"
-                onClick={() => setToneType(tone.id as AlarmToneType)}
-                className={`p-2.5 text-left rounded-xl border text-xs transition-all cursor-pointer ${
-                  toneType === tone.id
-                    ? 'bg-amber-500/15 border-amber-500/60 text-amber-200 font-bold'
-                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                <div className="font-semibold text-slate-200">{tone.label}</div>
-                <div className="text-[10px] text-slate-450 mt-0.5">{tone.desc}</div>
-              </button>
-            ))}
-          </div>
 
-          <button
-            type="button"
-            onClick={handlePreviewTone}
-            disabled={isPreviewing}
-            className="w-full mt-1.5 py-2 px-3 rounded-lg border border-slate-800 hover:border-slate-700 bg-slate-950 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
-          >
-            <Volume2 className={`w-3.5 h-3.5 text-amber-400 ${isPreviewing ? 'animate-ping' : ''}`} />
-            <span>{isPreviewing ? 'Playing Test Ringtone...' : 'Test Loudness (Preview)'}</span>
-          </button>
+          {/* User's Default Custom MP3 Sound (if configured in Alarm Center) */}
+          {customSound ? (
+            <div
+              onClick={() => setSelectedSoundMode('custom')}
+              className={`p-3 rounded-xl border transition-all cursor-pointer relative ${
+                selectedSoundMode === 'custom'
+                  ? 'bg-amber-500/15 border-amber-500/70 shadow-lg shadow-amber-500/10'
+                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`p-2.5 rounded-lg shrink-0 ${selectedSoundMode === 'custom' ? 'bg-amber-500/25 text-amber-300' : 'bg-slate-900 text-slate-400'}`}>
+                    <Music className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-bold text-white truncate max-w-[190px] sm:max-w-xs">{customSound.name}</span>
+                      <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/25 text-amber-300 border border-amber-500/40">
+                        DEFAULT
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">
+                      Your uploaded song from Alarm Center • {(customSound.sizeBytes / (1024 * 1024)).toFixed(1)} MB
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePreviewCustom();
+                    }}
+                    disabled={previewingCustom}
+                    className="px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-bold flex items-center gap-1 transition cursor-pointer"
+                  >
+                    <Play className={`w-3 h-3 ${previewingCustom ? 'animate-spin' : ''}`} />
+                    <span>{previewingCustom ? 'Playing...' : 'Preview'}</span>
+                  </button>
+                  {selectedSoundMode === 'custom' && (
+                    <div className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center">
+                      <Check className="w-3 h-3 stroke-[3]" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Built-in Rail Synthesizers */}
+          <div className="space-y-1.5">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              {customSound ? 'Or choose built-in rail synthesizers:' : 'Choose synthesized tone (or upload MP3 in Alarm Center):'}
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'digital_clock', label: 'Classic Digital', desc: 'Loud pulsing beeps' },
+                { id: 'emergency_siren', label: 'Emergency Siren', desc: 'Oscillating sweep' },
+                { id: 'train_horn', label: 'Locomotive Horn', desc: 'Dual-tone brass' }
+              ].map((tone) => (
+                <button
+                  key={tone.id}
+                  type="button"
+                  onClick={() => setSelectedSoundMode(tone.id as AlarmToneType)}
+                  className={`p-2.5 text-left rounded-xl border text-xs transition-all cursor-pointer ${
+                    selectedSoundMode === tone.id
+                      ? 'bg-indigo-600/20 border-indigo-500 text-indigo-200 font-bold shadow-md shadow-indigo-600/20'
+                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="font-semibold text-slate-200">{tone.label}</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">{tone.desc}</div>
+                </button>
+              ))}
+            </div>
+
+            {selectedSoundMode !== 'custom' && (
+              <button
+                type="button"
+                onClick={() => handlePreviewTone(selectedSoundMode as AlarmToneType)}
+                disabled={isPreviewing}
+                className="w-full mt-1 py-1.5 px-3 rounded-lg border border-slate-800 hover:border-slate-700 bg-slate-950 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <Volume2 className={`w-3.5 h-3.5 text-indigo-400 ${isPreviewing ? 'animate-ping' : ''}`} />
+                <span>{isPreviewing ? 'Playing Test Ringtone...' : 'Test Loudness (Preview)'}</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Optional Backup Brevo Email */}

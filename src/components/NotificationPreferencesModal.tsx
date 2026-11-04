@@ -48,6 +48,8 @@ interface ArmedAlarmState {
   triggerMinutes?: number;
   tone?: string;
   toneType?: string;
+  customSoundId?: string;
+  customSoundName?: string;
   armedAt?: string;
 }
 
@@ -627,7 +629,18 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
                           const m = armedAlarm.triggerMinutes || armedAlarm.thresholdMinutes || 30;
                           return m >= 60 ? (m % 60 === 0 ? `${m / 60} hour${m > 60 ? 's' : ''}` : `${(m / 60).toFixed(1)} hours`) : `${m} mins`;
                         })()}</strong> prior</span>
-                        <span>Tone: <strong className="capitalize">{(armedAlarm.toneType || armedAlarm.tone || 'digital_clock').replace(/_/g, ' ')}</strong></span>
+                        <span>Tone: <strong className="text-slate-200">
+                          {armedAlarm.customSoundName
+                            ? `🎵 ${armedAlarm.customSoundName} (Default)`
+                            : (armedAlarm.toneType === 'custom'
+                                ? (localStorage.getItem('rail_default_custom_sound_name') ? `🎵 ${localStorage.getItem('rail_default_custom_sound_name')} (Default)` : '🎵 Custom Song (Default)')
+                                : (localStorage.getItem('rail_default_custom_sound_name')
+                                    ? `🎵 ${localStorage.getItem('rail_default_custom_sound_name')} (Default)`
+                                    : (armedAlarm.toneType || armedAlarm.tone || 'digital_clock').replace(/_/g, ' ')
+                                  )
+                              )
+                          }
+                        </strong></span>
                       </div>
                     </div>
 
