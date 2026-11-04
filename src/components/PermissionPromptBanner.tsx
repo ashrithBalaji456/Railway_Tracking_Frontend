@@ -7,7 +7,6 @@ import {
   requestNativeNotificationPermission,
   openNativeNotificationSettings,
   requestNativeOverlayPermission,
-  triggerTestNotification,
   type NativeAlarmPermissions 
 } from '../utils/nativeAlarmBridge';
 
@@ -66,18 +65,12 @@ export default function PermissionPromptBanner() {
               setNativePerms(perms);
               if (perms.notifications && perms.overlay) {
                 setGrantedSuccess(true);
-                try {
-                  await triggerTestNotification(
-                    '🔔 RailTrack Notifications Active',
-                    'Lock-screen alerts and departure wake-up alarms are operational!'
-                  );
-                } catch {}
                 setTimeout(() => {
                   if (isMounted) {
                     setShowModal(false);
                     sessionStorage.setItem('rail_permission_modal_dismissed', 'true');
                   }
-                }, 2000);
+                }, 1500);
               }
             }
           } catch {}
