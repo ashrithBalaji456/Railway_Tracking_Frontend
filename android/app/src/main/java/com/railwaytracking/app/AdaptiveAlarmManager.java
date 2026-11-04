@@ -11,24 +11,29 @@ import android.os.Build;
 import android.util.Log;
 import androidx.core.app.NotificationCompat;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 
 /**
  * Adaptive Alarm Manager:
  * Manages dynamic station wake-up alarms that automatically adapt to
  * Indian Railways live train delays and schedule changes.
+ * Supports multiple stations on the same train or across different trains simultaneously.
  */
 public class AdaptiveAlarmManager {
 
     private static final String TAG = "AdaptiveAlarmManager";
     public static final String PREFS_NAME = "rail_adaptive_alarm_prefs";
-    public static final int SYNC_REQ_CODE = 8802;
-    public static final int ALARM_REQ_CODE = 8801;
+    public static final String PREF_ALARMS_MAP = "alarms_map_json";
     public static final String SYNC_CHANNEL_ID = "railtrack_adaptive_sync";
-    public static final int SYNC_NOTIFICATION_ID = 7702;
 
     private static AdaptiveAlarmManager instance;
 
@@ -39,7 +44,26 @@ public class AdaptiveAlarmManager {
         return instance;
     }
 
-    public void armAlarm(
+    public static String buildAlarmId(String trainNumber, String stationCode) {
+        return (trainNumber != null ? trainNumber.trim() : "") + "_" + (stationCode != null ? stationCode.trim().toUpperCase() : "");
+    }
+
+    public static int getAlarmReqCode(String trainNumber, String stationCode) {
+        String id = buildAlarmId(trainNumber, stationCode);
+        return 10000 + (Math.abs(id.hashCode()) % 40000);
+    }
+
+    public static int getSyncReqCode(String trainNumber, String stationCode) {
+        String id = buildAlarmId(trainNumber, stationCode) + "_SYNC";
+        return 50000 + (Math.abs(id.hashCode()) % 40000);
+    }
+
+    public static int getNotificationId(String trainNumber, String stationCode) {
+        String id = buildAlarmId(trainNumber, stationCode) + "_NOTIF";
+        return 7000 + (Math.abs(id.hashCode()) % 2000);
+    }
+
+    public synchronized void armAlarm(
             Context context,
             String trainNumber,
             String trainName,
@@ -51,61 +75,95 @@ public class AdaptiveAlarmManager {
             String backendUrl
     ) {
         long targetTriggerMillis = calculateTriggerMillis(expectedArrival, triggerMinutes);
+        String alarmId = buildAlarmId(trainNumber, stationCode);
 
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        prefs.edit()
-                .putBoolean("isArmed", true)
-                .putString("trainNumber", trainNumber)
-                .putString("trainName", trainName != null ? trainName : "Train " + trainNumber)
-                .putString("stationCode", stationCode.toUpperCase())
-                .putString("stationName", stationName)
-                .putInt("triggerMinutes", triggerMinutes)
-                .putString("expectedArrival", expectedArrival)
-                .putString("journeyDate", journeyDate != null ? journeyDate : "")
-                .putString("backendUrl", backendUrl != null ? backendUrl : "https://railway-tracking-backend-gwa2.onrender.com")
-                .putLong("targetTriggerMillis", targetTriggerMillis)
-                .putLong("lastSyncMillis", System.currentTimeMillis())
-                .apply();
+        JSONObject alarmsMap = getAlarmsMap(prefs);
 
-        Log.d(TAG, "Adaptive alarm armed for train " + trainNumber + " at " + stationCode +
-                ". Target trigger: " + new Date(targetTriggerMillis));
+        try {
+            JSONObject alarmObj = new JSONObject();
+            alarmObj.put("id", alarmId);
+            alarmObj.put("trainNumber", trainNumber);
+            alarmObj.put("trainName", trainName != null ? trainName : "Train " + trainNumber);
+            alarmObj.put("stationCode", stationCode.toUpperCase());
+            alarmObj.put("stationName", stationName);
+            alarmObj.put("triggerMinutes", triggerMinutes);
+            alarmObj.put("expectedArrival", expectedArrival != null ? expectedArrival : "");
+            alarmObj.put("journeyDate", journeyDate != null ? journeyDate : "");
+            alarmObj.put("backendUrl", backendUrl != null ? backendUrl : "https://railway-tracking-backend-gwa2.onrender.com");
+            alarmObj.put("targetTriggerMillis", targetTriggerMillis);
+            alarmObj.put("lastSyncMillis", System.currentTimeMillis());
 
-        // 1. Schedule exact system alarm clock
-        scheduleAlarmClock(context, targetTriggerMillis, stationName, trainNumber, triggerMinutes);
+            alarmsMap.put(alarmId, alarmObj);
 
-        // 2. Schedule adaptive periodic background sync with 3-minute pre-flight check
-        long timeUntilTarget = targetTriggerMillis - System.currentTimeMillis();
-        long initialSyncDelay;
-        if (timeUntilTarget <= (3 * 60 * 1000L)) {
-            initialSyncDelay = Math.max(30 * 1000L, timeUntilTarget);
-        } else if (timeUntilTarget <= (8 * 60 * 1000L)) {
-            // Target is 3-8 mins away: schedule pre-flight check for exactly 3 mins prior
-            initialSyncDelay = timeUntilTarget - (3 * 60 * 1000L);
-        } else if (timeUntilTarget <= (35 * 60 * 1000L)) {
-            initialSyncDelay = 5 * 60 * 1000L;
-        } else {
-            initialSyncDelay = 15 * 60 * 1000L;
+            // Save map and legacy fallback values
+            prefs.edit()
+                    .putString(PREF_ALARMS_MAP, alarmsMap.toString())
+                    .putBoolean("isArmed", true)
+                    .putString("trainNumber", trainNumber)
+                    .putString("trainName", trainName != null ? trainName : "Train " + trainNumber)
+                    .putString("stationCode", stationCode.toUpperCase())
+                    .putString("stationName", stationName)
+                    .putInt("triggerMinutes", triggerMinutes)
+                    .putString("expectedArrival", expectedArrival != null ? expectedArrival : "")
+                    .putString("journeyDate", journeyDate != null ? journeyDate : "")
+                    .putString("backendUrl", backendUrl != null ? backendUrl : "https://railway-tracking-backend-gwa2.onrender.com")
+                    .putLong("targetTriggerMillis", targetTriggerMillis)
+                    .putLong("lastSyncMillis", System.currentTimeMillis())
+                    .apply();
+
+            Log.d(TAG, "Adaptive alarm armed for ID [" + alarmId + "] (" + stationName + ", Train " + trainNumber + "). Target: " + new Date(targetTriggerMillis));
+
+            // 1. Schedule exact system alarm clock for this specific alarm
+            scheduleAlarmClock(context, targetTriggerMillis, trainNumber, trainName, stationCode, stationName, triggerMinutes);
+
+            // 2. Schedule adaptive periodic background sync with 3-minute pre-flight check
+            long timeUntilTarget = targetTriggerMillis - System.currentTimeMillis();
+            long initialSyncDelay;
+            if (timeUntilTarget <= (3 * 60 * 1000L)) {
+                initialSyncDelay = Math.max(30 * 1000L, timeUntilTarget);
+            } else if (timeUntilTarget <= (8 * 60 * 1000L)) {
+                initialSyncDelay = timeUntilTarget - (3 * 60 * 1000L);
+            } else if (timeUntilTarget <= (35 * 60 * 1000L)) {
+                initialSyncDelay = 5 * 60 * 1000L;
+            } else {
+                initialSyncDelay = 15 * 60 * 1000L;
+            }
+            scheduleNextSync(context, trainNumber, stationCode, initialSyncDelay);
+
+        } catch (Exception e) {
+            Log.e(TAG, "Failed storing alarm for ID [" + alarmId + "]", e);
         }
-        scheduleNextSync(context, initialSyncDelay);
     }
 
     public void scheduleAlarmClock(
             Context context,
             long targetTriggerMillis,
-            String stationName,
             String trainNumber,
+            String trainName,
+            String stationCode,
+            String stationName,
             int triggerMinutes
     ) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (alarmManager == null) return;
 
+        int reqCode = getAlarmReqCode(trainNumber, stationCode);
+        String alarmId = buildAlarmId(trainNumber, stationCode);
+
         Intent intent = new Intent(context, AlarmReceiver.class);
         intent.putExtra("title", "🔔 " + stationName + " Approaching (" + triggerMinutes + "m Warning)");
         intent.putExtra("body", "Train " + trainNumber + " is nearing " + stationName + "! Time to prepare.");
+        intent.putExtra("trainNumber", trainNumber);
+        intent.putExtra("trainName", trainName);
+        intent.putExtra("stationCode", stationCode);
+        intent.putExtra("stationName", stationName);
+        intent.putExtra("triggerMinutes", triggerMinutes);
+        intent.putExtra("alarmId", alarmId);
 
         PendingIntent pendingIntent = PendingIntent.getBroadcast(
                 context,
-                ALARM_REQ_CODE,
+                reqCode,
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
@@ -113,9 +171,12 @@ public class AdaptiveAlarmManager {
         Intent showIntent = new Intent(context, MainActivity.class);
         showIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         showIntent.putExtra("from_alarm", true);
+        showIntent.putExtra("trainNumber", trainNumber);
+        showIntent.putExtra("stationCode", stationCode);
+        showIntent.putExtra("alarmId", alarmId);
         PendingIntent showPendingIntent = PendingIntent.getActivity(
                 context,
-                1001,
+                reqCode,
                 showIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
@@ -129,20 +190,27 @@ public class AdaptiveAlarmManager {
             } else {
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, targetTriggerMillis, pendingIntent);
             }
-            Log.d(TAG, "Scheduled system AlarmClock for: " + new Date(targetTriggerMillis));
+            Log.d(TAG, "Scheduled system AlarmClock for ID [" + alarmId + "] at: " + new Date(targetTriggerMillis));
         } catch (SecurityException se) {
             Log.e(TAG, "SecurityException scheduling alarm clock: " + se.getMessage());
         }
     }
 
-    public void scheduleNextSync(Context context, long delayMillis) {
+    public void scheduleNextSync(Context context, String trainNumber, String stationCode, long delayMillis) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (alarmManager == null) return;
 
+        int syncReqCode = getSyncReqCode(trainNumber, stationCode);
+        String alarmId = buildAlarmId(trainNumber, stationCode);
+
         Intent syncIntent = new Intent(context, AdaptiveSyncReceiver.class);
+        syncIntent.putExtra("trainNumber", trainNumber);
+        syncIntent.putExtra("stationCode", stationCode);
+        syncIntent.putExtra("alarmId", alarmId);
+
         PendingIntent syncPendingIntent = PendingIntent.getBroadcast(
                 context,
-                SYNC_REQ_CODE,
+                syncReqCode,
                 syncIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
@@ -154,39 +222,124 @@ public class AdaptiveAlarmManager {
             } else {
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, syncPendingIntent);
             }
-            Log.d(TAG, "Next adaptive sync scheduled in " + (delayMillis / 60000) + " minutes (" + new Date(triggerAt) + ")");
+            Log.d(TAG, "Next adaptive sync for [" + alarmId + "] scheduled in " + (delayMillis / 60000) + " minutes (" + new Date(triggerAt) + ")");
         } catch (Exception e) {
             Log.e(TAG, "Error scheduling adaptive sync: " + e.getMessage());
         }
     }
 
-    public void cancelAlarm(Context context) {
+    public void scheduleNextSync(Context context, long delayMillis) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        prefs.edit().clear().apply();
+        String tn = prefs.getString("trainNumber", "");
+        String sc = prefs.getString("stationCode", "");
+        if (!tn.isEmpty() && !sc.isEmpty()) {
+            scheduleNextSync(context, tn, sc, delayMillis);
+        }
+    }
 
+    public synchronized void cancelAlarm(Context context, String trainNumber, String stationCode) {
+        if (trainNumber == null || stationCode == null) {
+            cancelAllAlarms(context);
+            return;
+        }
+
+        String alarmId = buildAlarmId(trainNumber, stationCode);
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+
         if (alarmManager != null) {
-            // Cancel alarm clock
+            int alarmReq = getAlarmReqCode(trainNumber, stationCode);
             Intent alarmIntent = new Intent(context, AlarmReceiver.class);
             PendingIntent piAlarm = PendingIntent.getBroadcast(
                     context,
-                    ALARM_REQ_CODE,
+                    alarmReq,
                     alarmIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
             );
             alarmManager.cancel(piAlarm);
 
-            // Cancel periodic sync
+            int syncReq = getSyncReqCode(trainNumber, stationCode);
             Intent syncIntent = new Intent(context, AdaptiveSyncReceiver.class);
             PendingIntent piSync = PendingIntent.getBroadcast(
                     context,
-                    SYNC_REQ_CODE,
+                    syncReq,
                     syncIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
             );
             alarmManager.cancel(piSync);
         }
 
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        JSONObject alarmsMap = getAlarmsMap(prefs);
+        alarmsMap.remove(alarmId);
+
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString(PREF_ALARMS_MAP, alarmsMap.toString());
+
+        if (alarmsMap.length() == 0) {
+            editor.clear();
+            stopAudioAndServices(context);
+        } else {
+            // Keep legacy keys populated with one remaining alarm
+            Iterator<String> keys = alarmsMap.keys();
+            if (keys.hasNext()) {
+                JSONObject rem = alarmsMap.optJSONObject(keys.next());
+                if (rem != null) {
+                    editor.putBoolean("isArmed", true)
+                            .putString("trainNumber", rem.optString("trainNumber"))
+                            .putString("trainName", rem.optString("trainName"))
+                            .putString("stationCode", rem.optString("stationCode"))
+                            .putString("stationName", rem.optString("stationName"))
+                            .putInt("triggerMinutes", rem.optInt("triggerMinutes"))
+                            .putLong("targetTriggerMillis", rem.optLong("targetTriggerMillis"));
+                }
+            }
+        }
+        editor.apply();
+
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm != null) {
+            nm.cancel(getNotificationId(trainNumber, stationCode));
+        }
+
+        Log.d(TAG, "Adaptive alarm cancelled for ID [" + alarmId + "]. Remaining active alarms: " + alarmsMap.length());
+    }
+
+    public synchronized void cancelAllAlarms(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        JSONObject alarmsMap = getAlarmsMap(prefs);
+
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (alarmManager != null) {
+            Iterator<String> keys = alarmsMap.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                JSONObject obj = alarmsMap.optJSONObject(key);
+                if (obj != null) {
+                    String tn = obj.optString("trainNumber");
+                    String sc = obj.optString("stationCode");
+                    int alarmReq = getAlarmReqCode(tn, sc);
+                    Intent ai = new Intent(context, AlarmReceiver.class);
+                    PendingIntent piA = PendingIntent.getBroadcast(context, alarmReq, ai, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                    alarmManager.cancel(piA);
+
+                    int syncReq = getSyncReqCode(tn, sc);
+                    Intent si = new Intent(context, AdaptiveSyncReceiver.class);
+                    PendingIntent piS = PendingIntent.getBroadcast(context, syncReq, si, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                    alarmManager.cancel(piS);
+                }
+            }
+        }
+
+        prefs.edit().clear().apply();
+        stopAudioAndServices(context);
+        Log.d(TAG, "All adaptive alarms and sync listeners cancelled successfully.");
+    }
+
+    public void cancelAlarm(Context context) {
+        cancelAllAlarms(context);
+    }
+
+    private void stopAudioAndServices(Context context) {
         try {
             Intent stopService = new Intent(context, AlarmForegroundService.class);
             context.stopService(stopService);
@@ -198,10 +351,54 @@ public class AdaptiveAlarmManager {
         if (nm != null) {
             nm.cancel(AlarmReceiver.NOTIFICATION_ID);
             nm.cancel(AlarmForegroundService.NOTIFICATION_ID);
-            nm.cancel(SYNC_NOTIFICATION_ID);
         }
+    }
 
-        Log.d(TAG, "Adaptive alarm and sync listeners cancelled successfully.");
+    public static JSONObject getAlarmsMap(SharedPreferences prefs) {
+        String json = prefs.getString(PREF_ALARMS_MAP, null);
+        if (json != null && !json.trim().isEmpty()) {
+            try {
+                return new JSONObject(json);
+            } catch (Exception ignored) {}
+        }
+        JSONObject map = new JSONObject();
+        if (prefs.getBoolean("isArmed", false)) {
+            String tn = prefs.getString("trainNumber", "");
+            String sc = prefs.getString("stationCode", "");
+            if (!tn.isEmpty() && !sc.isEmpty()) {
+                String id = buildAlarmId(tn, sc);
+                try {
+                    JSONObject legacy = new JSONObject();
+                    legacy.put("id", id);
+                    legacy.put("trainNumber", tn);
+                    legacy.put("trainName", prefs.getString("trainName", "Train " + tn));
+                    legacy.put("stationCode", sc);
+                    legacy.put("stationName", prefs.getString("stationName", ""));
+                    legacy.put("triggerMinutes", prefs.getInt("triggerMinutes", 30));
+                    legacy.put("expectedArrival", prefs.getString("expectedArrival", ""));
+                    legacy.put("journeyDate", prefs.getString("journeyDate", ""));
+                    legacy.put("backendUrl", prefs.getString("backendUrl", ""));
+                    legacy.put("targetTriggerMillis", prefs.getLong("targetTriggerMillis", 0L));
+                    legacy.put("lastSyncMillis", prefs.getLong("lastSyncMillis", 0L));
+                    map.put(id, legacy);
+                } catch (Exception ignored) {}
+            }
+        }
+        return map;
+    }
+
+    public List<JSONObject> getActiveAlarms(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        JSONObject map = getAlarmsMap(prefs);
+        List<JSONObject> list = new ArrayList<>();
+        Iterator<String> keys = map.keys();
+        while (keys.hasNext()) {
+            JSONObject obj = map.optJSONObject(keys.next());
+            if (obj != null) {
+                list.add(obj);
+            }
+        }
+        return list;
     }
 
     public void postScheduleShiftNotification(
@@ -229,7 +426,7 @@ public class AdaptiveAlarmManager {
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setAutoCancel(true);
 
-        nm.notify(SYNC_NOTIFICATION_ID, builder.build());
+        nm.notify(SYNC_CHANNEL_ID.hashCode(), builder.build());
     }
 
     private void createSyncChannel(NotificationManager nm) {
@@ -261,8 +458,6 @@ public class AdaptiveAlarmManager {
             int min = Integer.parseInt(parts[1]);
 
             Calendar cal = Calendar.getInstance();
-            int currentHour = cal.get(Calendar.HOUR_OF_DAY);
-            int currentMin = cal.get(Calendar.MINUTE);
 
             cal.set(Calendar.HOUR_OF_DAY, hour);
             cal.set(Calendar.MINUTE, min);
@@ -285,4 +480,3 @@ public class AdaptiveAlarmManager {
         }
     }
 }
-

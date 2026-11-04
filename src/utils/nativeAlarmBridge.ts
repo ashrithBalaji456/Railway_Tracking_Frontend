@@ -12,7 +12,9 @@ export interface NativeAlarmPluginInterface {
     triggerAtMillis: number;
     seconds: number;
   }>;
-  cancelAlarm(): Promise<{ cancelled: boolean }>;
+  cancelAlarm(options?: { trainNumber?: string; stationCode?: string }): Promise<{ cancelled: boolean }>;
+  cancelAdaptiveStationAlarm(options: { trainNumber: string; stationCode: string }): Promise<{ cancelled: boolean }>;
+  getActiveAlarms(): Promise<{ alarms: any[] }>;
   armAdaptiveStationAlarm(options: {
     trainNumber: string;
     stationCode: string;
@@ -34,6 +36,7 @@ export interface NativeAlarmPluginInterface {
   isAlarmPlaying(): Promise<{ isPlaying: boolean }>;
   isAlarmRinging(): Promise<{
     isRinging: boolean;
+    alarmId?: string;
     trainNumber?: string;
     trainName?: string;
     stationName?: string;
@@ -41,7 +44,7 @@ export interface NativeAlarmPluginInterface {
     triggerMinutes?: number;
     expectedArrival?: string;
   }>;
-  snoozeAlarm(options?: { minutes?: number }): Promise<{
+  snoozeAlarm(options?: { minutes?: number; trainNumber?: string; stationCode?: string }): Promise<{
     snoozed: boolean;
     snoozeMinutes: number;
     nextTriggerMillis: number;
@@ -100,15 +103,38 @@ export const scheduleNativeAlarm = async (
   return null;
 };
 
-export const cancelNativeAlarm = async () => {
+export const cancelNativeAlarm = async (options?: { trainNumber?: string; stationCode?: string }) => {
   if (isNativeApp()) {
     try {
-      return await callNative<{ cancelled: boolean }>('cancelAlarm');
+      return await callNative<{ cancelled: boolean }>('cancelAlarm', options || {});
     } catch (e) {
       console.warn('Could not cancel native alarm:', e);
     }
   }
   return null;
+};
+
+export const cancelAdaptiveStationAlarm = async (trainNumber: string, stationCode: string) => {
+  if (isNativeApp()) {
+    try {
+      return await callNative<{ cancelled: boolean }>('cancelAdaptiveStationAlarm', { trainNumber, stationCode });
+    } catch (e) {
+      console.warn('Could not cancel adaptive station alarm:', e);
+    }
+  }
+  return null;
+};
+
+export const getNativeActiveAlarms = async () => {
+  if (isNativeApp()) {
+    try {
+      const res = await callNative<{ alarms: any[] }>('getActiveAlarms');
+      return res?.alarms || [];
+    } catch (e) {
+      console.warn('Could not retrieve active native alarms:', e);
+    }
+  }
+  return [];
 };
 
 export const armAdaptiveNativeAlarm = async (options: {
@@ -165,14 +191,14 @@ export const checkNativeAlarmRinging = async () => {
   return { isRinging: false };
 };
 
-export const snoozeNativeAlarm = async (minutes: number = 5) => {
+export const snoozeNativeAlarm = async (minutes: number = 5, options?: { trainNumber?: string; stationCode?: string }) => {
   if (isNativeApp()) {
     try {
       return await callNative<{
         snoozed: boolean;
         snoozeMinutes: number;
         nextTriggerMillis: number;
-      }>('snoozeAlarm', { minutes });
+      }>('snoozeAlarm', { minutes, ...options });
     } catch (e) {
       console.warn('Could not snooze native alarm:', e);
     }

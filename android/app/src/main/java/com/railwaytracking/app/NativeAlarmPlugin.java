@@ -166,10 +166,49 @@ public class NativeAlarmPlugin extends Plugin {
     @PluginMethod
     public void cancelAlarm(PluginCall call) {
         Context context = getContext();
-        AdaptiveAlarmManager.getInstance().cancelAlarm(context);
+        String trainNumber = call.getString("trainNumber");
+        String stationCode = call.getString("stationCode");
+
+        if (trainNumber != null && stationCode != null) {
+            AdaptiveAlarmManager.getInstance().cancelAlarm(context, trainNumber, stationCode);
+        } else {
+            AdaptiveAlarmManager.getInstance().cancelAllAlarms(context);
+        }
 
         JSObject ret = new JSObject();
         ret.put("cancelled", true);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void cancelAdaptiveStationAlarm(PluginCall call) {
+        Context context = getContext();
+        String trainNumber = call.getString("trainNumber");
+        String stationCode = call.getString("stationCode");
+
+        if (trainNumber != null && stationCode != null) {
+            AdaptiveAlarmManager.getInstance().cancelAlarm(context, trainNumber, stationCode);
+        } else {
+            AdaptiveAlarmManager.getInstance().cancelAllAlarms(context);
+        }
+
+        JSObject ret = new JSObject();
+        ret.put("cancelled", true);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void getActiveAlarms(PluginCall call) {
+        Context context = getContext();
+        java.util.List<org.json.JSONObject> alarms = AdaptiveAlarmManager.getInstance().getActiveAlarms(context);
+        com.getcapacitor.JSArray array = new com.getcapacitor.JSArray();
+        for (org.json.JSONObject obj : alarms) {
+            try {
+                array.put(new JSObject(obj.toString()));
+            } catch (Exception ignored) {}
+        }
+        JSObject ret = new JSObject();
+        ret.put("alarms", array);
         call.resolve(ret);
     }
 
@@ -253,13 +292,21 @@ public class NativeAlarmPlugin extends Plugin {
         Context context = getContext();
         android.content.SharedPreferences prefs = context.getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE);
 
+        String ringingId = prefs.getString("ringing_alarm_id", "");
+        String trainNumber = prefs.getString("ringing_train_number", prefs.getString("trainNumber", ""));
+        String trainName = prefs.getString("trainName", "");
+        String stationName = prefs.getString("ringing_station_name", prefs.getString("stationName", ""));
+        String stationCode = prefs.getString("ringing_station_code", prefs.getString("stationCode", ""));
+        int triggerMinutes = prefs.getInt("ringing_trigger_minutes", prefs.getInt("triggerMinutes", 30));
+
         JSObject ret = new JSObject();
         ret.put("isRinging", isPlaying);
-        ret.put("trainNumber", prefs.getString("trainNumber", ""));
-        ret.put("trainName", prefs.getString("trainName", ""));
-        ret.put("stationName", prefs.getString("stationName", ""));
-        ret.put("stationCode", prefs.getString("stationCode", ""));
-        ret.put("triggerMinutes", prefs.getInt("triggerMinutes", 30));
+        ret.put("alarmId", ringingId);
+        ret.put("trainNumber", trainNumber);
+        ret.put("trainName", trainName);
+        ret.put("stationName", stationName);
+        ret.put("stationCode", stationCode);
+        ret.put("triggerMinutes", triggerMinutes);
         ret.put("expectedArrival", prefs.getString("expectedArrival", ""));
         call.resolve(ret);
     }
@@ -267,6 +314,8 @@ public class NativeAlarmPlugin extends Plugin {
     @PluginMethod
     public void snoozeAlarm(PluginCall call) {
         int snoozeMinutes = call.getInt("minutes", 5);
+        String trainNumber = call.getString("trainNumber");
+        String stationCode = call.getString("stationCode");
         Context context = getContext();
 
         // 1. Stop current loud audio & foreground service
@@ -282,14 +331,21 @@ public class NativeAlarmPlugin extends Plugin {
             nm.cancel(AlarmForegroundService.NOTIFICATION_ID);
         }
 
-        // 2. Schedule re-trigger in 5 minutes
-        long nextTriggerMillis = System.currentTimeMillis() + (snoozeMinutes * 60 * 1000L);
         android.content.SharedPreferences prefs = context.getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE);
-        String stationName = prefs.getString("stationName", "Station");
-        String trainNumber = prefs.getString("trainNumber", "");
-        AdaptiveAlarmManager.getInstance().scheduleAlarmClock(context, nextTriggerMillis, stationName, trainNumber, snoozeMinutes);
+        if (trainNumber == null || trainNumber.isEmpty()) {
+            trainNumber = prefs.getString("ringing_train_number", prefs.getString("trainNumber", ""));
+        }
+        if (stationCode == null || stationCode.isEmpty()) {
+            stationCode = prefs.getString("ringing_station_code", prefs.getString("stationCode", ""));
+        }
+        String stationName = prefs.getString("ringing_station_name", prefs.getString("stationName", "Station"));
+        String trainName = prefs.getString("trainName", "Train " + trainNumber);
 
-        Log.d(TAG, "Alarm snoozed for " + snoozeMinutes + " minutes; will re-ring at " + new java.util.Date(nextTriggerMillis));
+        // 2. Schedule re-trigger in snoozeMinutes minutes
+        long nextTriggerMillis = System.currentTimeMillis() + (snoozeMinutes * 60 * 1000L);
+        AdaptiveAlarmManager.getInstance().scheduleAlarmClock(context, nextTriggerMillis, trainNumber, trainName, stationCode, stationName, snoozeMinutes);
+
+        Log.d(TAG, "Alarm snoozed for [" + trainNumber + "_" + stationCode + "] for " + snoozeMinutes + " minutes; will re-ring at " + new java.util.Date(nextTriggerMillis));
 
         JSObject ret = new JSObject();
         ret.put("snoozed", true);

@@ -22,7 +22,7 @@ import CustomSoundManagerModal from './CustomSoundManagerModal';
 import LockScreenTestAlarmModal from './LockScreenTestAlarmModal';
 import alarmAudioService, { type AlarmToneType } from '../utils/alarmAudioService';
 import customAlarmSoundService from '../utils/customAlarmSoundService';
-import { cancelNativeAlarm } from '../utils/nativeAlarmBridge';
+import multiAlarmManager, { type WakeUpAlarmConfig } from '../utils/multiAlarmManager';
 
 interface NotificationPreferencesModalProps {
   isOpen: boolean;
@@ -39,20 +39,6 @@ interface TravelReminderItem {
   createdAt: string;
 }
 
-interface ArmedAlarmState {
-  trainNumber: string;
-  stationCode: string;
-  stationName: string;
-  targetArrivalTime?: string;
-  thresholdMinutes?: number;
-  triggerMinutes?: number;
-  tone?: string;
-  toneType?: string;
-  customSoundId?: string;
-  customSoundName?: string;
-  armedAt?: string;
-}
-
 export default function NotificationPreferencesModal({ isOpen, onClose }: NotificationPreferencesModalProps) {
   const [activeTab, setActiveTab] = useState<'preferences' | 'activeReminders'>('preferences');
 
@@ -64,10 +50,10 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
   const [travelReminderEnabled, setTravelReminderEnabled] = useState(true);
   const [stationWakeUpAlarmEnabled, setStationWakeUpAlarmEnabled] = useState(true);
 
-  // Reminders & Alarms state
+  // Reminders & Alarms state (Multi-Alarm Enabled)
   const [reminders, setReminders] = useState<TravelReminderItem[]>([]);
   const [remindersLoading, setRemindersLoading] = useState(false);
-  const [armedAlarm, setArmedAlarm] = useState<ArmedAlarmState | null>(null);
+  const [armedAlarms, setArmedAlarms] = useState<WakeUpAlarmConfig[]>(() => multiAlarmManager.getArmedAlarms());
 
   // Action status
   const [saveLoading, setSaveLoading] = useState(false);
@@ -89,6 +75,16 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
   }, []);
   const [errorMessage, setErrorMessage] = useState('');
 
+  useEffect(() => {
+    const handleAlarmsUpdate = () => {
+      setArmedAlarms(multiAlarmManager.getArmedAlarms());
+    };
+    window.addEventListener('rail-alarms-updated', handleAlarmsUpdate);
+    return () => {
+      window.removeEventListener('rail-alarms-updated', handleAlarmsUpdate);
+    };
+  }, []);
+
   // Initial load from localStorage & API
   useEffect(() => {
     if (!isOpen) return;
@@ -98,7 +94,7 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
     if (storedEmail) setEmail(storedEmail);
     if (storedPhone) setWhatsappPhone(storedPhone);
 
-    // Read armed alarm from localStorage
+    // Read armed alarms
     checkArmedAlarm();
 
     // Fetch preferences from backend if email is available
@@ -109,16 +105,7 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
   }, [isOpen]);
 
   const checkArmedAlarm = () => {
-    try {
-      const rawAlarm = localStorage.getItem('rail_armed_alarm');
-      if (rawAlarm) {
-        setArmedAlarm(JSON.parse(rawAlarm));
-      } else {
-        setArmedAlarm(null);
-      }
-    } catch {
-      setArmedAlarm(null);
-    }
+    setArmedAlarms(multiAlarmManager.getArmedAlarms());
   };
 
   const fetchPreferences = async (userEmail: string) => {
@@ -207,12 +194,17 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
     }
   };
 
-  const handleDisarmAlarm = () => {
-    if (window.confirm('Are you sure you want to disarm your station wake-up alarm?')) {
-      localStorage.removeItem('rail_armed_alarm');
-      alarmAudioService.stopAlarm();
-      cancelNativeAlarm();
-      setArmedAlarm(null);
+  const handleDisarmAlarm = async (trainNumber: string, stationCode: string) => {
+    if (window.confirm(`Disarm station wake-up alarm for ${stationCode} (Train ${trainNumber})?`)) {
+      await multiAlarmManager.disarmAlarm(trainNumber, stationCode);
+      setArmedAlarms(multiAlarmManager.getArmedAlarms());
+    }
+  };
+
+  const handleDisarmAllAlarms = async () => {
+    if (window.confirm('Disarm all active station wake-up alarms?')) {
+      await multiAlarmManager.disarmAllAlarms();
+      setArmedAlarms([]);
     }
   };
 
@@ -274,8 +266,8 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
           >
             <Clock className="w-4 h-4" />
             Active Reminders & Alarms
-            {(reminders.length > 0 || armedAlarm) && (
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            {(reminders.length > 0 || armedAlarms.length > 0) && (
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
             )}
           </button>
         </div>
@@ -596,70 +588,95 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
           ) : (
             /* Active Reminders & Alarms Tab */
             <div className="space-y-6">
-              {/* Armed Station Wake-Up Alarm Section */}
+              {/* Armed Station Wake-Up Alarm Section (Multi-Alarm Enabled) */}
               <div className="bg-slate-950/40 border border-slate-800/80 rounded-2xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-400">
                     <Volume2 className="w-4 h-4" />
-                    <span>Station Approaching Night Guardian</span>
+                    <span>Station Approaching Night Guardian ({armedAlarms.length})</span>
                   </div>
-                  {armedAlarm ? (
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse">
-                      Armed & Monitoring
-                    </span>
+                  {armedAlarms.length > 0 ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse">
+                        {armedAlarms.length} Armed & Monitoring
+                      </span>
+                      {armedAlarms.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={handleDisarmAllAlarms}
+                          className="text-[10px] text-rose-400 hover:text-rose-300 font-bold underline cursor-pointer"
+                        >
+                          Disarm All
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <span className="text-[10px] text-slate-500">Standby</span>
                   )}
                 </div>
 
-                {armedAlarm ? (
-                  <div className="p-3.5 rounded-xl bg-rose-950/20 border border-rose-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="space-y-1.5 min-w-0 flex-1">
-                      <div className="text-xs font-bold text-white flex items-center gap-1.5 flex-wrap">
-                        <Train className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                        <span>Train {armedAlarm.trainNumber}</span>
-                        <span className="text-slate-400">• Approaching</span>
-                        <span className="text-rose-300 font-mono font-bold bg-rose-950/60 px-1.5 py-0.5 rounded border border-rose-800/40">{armedAlarm.stationCode}</span>
-                        {armedAlarm.stationName && (
-                          <span className="text-slate-300 text-[11px]">({armedAlarm.stationName})</span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <span>Trigger: <strong>{(() => {
-                          const m = armedAlarm.triggerMinutes || armedAlarm.thresholdMinutes || 30;
-                          return m >= 60 ? (m % 60 === 0 ? `${m / 60} hour${m > 60 ? 's' : ''}` : `${(m / 60).toFixed(1)} hours`) : `${m} mins`;
-                        })()}</strong> prior</span>
-                        <span>Tone: <strong className="text-slate-200">
-                          {armedAlarm.customSoundName
-                            ? `🎵 ${armedAlarm.customSoundName} (Default)`
-                            : (armedAlarm.toneType === 'custom'
-                                ? (localStorage.getItem('rail_default_custom_sound_name') ? `🎵 ${localStorage.getItem('rail_default_custom_sound_name')} (Default)` : '🎵 Custom Song (Default)')
-                                : (localStorage.getItem('rail_default_custom_sound_name')
-                                    ? `🎵 ${localStorage.getItem('rail_default_custom_sound_name')} (Default)`
-                                    : (armedAlarm.toneType || armedAlarm.tone || 'digital_clock').replace(/_/g, ' ')
-                                  )
-                              )
-                          }
-                        </strong></span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center pt-1 sm:pt-0">
-                      <button
-                        type="button"
-                        onClick={handleDisarmAlarm}
-                        className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-rose-600/30 transition-all cursor-pointer active:scale-95"
+                {armedAlarms.length > 0 ? (
+                  <div className="space-y-2.5">
+                    {armedAlarms.map((alarm) => (
+                      <div
+                        key={`${alarm.trainNumber}_${alarm.stationCode}`}
+                        className="p-3.5 rounded-xl bg-rose-950/20 border border-rose-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Disarm</span>
-                      </button>
-                    </div>
+                        <div className="space-y-1.5 min-w-0 flex-1">
+                          <div className="text-xs font-bold text-white flex items-center gap-1.5 flex-wrap">
+                            <Train className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                            <span>Train {alarm.trainNumber}</span>
+                            {alarm.trainName && <span className="text-slate-400">• {alarm.trainName}</span>}
+                            <span className="text-slate-400">• Approaching</span>
+                            <span className="text-rose-300 font-mono font-bold bg-rose-950/60 px-1.5 py-0.5 rounded border border-rose-800/40">
+                              {alarm.stationCode}
+                            </span>
+                            {alarm.stationName && (
+                              <span className="text-slate-300 text-[11px]">({alarm.stationName})</span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span>
+                              Trigger: <strong>{(() => {
+                                const m = alarm.triggerMinutes || 30;
+                                return m >= 60 ? (m % 60 === 0 ? `${m / 60} hour${m > 60 ? 's' : ''}` : `${(m / 60).toFixed(1)} hours`) : `${m} mins`;
+                              })()}</strong> prior
+                            </span>
+                            <span>
+                              Tone: <strong className="text-slate-200">
+                                {alarm.customSoundName
+                                  ? `🎵 ${alarm.customSoundName} (Default)`
+                                  : (alarm.toneType === 'custom'
+                                      ? (localStorage.getItem('rail_default_custom_sound_name') ? `🎵 ${localStorage.getItem('rail_default_custom_sound_name')} (Default)` : '🎵 Custom Song (Default)')
+                                      : (localStorage.getItem('rail_default_custom_sound_name')
+                                          ? `🎵 ${localStorage.getItem('rail_default_custom_sound_name')} (Default)`
+                                          : (alarm.toneType || 'digital_clock').replace(/_/g, ' ')
+                                        )
+                                    )
+                                }
+                              </strong>
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center pt-1 sm:pt-0">
+                          <button
+                            type="button"
+                            onClick={() => handleDisarmAlarm(alarm.trainNumber, alarm.stationCode)}
+                            className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-rose-600/30 transition-all cursor-pointer active:scale-95"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Disarm</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <div className="p-4 rounded-xl border border-dashed border-slate-800 text-center">
-                    <p className="text-xs text-slate-400">No station wake-up alarm is currently armed.</p>
+                    <p className="text-xs text-slate-400">No station wake-up alarms are currently armed.</p>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      You can set an alarm on any upcoming station from the <strong>Live Train Tracking</strong> screen.
+                      You can set multiple alarms on any upcoming stations from the <strong>Live Train Tracking</strong> screen.
                     </p>
                   </div>
                 )}

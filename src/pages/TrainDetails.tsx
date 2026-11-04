@@ -12,10 +12,10 @@ import { searchHistoryService } from '../services/searchHistoryService';
 import { getStationGastronomyBadge, type StationDelicacy } from '../data/stationGastronomy';
 import { getDepartedWindowInfo, formatDelayDisplay } from '../utils/liveStatusUtils';
 import StationWakeUpAlarmModal, { type WakeUpAlarmConfig } from '../components/StationWakeUpAlarmModal';
+import multiAlarmManager from '../utils/multiAlarmManager';
 import RingingAlarmOverlay from '../components/RingingAlarmOverlay';
 import { alarmAudioService, type AlarmToneType } from '../utils/alarmAudioService';
 import customAlarmSoundService from '../utils/customAlarmSoundService';
-import { armAdaptiveNativeAlarm, cancelNativeAlarm } from '../utils/nativeAlarmBridge';
 import whatsappShareService from '../utils/whatsappShareService';
 import webNotificationService from '../utils/webNotificationService';
 
@@ -250,20 +250,22 @@ export default function TrainDetails() {
   const [alertMinutes, setAlertMinutes] = useState(15);
   const [showAlertModal, setShowAlertModal] = useState(false);
 
-  // Station Approaching & Wake-Up Alarm State
+  // Station Approaching & Wake-Up Alarm State (Multi-Alarm Enabled)
   const [selectedAlarmStation, setSelectedAlarmStation] = useState<any | null>(null);
-  const [armedAlarmConfig, setArmedAlarmConfig] = useState<WakeUpAlarmConfig | null>(() => {
-    try {
-      const stored = localStorage.getItem('rail_armed_alarm');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.trainNumber === trainNumber) return parsed;
-      }
-    } catch (e) {
-      // ignore
-    }
-    return null;
+  const [armedAlarms, setArmedAlarms] = useState<WakeUpAlarmConfig[]>(() => {
+    return multiAlarmManager.getArmedAlarmsForTrain(trainNumber || '');
   });
+
+  useEffect(() => {
+    const handleAlarmsUpdated = () => {
+      setArmedAlarms(multiAlarmManager.getArmedAlarmsForTrain(trainNumber || ''));
+    };
+    window.addEventListener('rail-alarms-updated', handleAlarmsUpdated);
+    handleAlarmsUpdated();
+    return () => {
+      window.removeEventListener('rail-alarms-updated', handleAlarmsUpdated);
+    };
+  }, [trainNumber]);
   const [isAlarmRinging, setIsAlarmRinging] = useState(false);
   const [ringingAlarmData, setRingingAlarmData] = useState<any | null>(null);
   const hasTriggeredAlarmRef = useRef<boolean>(false);
@@ -372,148 +374,136 @@ export default function TrainDetails() {
     return liveStatus.nextStationCode && !isSkippedStation(liveStatus.nextStationCode) ? liveStatus.nextStationCode.toUpperCase() : null;
   })();
 
-  // Monitor train position against armed wake-up alarm
+  // Monitor train position against all armed wake-up alarms for this train
   useEffect(() => {
-    if (!armedAlarmConfig || isAlarmRinging || hasTriggeredAlarmRef.current) return;
+    if (!armedAlarms.length || isAlarmRinging || hasTriggeredAlarmRef.current) return;
 
-    const targetCode = armedAlarmConfig.stationCode.toUpperCase();
-    const liveStop = liveStatus?.stations?.find(
-      (ls: any) => ls.stationCode?.toUpperCase() === targetCode
-    );
-    const routeStop = route?.stations?.find(
-      (rs: any) => rs.stationCode?.toUpperCase() === targetCode
-    );
+    for (const alarmCfg of armedAlarms) {
+      const targetCode = alarmCfg.stationCode.toUpperCase();
+      const liveStop = liveStatus?.stations?.find(
+        (ls: any) => ls.stationCode?.toUpperCase() === targetCode
+      );
+      const routeStop = route?.stations?.find(
+        (rs: any) => rs.stationCode?.toUpperCase() === targetCode
+      );
 
-    if (!liveStop && !routeStop) return;
+      if (!liveStop && !routeStop) continue;
 
-    let shouldTrigger = false;
-    let computedEta = armedAlarmConfig.triggerMinutes;
+      let shouldTrigger = false;
+      let computedEta = alarmCfg.triggerMinutes;
 
-    // 1. Dynamic live ETA calculation (handles delay, slack time, and speed variations automatically)
-    let diffMinutes: number | null = null;
-    const expArr = liveStop?.expectedArrival || routeStop?.arrivalTime;
-    if (expArr) {
-      try {
-        const [h, m] = expArr.split(':').map(Number);
-        const now = new Date();
-        const targetTime = new Date(now);
-        targetTime.setHours(h, m, 0, 0);
-        // Midnight rollover guard: If parsed arrival time is earlier than current time today,
-        // it means the train is arriving across midnight on the next calendar day.
-        if (targetTime.getTime() <= now.getTime()) {
-          targetTime.setDate(targetTime.getDate() + 1);
+      // 1. Dynamic live ETA calculation (handles delay, slack time, and speed variations automatically)
+      let diffMinutes: number | null = null;
+      const expArr = liveStop?.expectedArrival || routeStop?.arrivalTime;
+      if (expArr) {
+        try {
+          const [h, m] = expArr.split(':').map(Number);
+          const now = new Date();
+          const targetTime = new Date(now);
+          targetTime.setHours(h, m, 0, 0);
+          if (targetTime.getTime() <= now.getTime()) {
+            targetTime.setDate(targetTime.getDate() + 1);
+          }
+          diffMinutes = Math.round((targetTime.getTime() - now.getTime()) / (1000 * 60));
+          if (diffMinutes > 0 && diffMinutes <= alarmCfg.triggerMinutes) {
+            shouldTrigger = true;
+            computedEta = diffMinutes;
+          }
+        } catch (e) {
+          // ignore
         }
-        diffMinutes = Math.round((targetTime.getTime() - now.getTime()) / (1000 * 60));
-        if (diffMinutes > 0 && diffMinutes <= armedAlarmConfig.triggerMinutes) {
-          shouldTrigger = true;
-          computedEta = diffMinutes;
-        }
-      } catch (e) {
-        // ignore
       }
-    }
 
-    // 2. Physical arrival at target station
-    if (liveStop) {
-      const statusUpper = (liveStop.status || '').toUpperCase();
-      if (statusUpper === 'AT_STATION' || statusUpper === 'ARRIVED') {
-        shouldTrigger = true;
-      }
-    }
-
-    // 3. Station sequence & proximity guard:
-    // Indian Railways timetable routes only list scheduled commercial stopping stations.
-    // In long-distance superfast/Rajdhani runs, trains may travel 200-450 km non-stop between halts.
-    // We must NEVER fire "1 stop away" blindly if the train is still hours or tens of kilometers away!
-    const currentBubbleStation = route?.stations?.find(
-      (st: any) => st.stationCode?.toUpperCase() === bubbleStationCode
-    );
-    const currentBubbleSeq = currentBubbleStation?.sequenceNumber;
-    const targetSeq = (routeStop || liveStop)?.sequenceNumber;
-
-    const currentDist = currentBubbleStation?.distance;
-    const targetDist = routeStop?.distance ?? liveStop?.distance;
-    const distanceRemaining = (currentDist != null && targetDist != null) ? (targetDist - currentDist) : null;
-
-    if (currentBubbleSeq != null && targetSeq != null) {
-      const stopsDifference = targetSeq - currentBubbleSeq;
-      if (stopsDifference === 0) {
-        // Train is already at the target station sequence
-        shouldTrigger = true;
-      } else if (stopsDifference === 1) {
-        // "1 stop away":
-        // Prioritize user's requested time buffer (e.g. 30 mins) so passenger is never rushed:
-        // 1. Primary: Dynamic countdown reaches user's threshold (diffMinutes <= triggerMinutes, e.g. <= 30m)
-        // 2. Telemetry Fallback: If time ETA is missing from feed, estimate distance using ~55 km/h train approach speed
-        //    (e.g., 30 mins -> ~25 km buffer, 45 mins -> ~38 km buffer)
-        // 3. Emergency Parachute: Train physically entering outer yard signals (<= 5 km)
-        // 4. Zero Telemetry Fallback: Neither time nor distance exists in the feed
-        const isTimeTriggered = diffMinutes != null && diffMinutes > 0 && diffMinutes <= armedAlarmConfig.triggerMinutes;
-        
-        // Approximate ~0.85 km per minute of advance warning (at 50-60 km/h approach speed)
-        const proportionalDistanceKm = Math.max(10, Math.round(armedAlarmConfig.triggerMinutes * 0.85));
-        const isDistanceProportionalTriggered = diffMinutes == null && distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= proportionalDistanceKm;
-        
-        const isEmergencyYardParachute = distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= 5;
-        const noTelemetryAvailable = distanceRemaining == null && diffMinutes == null;
-
-        if (isTimeTriggered || isDistanceProportionalTriggered || isEmergencyYardParachute || noTelemetryAvailable) {
+      // 2. Physical arrival at target station
+      if (liveStop) {
+        const statusUpper = (liveStop.status || '').toUpperCase();
+        if (statusUpper === 'AT_STATION' || statusUpper === 'ARRIVED') {
           shouldTrigger = true;
         }
       }
-    }
 
-    if (shouldTrigger) {
-      hasTriggeredAlarmRef.current = true;
-      const alarmPayload = {
-        stationCode: armedAlarmConfig.stationCode,
-        stationName: armedAlarmConfig.stationName,
-        etaMinutes: computedEta,
-        distanceKm: routeStop?.distance,
-        platform: liveStop?.platform || routeStop?.platform
-      };
+      // 3. Station sequence & proximity guard
+      const currentBubbleStation = route?.stations?.find(
+        (st: any) => st.stationCode?.toUpperCase() === bubbleStationCode
+      );
+      const currentBubbleSeq = currentBubbleStation?.sequenceNumber;
+      const targetSeq = (routeStop || liveStop)?.sequenceNumber;
 
-      setRingingAlarmData(alarmPayload);
-      setIsAlarmRinging(true);
+      const currentDist = currentBubbleStation?.distance;
+      const targetDist = routeStop?.distance ?? liveStop?.distance;
+      const distanceRemaining = (currentDist != null && targetDist != null) ? (targetDist - currentDist) : null;
 
-      customAlarmSoundService.getDefaultSound().then(async (defSound) => {
-        let customUrl: string | undefined = undefined;
-        if (defSound) {
-          try {
-            customUrl = (await customAlarmSoundService.getSoundBlobUrl(defSound.id)) || undefined;
-          } catch (e) {}
+      if (currentBubbleSeq != null && targetSeq != null) {
+        const stopsDifference = targetSeq - currentBubbleSeq;
+        if (stopsDifference === 0) {
+          shouldTrigger = true;
+        } else if (stopsDifference === 1) {
+          const isTimeTriggered = diffMinutes != null && diffMinutes > 0 && diffMinutes <= alarmCfg.triggerMinutes;
+          const proportionalDistanceKm = Math.max(10, Math.round(alarmCfg.triggerMinutes * 0.85));
+          const isDistanceProportionalTriggered = diffMinutes == null && distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= proportionalDistanceKm;
+          const isEmergencyYardParachute = distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= 5;
+          const noTelemetryAvailable = distanceRemaining == null && diffMinutes == null;
+
+          if (isTimeTriggered || isDistanceProportionalTriggered || isEmergencyYardParachute || noTelemetryAvailable) {
+            shouldTrigger = true;
+          }
         }
-        alarmAudioService.startContinuousAlarm({
-          toneType: armedAlarmConfig.toneType === 'custom' ? undefined : (armedAlarmConfig.toneType as AlarmToneType),
-          customSoundUrl: customUrl,
-          customSoundName: armedAlarmConfig.customSoundName || defSound?.name,
-          trainNumber: trainNumber || train?.trainNumber,
-          stationName: armedAlarmConfig.stationName,
-          etaMinutes: computedEta
-        });
-      }).catch(() => {
-        alarmAudioService.startContinuousAlarm({
-          toneType: armedAlarmConfig.toneType === 'custom' ? 'digital_clock' : (armedAlarmConfig.toneType as AlarmToneType),
-          trainNumber: trainNumber || train?.trainNumber,
-          stationName: armedAlarmConfig.stationName,
-          etaMinutes: computedEta
-        });
-      });
+      }
 
-      if (armedAlarmConfig.backupEmail) {
-        api.post('/api/v1/alarm/approaching', {
-          email: armedAlarmConfig.backupEmail,
-          trainNumber: trainNumber || train?.trainNumber,
-          trainName: train?.trainName,
-          stationCode: armedAlarmConfig.stationCode,
-          stationName: armedAlarmConfig.stationName,
+      if (shouldTrigger) {
+        hasTriggeredAlarmRef.current = true;
+        const alarmPayload = {
+          stationCode: alarmCfg.stationCode,
+          stationName: alarmCfg.stationName,
           etaMinutes: computedEta,
           distanceKm: routeStop?.distance,
           platform: liveStop?.platform || routeStop?.platform
-        }).catch((err) => console.warn('Failed to send backup alarm email:', err));
+        };
+
+        setRingingAlarmData(alarmPayload);
+        setIsAlarmRinging(true);
+
+        customAlarmSoundService.getDefaultSound().then(async (defSound) => {
+          let customUrl: string | undefined = undefined;
+          if (defSound) {
+            try {
+              customUrl = (await customAlarmSoundService.getSoundBlobUrl(defSound.id)) || undefined;
+            } catch (e) {}
+          }
+          alarmAudioService.startContinuousAlarm({
+            toneType: alarmCfg.toneType === 'custom' ? undefined : (alarmCfg.toneType as AlarmToneType),
+            customSoundUrl: customUrl,
+            customSoundName: alarmCfg.customSoundName || defSound?.name,
+            trainNumber: trainNumber || train?.trainNumber,
+            stationName: alarmCfg.stationName,
+            etaMinutes: computedEta
+          });
+        }).catch(() => {
+          alarmAudioService.startContinuousAlarm({
+            toneType: alarmCfg.toneType === 'custom' ? 'digital_clock' : (alarmCfg.toneType as AlarmToneType),
+            trainNumber: trainNumber || train?.trainNumber,
+            stationName: alarmCfg.stationName,
+            etaMinutes: computedEta
+          });
+        });
+
+        if (alarmCfg.backupEmail) {
+          api.post('/api/v1/alarm/approaching', {
+            email: alarmCfg.backupEmail,
+            trainNumber: trainNumber || train?.trainNumber,
+            trainName: train?.trainName,
+            stationCode: alarmCfg.stationCode,
+            stationName: alarmCfg.stationName,
+            etaMinutes: computedEta,
+            distanceKm: routeStop?.distance,
+            platform: liveStop?.platform || routeStop?.platform
+          }).catch((err) => console.warn('Failed to send backup alarm email:', err));
+        }
+
+        break;
       }
     }
-  }, [liveStatus, bubbleStationCode, armedAlarmConfig, isAlarmRinging, route, trainNumber, train]);
+  }, [liveStatus, bubbleStationCode, armedAlarms, isAlarmRinging, route, trainNumber, train]);
 
   const disruptionBannerText = (() => {
     if (!liveStatus) return '';
@@ -3004,15 +2994,15 @@ export default function TrainDetails() {
                                     platform: liveStop?.platform || s.platform
                                   });
                                 }}
-                                title={armedAlarmConfig?.stationCode?.toUpperCase() === s.stationCode?.toUpperCase() ? "Wake-up alarm armed for this station! Tap to manage." : "Set night travel wake-up alarm"}
+                                title={armedAlarms.some(a => a.stationCode?.toUpperCase() === s.stationCode?.toUpperCase()) ? "Wake-up alarm armed for this station! Tap to manage or disarm." : "Set night travel wake-up alarm"}
                                 className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] sm:text-[9px] font-bold border transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95 ${
-                                  armedAlarmConfig?.stationCode?.toUpperCase() === s.stationCode?.toUpperCase()
+                                  armedAlarms.some(a => a.stationCode?.toUpperCase() === s.stationCode?.toUpperCase())
                                     ? 'bg-amber-500/25 border-amber-500 text-amber-300 animate-pulse shadow-amber-500/20'
                                     : 'bg-slate-900/90 border-slate-700/80 text-slate-400 hover:text-amber-300 hover:border-amber-500/40'
                                 }`}
                               >
-                                <Bell className={`w-2.5 h-2.5 ${armedAlarmConfig?.stationCode?.toUpperCase() === s.stationCode?.toUpperCase() ? 'fill-amber-400 text-amber-400' : ''}`} />
-                                <span>{armedAlarmConfig?.stationCode?.toUpperCase() === s.stationCode?.toUpperCase() ? 'Alarm Armed' : 'Set Alarm'}</span>
+                                <Bell className={`w-2.5 h-2.5 ${armedAlarms.some(a => a.stationCode?.toUpperCase() === s.stationCode?.toUpperCase()) ? 'fill-amber-400 text-amber-400' : ''}`} />
+                                <span>{armedAlarms.some(a => a.stationCode?.toUpperCase() === s.stationCode?.toUpperCase()) ? 'Alarm Armed' : 'Set Alarm'}</span>
                               </button>
                             )}
                             {isStationCancelled && (
@@ -3685,27 +3675,51 @@ export default function TrainDetails() {
         </div>
       )}
 
-      {/* Armed Alarm Status Floating Pill */}
-      {armedAlarmConfig && !isAlarmRinging && (
-        <div className="fixed top-20 right-4 sm:right-8 z-40 bg-gradient-to-r from-amber-950/90 to-slate-900/90 backdrop-blur-md border border-amber-500/50 px-3.5 py-2 rounded-2xl shadow-xl flex items-center gap-3 animate-fadeIn">
-          <div className="p-1.5 bg-amber-500/20 text-amber-400 rounded-lg animate-pulse">
+      {/* Multi-Alarm Floating Status Pills */}
+      {armedAlarms.length > 0 && !isAlarmRinging && (
+        <div className="fixed top-20 right-4 sm:right-8 z-40 bg-gradient-to-r from-amber-950/95 to-slate-900/95 backdrop-blur-md border border-amber-500/50 p-2.5 sm:px-3.5 sm:py-2 rounded-2xl shadow-xl flex items-center gap-3 animate-fadeIn max-w-[90vw]">
+          <div className="p-1.5 bg-amber-500/20 text-amber-400 rounded-lg animate-pulse shrink-0">
             <Bell className="w-4 h-4 fill-amber-400" />
           </div>
-          <div className="text-left">
-            <div className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">Night Alarm Armed</div>
-            <div className="text-xs text-white font-bold">{armedAlarmConfig.stationName} ({armedAlarmConfig.stationCode})</div>
+          <div className="text-left min-w-0">
+            <div className="text-[10px] text-amber-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <span>Night Alarms ({armedAlarms.length})</span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+              {armedAlarms.map((a) => (
+                <span
+                  key={a.stationCode}
+                  onClick={() => {
+                    const st = route?.stations?.find((rs: any) => rs.stationCode?.toUpperCase() === a.stationCode?.toUpperCase()) || { stationCode: a.stationCode, stationName: a.stationName };
+                    setSelectedAlarmStation(st);
+                  }}
+                  className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 cursor-pointer"
+                  title="Tap to manage alarm for this station"
+                >
+                  <span>{a.stationCode} (~{a.triggerMinutes}m)</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      multiAlarmManager.disarmAlarm(trainNumber || train?.trainNumber || '', a.stationCode);
+                    }}
+                    className="text-slate-400 hover:text-rose-400 ml-0.5"
+                    title="Disarm this station alarm"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
           </div>
           <button
             type="button"
             onClick={() => {
-              alarmAudioService.stopAlarm();
-              cancelNativeAlarm();
-              setArmedAlarmConfig(null);
-              localStorage.removeItem('rail_armed_alarm');
+              multiAlarmManager.disarmAllAlarms();
             }}
-            className="text-[10px] text-slate-400 hover:text-rose-400 font-bold ml-1 cursor-pointer underline"
+            className="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-1 cursor-pointer underline shrink-0"
           >
-            Disarm
+            Disarm All
           </button>
         </div>
       )}
@@ -3718,36 +3732,25 @@ export default function TrainDetails() {
           trainNumber={trainNumber || train?.trainNumber || ''}
           trainName={train?.trainName}
           station={selectedAlarmStation}
-          currentArmedConfig={armedAlarmConfig}
-          onArmAlarm={(cfg) => {
+          currentArmedConfig={multiAlarmManager.getArmedAlarm(trainNumber || train?.trainNumber || '', selectedAlarmStation?.stationCode || '')}
+          onArmAlarm={async (cfg) => {
             const effectiveJourneyDate = selectedJourneyDate || liveStatus?.startDate || '';
-            setArmedAlarmConfig(cfg);
-            localStorage.setItem('rail_armed_alarm', JSON.stringify({
-              ...cfg,
-              trainNumber: trainNumber || train?.trainNumber,
-              journeyDate: effectiveJourneyDate
-            }));
-
             const targetCode = cfg.stationCode.toUpperCase();
             const targetStop = liveStatus?.stations?.find((ls: any) => ls.stationCode?.toUpperCase() === targetCode);
             const routeStop = route?.stations?.find((rs: any) => rs.stationCode?.toUpperCase() === targetCode);
             const expArrival = targetStop?.expectedArrival || targetStop?.arrivalTime || routeStop?.arrivalTime || '';
 
-            armAdaptiveNativeAlarm({
-              trainNumber: trainNumber || train?.trainNumber || '',
-              trainName: train?.trainName,
-              stationCode: cfg.stationCode,
-              stationName: cfg.stationName,
-              triggerMinutes: cfg.triggerMinutes,
+            await multiAlarmManager.armAlarm({
+              ...cfg,
+              trainNumber: cfg.trainNumber || trainNumber || train?.trainNumber || ''
+            }, {
               expectedArrival: expArrival,
-              journeyDate: effectiveJourneyDate
+              journeyDate: effectiveJourneyDate,
+              trainName: train?.trainName
             });
           }}
-          onDisarmAlarm={() => {
-            alarmAudioService.stopAlarm();
-            cancelNativeAlarm();
-            setArmedAlarmConfig(null);
-            localStorage.removeItem('rail_armed_alarm');
+          onDisarmAlarm={async () => {
+            await multiAlarmManager.disarmAlarm(trainNumber || train?.trainNumber || '', selectedAlarmStation.stationCode);
           }}
         />
       )}
@@ -3758,27 +3761,19 @@ export default function TrainDetails() {
           isOpen={isAlarmRinging}
           onDismiss={() => {
             alarmAudioService.stopAlarm();
-            cancelNativeAlarm();
+            if (ringingAlarmData?.stationCode) {
+              multiAlarmManager.disarmAlarm(trainNumber || train?.trainNumber || '', ringingAlarmData.stationCode);
+            } else {
+              multiAlarmManager.disarmAllAlarms();
+            }
             setIsAlarmRinging(false);
-            setArmedAlarmConfig(null);
-            localStorage.removeItem('rail_armed_alarm');
+            setRingingAlarmData(null);
           }}
           onSnooze={() => {
             alarmAudioService.stopAlarm();
             setIsAlarmRinging(false);
-            if (armedAlarmConfig) {
-              const snoozeEta = 5;
-              const snoozedConfig = { ...armedAlarmConfig, triggerMinutes: snoozeEta };
-              setArmedAlarmConfig(snoozedConfig);
-              localStorage.setItem('rail_armed_alarm', JSON.stringify(snoozedConfig));
-              armAdaptiveNativeAlarm({
-                trainNumber: trainNumber || train?.trainNumber || '',
-                trainName: train?.trainName,
-                stationCode: armedAlarmConfig.stationCode,
-                stationName: armedAlarmConfig.stationName,
-                triggerMinutes: snoozeEta,
-                journeyDate: selectedJourneyDate || liveStatus?.startDate || ''
-              }).catch(() => {});
+            if (ringingAlarmData?.stationCode) {
+              multiAlarmManager.snoozeAlarm(trainNumber || train?.trainNumber || '', ringingAlarmData.stationCode, 5);
             }
           }}
           trainNumber={trainNumber || train?.trainNumber || ''}

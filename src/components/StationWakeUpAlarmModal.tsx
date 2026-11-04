@@ -16,6 +16,9 @@ import { alarmAudioService, type AlarmToneType } from '../utils/alarmAudioServic
 import customAlarmSoundService, { type CustomAlarmSound } from '../utils/customAlarmSoundService';
 
 export interface WakeUpAlarmConfig {
+  id?: string;
+  trainNumber?: string;
+  trainName?: string;
   stationCode: string;
   stationName: string;
   triggerMinutes: number;
@@ -23,6 +26,8 @@ export interface WakeUpAlarmConfig {
   customSoundId?: string;
   customSoundName?: string;
   backupEmail?: string;
+  expectedArrival?: string;
+  journeyDate?: string;
   armedAt: string;
 }
 
@@ -120,6 +125,8 @@ export default function StationWakeUpAlarmModal({
 
     const isCustom = selectedSoundMode === 'custom' && !!customSound;
     onArmAlarm({
+      trainNumber,
+      trainName,
       stationCode: station.stationCode,
       stationName: station.stationName,
       triggerMinutes,
@@ -127,6 +134,7 @@ export default function StationWakeUpAlarmModal({
       customSoundId: isCustom ? customSound?.id : undefined,
       customSoundName: isCustom ? customSound?.name : undefined,
       backupEmail: backupEmail.trim() || undefined,
+      expectedArrival: station.expectedArrival,
       armedAt: new Date().toISOString()
     });
     onClose();

@@ -20,9 +20,9 @@ import java.util.concurrent.Executors;
 
 /**
  * Adaptive Sync Receiver:
- * Executes periodically in background (every 15m, or 5m when near station)
+ * Executes periodically in background for each active alarm
  * to check Indian Railways live telemetry. If the train has been delayed
- * or recovered time, it dynamically reschedules the system AlarmClock!
+ * or recovered time, it dynamically reschedules that specific alarm's AlarmClock!
  */
 public class AdaptiveSyncReceiver extends BroadcastReceiver {
 
@@ -34,26 +34,52 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
         Log.d(TAG, "AdaptiveSyncReceiver triggered. Evaluating live train delay in background...");
 
         SharedPreferences prefs = context.getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE);
-        boolean isArmed = prefs.getBoolean("isArmed", false);
-        if (!isArmed) {
-            Log.d(TAG, "Adaptive alarm is not armed. Aborting background sync.");
+        JSONObject alarmsMap = AdaptiveAlarmManager.getAlarmsMap(prefs);
+
+        String intentTrain = intent != null ? intent.getStringExtra("trainNumber") : null;
+        String intentStation = intent != null ? intent.getStringExtra("stationCode") : null;
+
+        JSONObject targetAlarm = null;
+        String alarmId = null;
+
+        if (intentTrain != null && intentStation != null) {
+            alarmId = AdaptiveAlarmManager.buildAlarmId(intentTrain, intentStation);
+            targetAlarm = alarmsMap.optJSONObject(alarmId);
+        }
+
+        if (targetAlarm == null) {
+            // Check legacy fallback
+            if (!prefs.getBoolean("isArmed", false)) {
+                Log.d(TAG, "No adaptive alarms currently active. Aborting background sync.");
+                return;
+            }
+            String legacyTrain = prefs.getString("trainNumber", "");
+            String legacyStation = prefs.getString("stationCode", "");
+            alarmId = AdaptiveAlarmManager.buildAlarmId(legacyTrain, legacyStation);
+            targetAlarm = alarmsMap.optJSONObject(alarmId);
+        }
+
+        if (targetAlarm == null) {
+            Log.d(TAG, "Alarm configuration for ID [" + alarmId + "] not found. Aborting.");
             return;
         }
 
-        final String trainNumber = prefs.getString("trainNumber", "");
-        final String stationCode = prefs.getString("stationCode", "");
-        final String stationName = prefs.getString("stationName", "");
-        final int triggerMinutes = prefs.getInt("triggerMinutes", 30);
-        final String journeyDate = prefs.getString("journeyDate", "");
-        final String backendUrl = prefs.getString("backendUrl", "https://railway-tracking-backend-gwa2.onrender.com");
-        final long currentTargetMillis = prefs.getLong("targetTriggerMillis", 0L);
+        final String finalAlarmId = alarmId;
+        final String trainNumber = targetAlarm.optString("trainNumber", "");
+        final String trainName = targetAlarm.optString("trainName", "Train " + trainNumber);
+        final String stationCode = targetAlarm.optString("stationCode", "");
+        final String stationName = targetAlarm.optString("stationName", stationCode);
+        final int triggerMinutes = targetAlarm.optInt("triggerMinutes", 30);
+        final String journeyDate = targetAlarm.optString("journeyDate", "");
+        final String backendUrl = targetAlarm.optString("backendUrl", "https://railway-tracking-backend-gwa2.onrender.com");
+        final long currentTargetMillis = targetAlarm.optLong("targetTriggerMillis", 0L);
 
         long now = System.currentTimeMillis();
 
         // 1. If target time has already been reached, trigger alarm immediately!
         if (currentTargetMillis > 0 && now >= currentTargetMillis) {
-            Log.d(TAG, "Target trigger time reached! Firing alarm.");
-            triggerAlarmNow(context, stationName, trainNumber, triggerMinutes);
+            Log.d(TAG, "Target trigger time reached for [" + finalAlarmId + "]! Firing alarm.");
+            triggerAlarmNow(context, stationName, trainNumber, stationCode, triggerMinutes);
             return;
         }
 
@@ -80,8 +106,8 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
 
                 int responseCode = conn.getResponseCode();
                 if (responseCode != 200) {
-                    Log.w(TAG, "Live status HTTP failed with code: " + responseCode + ". Retaining existing alarm.");
-                    AdaptiveAlarmManager.getInstance().scheduleNextSync(context, 15 * 60 * 1000L);
+                    Log.w(TAG, "Live status HTTP failed with code: " + responseCode + " for train " + trainNumber + ". Retaining existing alarm.");
+                    AdaptiveAlarmManager.getInstance().scheduleNextSync(context, trainNumber, stationCode, 15 * 60 * 1000L);
                     return;
                 }
 
@@ -97,8 +123,8 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
 
                 JSONObject root = new JSONObject(sb.toString());
                 if (!root.optBoolean("success", false) || !root.has("data")) {
-                    Log.w(TAG, "Backend returned unsuccessful live payload. Retaining existing alarm.");
-                    AdaptiveAlarmManager.getInstance().scheduleNextSync(context, 15 * 60 * 1000L);
+                    Log.w(TAG, "Backend returned unsuccessful live payload for train " + trainNumber + ". Retaining existing alarm.");
+                    AdaptiveAlarmManager.getInstance().scheduleNextSync(context, trainNumber, stationCode, 15 * 60 * 1000L);
                     return;
                 }
 
@@ -128,8 +154,8 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
 
                 // If train has physically arrived, wake user immediately!
                 if (isAtStation) {
-                    Log.d(TAG, "Train physically arrived at " + stationCode + "! Firing alarm immediately.");
-                    triggerAlarmNow(context, stationName, trainNumber, triggerMinutes);
+                    Log.d(TAG, "Train " + trainNumber + " physically arrived at " + stationCode + "! Firing alarm immediately.");
+                    triggerAlarmNow(context, stationName, trainNumber, stationCode, triggerMinutes);
                     return;
                 }
 
@@ -139,20 +165,28 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
 
                     // If delay shift is greater than 3 minutes, reschedule AlarmClock!
                     if (shiftDifference >= (3 * 60 * 1000L)) {
-                        Log.d(TAG, "Delay shift detected (" + (shiftDifference / 60000) + "m). Updating AlarmClock from "
+                        Log.d(TAG, "Delay shift detected for [" + finalAlarmId + "] (" + (shiftDifference / 60000) + "m). Updating AlarmClock from "
                                 + currentTargetMillis + " to " + newTargetMillis);
 
-                        prefs.edit()
-                                .putLong("targetTriggerMillis", newTargetMillis)
-                                .putString("expectedArrival", liveArrival)
-                                .putLong("lastSyncMillis", System.currentTimeMillis())
-                                .apply();
+                        // Update in JSON map
+                        SharedPreferences freshPrefs = context.getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE);
+                        JSONObject freshMap = AdaptiveAlarmManager.getAlarmsMap(freshPrefs);
+                        JSONObject objToUpdate = freshMap.optJSONObject(finalAlarmId);
+                        if (objToUpdate != null) {
+                            objToUpdate.put("targetTriggerMillis", newTargetMillis);
+                            objToUpdate.put("expectedArrival", liveArrival);
+                            objToUpdate.put("lastSyncMillis", System.currentTimeMillis());
+                            freshMap.put(finalAlarmId, objToUpdate);
+                            freshPrefs.edit().putString(AdaptiveAlarmManager.PREF_ALARMS_MAP, freshMap.toString()).apply();
+                        }
 
                         AdaptiveAlarmManager.getInstance().scheduleAlarmClock(
                                 context,
                                 newTargetMillis,
-                                stationName,
                                 trainNumber,
+                                trainName,
+                                stationCode,
+                                stationName,
                                 triggerMinutes
                         );
 
@@ -164,7 +198,7 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                                 currentDelay
                         );
                     } else {
-                        Log.d(TAG, "Train timing steady. Shift delta: " + (shiftDifference / 1000) + "s. No change needed.");
+                        Log.d(TAG, "Train " + trainNumber + " at " + stationCode + " timing steady. Shift delta: " + (shiftDifference / 1000) + "s. No change needed.");
                     }
 
                     // Dynamically calculate next sync interval with 3-minute pre-flight check:
@@ -172,9 +206,9 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                     long nextDelay;
                     if (remainingToTarget <= (3 * 60 * 1000L)) {
                         if (remainingToTarget <= 0) {
-                            // Target reached or surpassed (train arrived earlier): trigger alarm ASAP!
-                            Log.d(TAG, "Pre-flight check: target reached or train running early! Triggering alarm now.");
-                            triggerAlarmNow(context, stationName, trainNumber, triggerMinutes);
+                            // Target reached or train running early: trigger alarm ASAP!
+                            Log.d(TAG, "Pre-flight check: target reached or train running early for [" + finalAlarmId + "]! Triggering alarm now.");
+                            triggerAlarmNow(context, stationName, trainNumber, stationCode, triggerMinutes);
                             return;
                         }
                         // Within 3 minutes of scheduled alarm: let AlarmClock ring in remaining seconds
@@ -190,26 +224,31 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                         nextDelay = 15 * 60 * 1000L;
                     }
 
-                    Log.d(TAG, "Next adaptive sync scheduled in " + (nextDelay / 60000) + "m (" + (nextDelay / 1000) + "s)");
-                    AdaptiveAlarmManager.getInstance().scheduleNextSync(context, nextDelay);
+                    Log.d(TAG, "Next adaptive sync for [" + finalAlarmId + "] scheduled in " + (nextDelay / 60000) + "m (" + (nextDelay / 1000) + "s)");
+                    AdaptiveAlarmManager.getInstance().scheduleNextSync(context, trainNumber, stationCode, nextDelay);
                 } else {
-                    Log.d(TAG, "Target station not in live list or timing absent. Retrying in 15 mins.");
-                    AdaptiveAlarmManager.getInstance().scheduleNextSync(context, 15 * 60 * 1000L);
+                    Log.d(TAG, "Target station " + stationCode + " not in live list or timing absent. Retrying in 15 mins.");
+                    AdaptiveAlarmManager.getInstance().scheduleNextSync(context, trainNumber, stationCode, 15 * 60 * 1000L);
                 }
 
             } catch (Exception e) {
-                Log.w(TAG, "Adaptive sync network check failed: " + e.getMessage() + ". Will retry in 15 mins.");
-                AdaptiveAlarmManager.getInstance().scheduleNextSync(context, 15 * 60 * 1000L);
+                Log.w(TAG, "Adaptive sync network check failed for train " + trainNumber + ": " + e.getMessage() + ". Will retry in 15 mins.");
+                AdaptiveAlarmManager.getInstance().scheduleNextSync(context, trainNumber, stationCode, 15 * 60 * 1000L);
             } finally {
                 pendingResult.finish();
             }
         });
     }
 
-    private void triggerAlarmNow(Context context, String stationName, String trainNumber, int triggerMinutes) {
+    private void triggerAlarmNow(Context context, String stationName, String trainNumber, String stationCode, int triggerMinutes) {
         Intent serviceIntent = new Intent(context, AlarmForegroundService.class);
         serviceIntent.putExtra("title", "🔔 " + stationName + " Approaching (" + triggerMinutes + "m Warning)");
         serviceIntent.putExtra("body", "Train " + trainNumber + " is nearing " + stationName + "! Tap to open or silence.");
+        serviceIntent.putExtra("trainNumber", trainNumber);
+        serviceIntent.putExtra("stationCode", stationCode);
+        serviceIntent.putExtra("stationName", stationName);
+        serviceIntent.putExtra("triggerMinutes", triggerMinutes);
+        serviceIntent.putExtra("alarmId", AdaptiveAlarmManager.buildAlarmId(trainNumber, stationCode));
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -223,4 +262,3 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
         }
     }
 }
-

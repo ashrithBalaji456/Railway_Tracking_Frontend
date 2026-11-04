@@ -17,11 +17,11 @@ public class AlarmReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         Log.d(TAG, "AlarmReceiver fired! Starting AlarmForegroundService.");
 
-        String title = intent.getStringExtra("title");
+        String title = intent != null ? intent.getStringExtra("title") : null;
         if (title == null || title.isBlank()) {
             title = "🌅 RailTrack Wake-Up Alarm!";
         }
-        String body = intent.getStringExtra("body");
+        String body = intent != null ? intent.getStringExtra("body") : null;
         if (body == null || body.isBlank()) {
             body = "Your scheduled train departure alarm is ringing now! Tap to open or silence.";
         }
@@ -30,6 +30,14 @@ public class AlarmReceiver extends BroadcastReceiver {
         Intent serviceIntent = new Intent(context, AlarmForegroundService.class);
         serviceIntent.putExtra("title", title);
         serviceIntent.putExtra("body", body);
+        if (intent != null) {
+            serviceIntent.putExtra("trainNumber", intent.getStringExtra("trainNumber"));
+            serviceIntent.putExtra("trainName", intent.getStringExtra("trainName"));
+            serviceIntent.putExtra("stationCode", intent.getStringExtra("stationCode"));
+            serviceIntent.putExtra("stationName", intent.getStringExtra("stationName"));
+            serviceIntent.putExtra("triggerMinutes", intent.getIntExtra("triggerMinutes", 30));
+            serviceIntent.putExtra("alarmId", intent.getStringExtra("alarmId"));
+        }
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

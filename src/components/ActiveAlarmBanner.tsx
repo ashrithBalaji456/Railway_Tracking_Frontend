@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { VolumeX, Clock, ShieldAlert } from 'lucide-react';
 import alarmAudioService, { type ActiveAlarmInfo } from '../utils/alarmAudioService';
-import { cancelNativeAlarm, stopNativeAlarm, checkNativeAlarmRinging, snoozeNativeAlarm } from '../utils/nativeAlarmBridge';
+import { stopNativeAlarm, checkNativeAlarmRinging } from '../utils/nativeAlarmBridge';
+import multiAlarmManager from '../utils/multiAlarmManager';
 import RingingAlarmOverlay from './RingingAlarmOverlay';
 
 export default function ActiveAlarmBanner() {
-  const [alarmInfo, setAlarmInfo] = useState<ActiveAlarmInfo | null>(() => {
-    return alarmAudioService.getActiveAlarmInfo();
+  const [alarmInfo, setAlarmInfo] = useState<(ActiveAlarmInfo & { stationCode?: string }) | null>(() => {
+    return alarmAudioService.getActiveAlarmInfo() as any;
   });
 
   useEffect(() => {
@@ -31,15 +32,18 @@ export default function ActiveAlarmBanner() {
       try {
         const res = await checkNativeAlarmRinging();
         if (res && res.isRinging) {
-          const stored = localStorage.getItem('rail_armed_alarm');
-          const parsed = stored ? JSON.parse(stored) : null;
+          const matched = res.trainNumber && res.stationCode ? multiAlarmManager.getArmedAlarm(res.trainNumber, res.stationCode) : null;
+          const fallback = !matched ? multiAlarmManager.getArmedAlarms()[0] : null;
+          const config = matched || fallback;
+
           setAlarmInfo({
             isPlaying: true,
-            trainNumber: res.trainNumber || parsed?.trainNumber || '',
-            stationName: res.stationName || parsed?.stationName || 'Your Destination',
-            toneType: parsed?.toneType || 'digital_clock',
-            customSoundName: parsed?.customSoundName,
-            etaMinutes: res.triggerMinutes || parsed?.triggerMinutes || 5
+            trainNumber: res.trainNumber || config?.trainNumber || '',
+            stationCode: res.stationCode || config?.stationCode || '',
+            stationName: res.stationName || config?.stationName || 'Your Destination',
+            toneType: config?.toneType === 'custom' ? undefined : (config?.toneType || 'digital_clock'),
+            customSoundName: config?.customSoundName,
+            etaMinutes: res.triggerMinutes || config?.triggerMinutes || 5
           });
         }
       } catch (err) {
@@ -69,25 +73,25 @@ export default function ActiveAlarmBanner() {
     return null;
   }
 
-  const handleTurnOff = () => {
+  const handleTurnOff = async () => {
     alarmAudioService.stopAlarm();
-    stopNativeAlarm();
-    cancelNativeAlarm();
-    localStorage.removeItem('rail_armed_alarm');
+    await stopNativeAlarm();
+    if (alarmInfo.trainNumber && alarmInfo.stationCode) {
+      await multiAlarmManager.disarmAlarm(alarmInfo.trainNumber, alarmInfo.stationCode);
+    } else {
+      await multiAlarmManager.disarmAllAlarms();
+    }
     setAlarmInfo(null);
   };
 
   const handleSnooze = async () => {
     alarmAudioService.stopAlarm();
-    await snoozeNativeAlarm(5);
-    setAlarmInfo(null);
-    const stored = localStorage.getItem('rail_armed_alarm');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        localStorage.setItem('rail_armed_alarm', JSON.stringify({ ...parsed, triggerMinutes: 5 }));
-      } catch (e) {}
+    if (alarmInfo.trainNumber && alarmInfo.stationCode) {
+      await multiAlarmManager.snoozeAlarm(alarmInfo.trainNumber, alarmInfo.stationCode, 5);
+    } else {
+      await multiAlarmManager.snoozeAlarm('', '', 5);
     }
+    setAlarmInfo(null);
   };
 
   const trainLabel = alarmInfo.trainNumber ? `Train ${alarmInfo.trainNumber}` : 'Your Train';

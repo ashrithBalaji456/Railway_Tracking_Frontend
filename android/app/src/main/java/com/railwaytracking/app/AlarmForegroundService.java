@@ -8,6 +8,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.media.AudioAttributes;
@@ -65,6 +66,25 @@ public class AlarmForegroundService extends Service {
             body = "Train departure alert is ringing! Tap to open or silence.";
         }
 
+        if (intent != null) {
+            String tn = intent.getStringExtra("trainNumber");
+            String sc = intent.getStringExtra("stationCode");
+            String sn = intent.getStringExtra("stationName");
+            int tm = intent.getIntExtra("triggerMinutes", 30);
+            String aid = intent.getStringExtra("alarmId");
+
+            if (tn != null && sc != null) {
+                SharedPreferences prefs = getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE);
+                prefs.edit()
+                        .putString("ringing_alarm_id", aid != null ? aid : AdaptiveAlarmManager.buildAlarmId(tn, sc))
+                        .putString("ringing_train_number", tn)
+                        .putString("ringing_station_code", sc)
+                        .putString("ringing_station_name", sn != null ? sn : sc)
+                        .putInt("ringing_trigger_minutes", tm)
+                        .apply();
+            }
+        }
+
         Notification notification = buildForegroundNotification(title, body);
 
         // Required in Android 14+ (API 34+) for foreground services
@@ -105,10 +125,6 @@ public class AlarmForegroundService extends Service {
 
     private Notification buildForegroundNotification(String title, String body) {
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-        if (alarmSound == null) {
-            alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm != null) {
             NotificationChannel channel = new NotificationChannel(
@@ -164,6 +180,16 @@ public class AlarmForegroundService extends Service {
     public void stopAlarm() {
         AlarmSoundPlayer.getInstance().stopAlarm(this);
         stopForeground(true);
+
+        SharedPreferences prefs = getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit()
+                .remove("ringing_alarm_id")
+                .remove("ringing_train_number")
+                .remove("ringing_station_code")
+                .remove("ringing_station_name")
+                .remove("ringing_trigger_minutes")
+                .apply();
+
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm != null) {
             nm.cancel(NOTIFICATION_ID);
@@ -188,4 +214,3 @@ public class AlarmForegroundService extends Service {
         return null;
     }
 }
-
