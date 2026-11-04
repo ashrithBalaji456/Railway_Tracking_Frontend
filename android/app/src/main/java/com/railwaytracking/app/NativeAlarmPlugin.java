@@ -78,14 +78,27 @@ public class NativeAlarmPlugin extends Plugin {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
+        Intent showIntent = new Intent(context, MainActivity.class);
+        showIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        showIntent.putExtra("from_alarm", true);
+        PendingIntent showPendingIntent = PendingIntent.getActivity(
+            context,
+            1001,
+            showIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                AlarmManager.AlarmClockInfo alarmClockInfo = new AlarmManager.AlarmClockInfo(triggerAtMillis, showPendingIntent);
+                alarmManager.setAlarmClock(alarmClockInfo, pendingIntent);
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
             } else {
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
             }
 
-            Log.d(TAG, "Exact alarm scheduled in " + seconds + " seconds (" + triggerAtMillis + " ms)");
+            Log.d(TAG, "Exact AlarmClock scheduled in " + seconds + " seconds (" + triggerAtMillis + " ms)");
 
             JSObject ret = new JSObject();
             ret.put("scheduled", true);
@@ -104,6 +117,12 @@ public class NativeAlarmPlugin extends Plugin {
     @PluginMethod
     public void cancelAlarm(PluginCall call) {
         Context context = getContext();
+
+        try {
+            Intent stopService = new Intent(context, AlarmForegroundService.class);
+            context.stopService(stopService);
+        } catch (Exception ignored) {}
+
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (alarmManager != null) {
             Intent intent = new Intent(context, AlarmReceiver.class);
@@ -115,6 +134,15 @@ public class NativeAlarmPlugin extends Plugin {
             );
             alarmManager.cancel(pendingIntent);
         }
+
+        AlarmSoundPlayer.getInstance().stopAlarm(context);
+
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm != null) {
+            nm.cancel(AlarmReceiver.NOTIFICATION_ID);
+            nm.cancel(AlarmForegroundService.NOTIFICATION_ID);
+        }
+
         JSObject ret = new JSObject();
         ret.put("cancelled", true);
         call.resolve(ret);
@@ -167,11 +195,18 @@ public class NativeAlarmPlugin extends Plugin {
     @PluginMethod
     public void stopAlarm(PluginCall call) {
         Context context = getContext();
+
+        try {
+            Intent stopService = new Intent(context, AlarmForegroundService.class);
+            context.stopService(stopService);
+        } catch (Exception ignored) {}
+
         AlarmSoundPlayer.getInstance().stopAlarm(context);
 
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm != null) {
             nm.cancel(AlarmReceiver.NOTIFICATION_ID);
+            nm.cancel(AlarmForegroundService.NOTIFICATION_ID);
             nm.cancel(7701);
         }
 

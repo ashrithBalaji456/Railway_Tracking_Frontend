@@ -45,6 +45,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- Foreground Service for un-killable background alarms & lock-screen audio -->
+        <service
+            android:name=".AlarmForegroundService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

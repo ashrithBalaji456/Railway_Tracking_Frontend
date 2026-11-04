@@ -13,14 +13,20 @@ public class StopAlarmReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         Log.d("StopAlarmReceiver", "STOP ALARM triggered from notification action!");
 
-        // 1. Stop native ringing audio & vibration
+        // 1. Stop Foreground Service
+        try {
+            Intent stopService = new Intent(context, AlarmForegroundService.class);
+            context.stopService(stopService);
+        } catch (Exception ignored) {}
+
+        // 2. Stop native ringing audio & vibration
         AlarmSoundPlayer.getInstance().stopAlarm(context);
 
-        // 2. Dismiss the persistent alarm notification
+        // 3. Dismiss the persistent alarm notification
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm != null) {
             nm.cancel(AlarmReceiver.NOTIFICATION_ID);
+            nm.cancel(AlarmForegroundService.NOTIFICATION_ID);
         }
     }
 }
-
