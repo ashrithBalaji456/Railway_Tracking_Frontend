@@ -3166,6 +3166,64 @@ flowchart TD
      - It is solely an emergency safety parachute for catastrophic anomalies (for example, if the passenger fell asleep before arming the alarm, and only armed it as the train was already decelerating into the outer junction).
      - It prevents the disaster of overshooting the station and waking up in the next city.
 
+---
+
+#### Q18: What happens if the user selects 1 hour (60m), 1.5 hours (90m), or 2 hours (120m)? How does the architecture handle long advance trigger windows?
+* **Supported Options in the UI:**
+  `StationWakeUpAlarmModal.tsx` now supports 6 options:
+  - **15 mins prior** (`triggerMinutes = 15`)
+  - **30 mins prior** (`triggerMinutes = 30`)
+  - **45 mins prior** (`triggerMinutes = 45`)
+  - **1 hour prior** (`triggerMinutes = 60`)
+  - **1.5 hours prior** (`triggerMinutes = 90`)
+  - **2 hours prior** (`triggerMinutes = 120`)
+
+* **How the System Executes Long Advance Windows (1h, 1.5h, 2h):**
+  ```mermaid
+  flowchart TD
+      subgraph "Long Window Execution (e.g. 2 Hours / 120 Mins Prior)"
+          A["User selects: 2 Hours Prior (120 mins)<br/>Expected Arrival: 04:00 AM"] --> B["Hardware AlarmClock scheduled for 02:00 AM (04:00 AM - 120m)"]
+          B --> C["Adaptive Background Polling (AdaptiveSyncReceiver)"]
+          C --> D{"Remaining Time to Target Alarm Time (> 35 mins?)"}
+          D -->|Yes: e.g. 90 mins away| E["Battery-saver cadence: Poll backend every 15 minutes"]
+          D -->|No: <= 35 mins away| F["Precision cadence: Intensify polling to every 5 minutes"]
+          E --> G{"Train Delayed by 40 mins?<br/>(Arrival shifted to 04:40 AM)"}
+          G -->|Yes: Delay delta >= 3m| H["Auto-reschedule hardware AlarmClock to 02:40 AM!"]
+          G -->|No: On-time| I["Keep 02:00 AM target"]
+          H --> J["Foreground or Hardware Trigger at 02:40 AM:<br/>diffMinutes <= 120 fires alarm with full audio!"]
+      end
+  ```
+
+  1. **Hardware AlarmClock Registration:**
+     - In `AdaptiveAlarmManager.calculateTriggerMillis(timeStr, triggerMinutes)`:
+       `cal.add(Calendar.MINUTE, -triggerMinutes)`
+     - For a 4:00 AM arrival:
+       - **1 Hour (60 mins):** Fires at **3:00 AM**.
+       - **1.5 Hours (90 mins):** Fires at **2:30 AM**.
+       - **2 Hours (120 mins):** Fires at **2:00 AM**.
+     - Guaranteed by Android hardware RTC wakeup even if the phone screen is off and app is killed.
+
+  2. **Adaptive Two-Phase Battery & Quota Optimization:**
+     - In `AdaptiveSyncReceiver.java`:
+       $$\text{remainingToTarget} = \text{newTargetMillis} - \text{System.currentTimeMillis()}$$
+       - **Phase 1 (Cruising Phase, $> 35$ mins to alarm):** The app checks backend live status every **15 minutes**. This prevents draining battery or spamming API requests when the train is still hours away.
+       - **Phase 2 (Approach Phase, $\le 35$ mins to alarm):** Polling intensifies to every **5 minutes** to capture immediate track speed variations, signal holds, or loop-line overtaking.
+
+  3. **Automatic Delay Compensation:**
+     - If the train is delayed along the route (e.g. delayed by +45 minutes):
+     - The background sync notices `shiftDifference >= 3 minutes`.
+     - It immediately adjusts the hardware `AlarmClock` (moving it forward by 45 minutes) and posts a non-intrusive notification:
+       `"🚆 Train Schedule Updated: Alarm Shifted to 02:45 AM due to +45m delay."`
+     - The passenger gets 45 more minutes of peaceful sleep and still wakes up with the exact 2-hour window intact!
+
+  4. **Proportional Distance Calculation (Missing Telemetry Fallback):**
+     - At ~0.85 km per minute:
+       - **1 Hour (60 mins):** Fires at **51 km away**.
+       - **1.5 Hours (90 mins):** Fires at **77 km away**.
+       - **2 Hours (120 mins):** Fires at **102 km away**.
+     - Even if the railway data feed loses internet timestamps, the distance trigger ensures the passenger gets their full 1 to 2 hour advance notice!
+
+
 
 
 

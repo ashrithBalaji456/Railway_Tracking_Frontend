@@ -623,7 +623,10 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
                         )}
                       </div>
                       <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <span>Trigger: <strong>{armedAlarm.triggerMinutes || armedAlarm.thresholdMinutes || 30} mins</strong> prior</span>
+                        <span>Trigger: <strong>{(() => {
+                          const m = armedAlarm.triggerMinutes || armedAlarm.thresholdMinutes || 30;
+                          return m >= 60 ? (m % 60 === 0 ? `${m / 60} hour${m > 60 ? 's' : ''}` : `${(m / 60).toFixed(1)} hours`) : `${m} mins`;
+                        })()}</strong> prior</span>
                         <span>Tone: <strong className="capitalize">{(armedAlarm.toneType || armedAlarm.tone || 'digital_clock').replace(/_/g, ' ')}</strong></span>
                       </div>
                     </div>

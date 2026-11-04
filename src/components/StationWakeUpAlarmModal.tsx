@@ -145,8 +145,15 @@ export default function StationWakeUpAlarmModal({
             <Clock className="w-3.5 h-3.5 text-indigo-400" />
             <span>Wake Me Up When Train Is:</span>
           </label>
-          <div className="grid grid-cols-4 gap-2">
-            {[15, 30, 45, 60].map((mins) => (
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {[
+              { mins: 15, label: '15 mins', sub: 'prior' },
+              { mins: 30, label: '30 mins', sub: 'prior' },
+              { mins: 45, label: '45 mins', sub: 'prior' },
+              { mins: 60, label: '1 hour', sub: 'prior' },
+              { mins: 90, label: '1.5 hrs', sub: 'prior' },
+              { mins: 120, label: '2 hours', sub: 'prior' }
+            ].map(({ mins, label, sub }) => (
               <button
                 key={mins}
                 type="button"
@@ -157,8 +164,8 @@ export default function StationWakeUpAlarmModal({
                     : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
                 }`}
               >
-                <div>~{mins} mins</div>
-                <div className="text-[9px] font-normal text-slate-400 mt-0.5">before arrival</div>
+                <div>~{label}</div>
+                <div className="text-[9px] font-normal text-slate-400 mt-0.5">{sub}</div>
               </button>
             ))}
           </div>
