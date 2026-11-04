@@ -22,6 +22,7 @@ import CustomSoundManagerModal from './CustomSoundManagerModal';
 import LockScreenTestAlarmModal from './LockScreenTestAlarmModal';
 import alarmAudioService, { type AlarmToneType } from '../utils/alarmAudioService';
 import customAlarmSoundService from '../utils/customAlarmSoundService';
+import { cancelNativeAlarm } from '../utils/nativeAlarmBridge';
 
 interface NotificationPreferencesModalProps {
   isOpen: boolean;
@@ -42,10 +43,12 @@ interface ArmedAlarmState {
   trainNumber: string;
   stationCode: string;
   stationName: string;
-  targetArrivalTime: string;
-  thresholdMinutes: number;
-  tone: string;
-  armedAt: string;
+  targetArrivalTime?: string;
+  thresholdMinutes?: number;
+  triggerMinutes?: number;
+  tone?: string;
+  toneType?: string;
+  armedAt?: string;
 }
 
 export default function NotificationPreferencesModal({ isOpen, onClose }: NotificationPreferencesModalProps) {
@@ -205,6 +208,8 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
   const handleDisarmAlarm = () => {
     if (window.confirm('Are you sure you want to disarm your station wake-up alarm?')) {
       localStorage.removeItem('rail_armed_alarm');
+      alarmAudioService.stopAlarm();
+      cancelNativeAlarm();
       setArmedAlarm(null);
     }
   };
@@ -618,8 +623,8 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
                         )}
                       </div>
                       <div className="text-[11px] text-slate-400 flex items-center gap-3">
-                        <span>Trigger: <strong>{armedAlarm.thresholdMinutes} mins</strong> prior</span>
-                        <span>Tone: <strong className="capitalize">{armedAlarm.tone.replace('_', ' ')}</strong></span>
+                        <span>Trigger: <strong>{armedAlarm.triggerMinutes || armedAlarm.thresholdMinutes || 30} mins</strong> prior</span>
+                        <span>Tone: <strong className="capitalize">{(armedAlarm.toneType || armedAlarm.tone || 'digital_clock').replace(/_/g, ' ')}</strong></span>
                       </div>
                     </div>
 

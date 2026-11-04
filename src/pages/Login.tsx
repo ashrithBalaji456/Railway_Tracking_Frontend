@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Lock, User, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import api from '../services/api';
 
@@ -10,6 +10,8 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as any)?.from?.pathname || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +40,7 @@ export default function Login() {
         localStorage.setItem('email', response.data.email);
         localStorage.setItem('userId', response.data.id.toString());
         localStorage.setItem('roles', JSON.stringify(response.data.roles));
-        navigate('/');
+        navigate(from, { replace: true });
       } else {
         setError(response.message || 'Login failed');
       }

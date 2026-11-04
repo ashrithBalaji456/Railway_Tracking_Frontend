@@ -241,9 +241,10 @@ class AlarmAudioService {
     this.vibrationInterval = setInterval(triggerVibration, 3000);
 
     // 3. Spoken Voice Wake-Up Announcement
-    // ONLY run speech synthesis for synthetic beeps (digital_clock / emergency_siren / train_horn)
-    // NEVER run speech synthesis when a custom song is playing, so Android OS audio focus does NOT kill the song after 2 seconds!
-    if (!options.customSoundUrl) {
+    // Run speech synthesis only on browser/desktop for synthetic beeps.
+    // NEVER run speech synthesis on native Capacitor APK (to protect WebView stability and keep native MediaPlayer uninterrupted)
+    const isCapacitorNative = typeof (window as any)?.Capacitor?.isNativePlatform === 'function' && (window as any).Capacitor.isNativePlatform();
+    if (!options.customSoundUrl && !isCapacitorNative) {
       const speakAnnouncement = () => {
         if (!('speechSynthesis' in window) || !this.isAlarmPlaying) return;
         try {

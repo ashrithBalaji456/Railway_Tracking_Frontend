@@ -86,13 +86,19 @@ public class AlarmForegroundService extends Service {
         // Start loud audio + vibration loops
         AlarmSoundPlayer.getInstance().startAlarm(this);
 
-        // Attempt to launch MainActivity over lock screen
-        Intent mainIntent = new Intent(this, MainActivity.class);
-        mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        mainIntent.putExtra("from_alarm", true);
+        // Attempt to bring MainActivity over lock screen only if phone is locked or screen off
         try {
-            startActivity(mainIntent);
-        } catch (Exception ignored) {}
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            boolean isScreenOn = pm != null && pm.isInteractive();
+            if (!isScreenOn) {
+                Intent mainIntent = new Intent(this, MainActivity.class);
+                mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                mainIntent.putExtra("from_alarm", true);
+                startActivity(mainIntent);
+            }
+        } catch (Exception ex) {
+            Log.w(TAG, "Could not start MainActivity from foreground service: " + ex.getMessage());
+        }
 
         return START_STICKY;
     }

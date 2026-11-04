@@ -202,3 +202,4 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
         }
     }
 }
+
