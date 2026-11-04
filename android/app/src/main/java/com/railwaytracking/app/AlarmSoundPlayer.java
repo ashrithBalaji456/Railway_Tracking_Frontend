@@ -110,6 +110,10 @@ public class AlarmSoundPlayer {
         }
     }
 
+    public synchronized void stopAlarm() {
+        stopAlarm(null);
+    }
+
     public synchronized void stopAlarm(Context context) {
         Log.d(TAG, "Stopping alarm sound and vibration");
         stopMediaPlayerOnly();

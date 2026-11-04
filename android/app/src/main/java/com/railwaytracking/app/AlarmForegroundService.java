@@ -158,7 +158,7 @@ public class AlarmForegroundService extends Service {
     }
 
     public void stopAlarm() {
-        AlarmSoundPlayer.getInstance().stopAlarm();
+        AlarmSoundPlayer.getInstance().stopAlarm(this);
         stopForeground(true);
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm != null) {
@@ -184,3 +184,4 @@ public class AlarmForegroundService extends Service {
         return null;
     }
 }
+
