@@ -12,6 +12,9 @@ export interface ActiveAlarmInfo {
   isPlaying: boolean;
   trainNumber?: string;
   stationName?: string;
+  stationCode?: string;
+  platform?: string;
+  distanceKm?: number;
   etaMinutes?: number;
   toneType?: AlarmToneType;
   customSoundName?: string;
@@ -193,6 +196,9 @@ class AlarmAudioService {
     customSoundName?: string;
     trainNumber?: string;
     stationName?: string;
+    stationCode?: string;
+    platform?: string;
+    distanceKm?: number;
     etaMinutes?: number;
   }): void {
     if (this.isAlarmPlaying) return;
@@ -274,6 +280,9 @@ class AlarmAudioService {
       isPlaying: true,
       trainNumber: options.trainNumber,
       stationName: options.stationName,
+      stationCode: options.stationCode,
+      platform: options.platform,
+      distanceKm: options.distanceKm,
       etaMinutes: options.etaMinutes,
       toneType: tone,
       customSoundName: options.customSoundName,

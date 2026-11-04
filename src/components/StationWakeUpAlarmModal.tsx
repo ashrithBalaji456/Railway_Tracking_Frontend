@@ -21,6 +21,7 @@ export interface WakeUpAlarmConfig {
   trainName?: string;
   stationCode: string;
   stationName: string;
+  platform?: string;
   triggerMinutes: number;
   toneType: AlarmToneType | 'custom';
   customSoundId?: string;
@@ -129,6 +130,7 @@ export default function StationWakeUpAlarmModal({
       trainName,
       stationCode: station.stationCode,
       stationName: station.stationName,
+      platform: station.platform,
       triggerMinutes,
       toneType: isCustom ? 'custom' : (selectedSoundMode as AlarmToneType),
       customSoundId: isCustom ? customSound?.id : undefined,

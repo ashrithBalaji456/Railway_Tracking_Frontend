@@ -35,6 +35,7 @@ public class AlarmReceiver extends BroadcastReceiver {
             serviceIntent.putExtra("trainName", intent.getStringExtra("trainName"));
             serviceIntent.putExtra("stationCode", intent.getStringExtra("stationCode"));
             serviceIntent.putExtra("stationName", intent.getStringExtra("stationName"));
+            serviceIntent.putExtra("platform", intent.getStringExtra("platform"));
             serviceIntent.putExtra("triggerMinutes", intent.getIntExtra("triggerMinutes", 30));
             serviceIntent.putExtra("alarmId", intent.getStringExtra("alarmId"));
         }

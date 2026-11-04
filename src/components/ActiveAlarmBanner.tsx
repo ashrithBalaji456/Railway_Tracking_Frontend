@@ -41,6 +41,7 @@ export default function ActiveAlarmBanner() {
             trainNumber: res.trainNumber || config?.trainNumber || '',
             stationCode: res.stationCode || config?.stationCode || '',
             stationName: res.stationName || config?.stationName || 'Your Destination',
+            platform: res.platform || config?.platform || '',
             toneType: config?.toneType === 'custom' ? undefined : (config?.toneType || 'digital_clock'),
             customSoundName: config?.customSoundName,
             etaMinutes: res.triggerMinutes || config?.triggerMinutes || 5
@@ -157,7 +158,8 @@ export default function ActiveAlarmBanner() {
         onSnooze={handleSnooze}
         trainNumber={alarmInfo.trainNumber || ''}
         stationName={alarmInfo.stationName || 'Upcoming Station'}
-        stationCode={''}
+        stationCode={alarmInfo.stationCode || ''}
+        platform={alarmInfo.platform}
         etaMinutes={alarmInfo.etaMinutes || 5}
       />
     </>

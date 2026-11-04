@@ -3739,14 +3739,17 @@ export default function TrainDetails() {
             const targetStop = liveStatus?.stations?.find((ls: any) => ls.stationCode?.toUpperCase() === targetCode);
             const routeStop = route?.stations?.find((rs: any) => rs.stationCode?.toUpperCase() === targetCode);
             const expArrival = targetStop?.expectedArrival || targetStop?.arrivalTime || routeStop?.arrivalTime || '';
+            const platform = targetStop?.platform || routeStop?.platform || selectedAlarmStation?.platform || cfg.platform || '';
 
             await multiAlarmManager.armAlarm({
               ...cfg,
-              trainNumber: cfg.trainNumber || trainNumber || train?.trainNumber || ''
+              trainNumber: cfg.trainNumber || trainNumber || train?.trainNumber || '',
+              platform: platform
             }, {
               expectedArrival: expArrival,
               journeyDate: effectiveJourneyDate,
-              trainName: train?.trainName
+              trainName: train?.trainName,
+              platform: platform
             });
           }}
           onDisarmAlarm={async () => {

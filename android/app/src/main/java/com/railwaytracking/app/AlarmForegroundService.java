@@ -70,6 +70,7 @@ public class AlarmForegroundService extends Service {
             String tn = intent.getStringExtra("trainNumber");
             String sc = intent.getStringExtra("stationCode");
             String sn = intent.getStringExtra("stationName");
+            String pf = intent.getStringExtra("platform");
             int tm = intent.getIntExtra("triggerMinutes", 30);
             String aid = intent.getStringExtra("alarmId");
 
@@ -80,6 +81,7 @@ public class AlarmForegroundService extends Service {
                         .putString("ringing_train_number", tn)
                         .putString("ringing_station_code", sc)
                         .putString("ringing_station_name", sn != null ? sn : sc)
+                        .putString("ringing_platform", pf != null ? pf : "")
                         .putInt("ringing_trigger_minutes", tm)
                         .apply();
             }
@@ -187,6 +189,7 @@ public class AlarmForegroundService extends Service {
                 .remove("ringing_train_number")
                 .remove("ringing_station_code")
                 .remove("ringing_station_name")
+                .remove("ringing_platform")
                 .remove("ringing_trigger_minutes")
                 .apply();
 

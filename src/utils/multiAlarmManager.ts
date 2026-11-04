@@ -12,6 +12,7 @@ export interface WakeUpAlarmConfig {
   trainName?: string;
   stationCode: string;
   stationName: string;
+  platform?: string;
   triggerMinutes: number;
   toneType: AlarmToneType | 'custom';
   customSoundId?: string;
@@ -73,13 +74,14 @@ class MultiAlarmManager {
 
   public async armAlarm(
     config: WakeUpAlarmConfig,
-    liveContext?: { expectedArrival?: string; journeyDate?: string; trainName?: string }
+    liveContext?: { expectedArrival?: string; journeyDate?: string; trainName?: string; platform?: string }
   ): Promise<void> {
     const id = this.buildId(config.trainNumber, config.stationCode);
     const fullConfig: WakeUpAlarmConfig = {
       ...config,
       id,
       trainName: config.trainName || liveContext?.trainName,
+      platform: config.platform || liveContext?.platform,
       expectedArrival: config.expectedArrival || liveContext?.expectedArrival,
       journeyDate: config.journeyDate || liveContext?.journeyDate,
       armedAt: config.armedAt || new Date().toISOString()
@@ -98,6 +100,7 @@ class MultiAlarmManager {
       trainName: fullConfig.trainName,
       stationCode: fullConfig.stationCode,
       stationName: fullConfig.stationName,
+      platform: fullConfig.platform,
       triggerMinutes: fullConfig.triggerMinutes,
       expectedArrival: fullConfig.expectedArrival,
       journeyDate: fullConfig.journeyDate
@@ -161,3 +164,4 @@ class MultiAlarmManager {
 
 export const multiAlarmManager = new MultiAlarmManager();
 export default multiAlarmManager;
+

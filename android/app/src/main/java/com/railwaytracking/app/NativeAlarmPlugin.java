@@ -124,6 +124,7 @@ public class NativeAlarmPlugin extends Plugin {
         String trainName = call.getString("trainName", "Train " + trainNumber);
         String journeyDate = call.getString("journeyDate", "");
         String backendUrl = call.getString("backendUrl", "https://railway-tracking-backend-gwa2.onrender.com");
+        String platform = call.getString("platform", "");
 
         if (trainNumber == null || stationCode == null) {
             call.reject("trainNumber and stationCode are required");
@@ -152,7 +153,8 @@ public class NativeAlarmPlugin extends Plugin {
                 triggerMinutes,
                 expectedArrival,
                 journeyDate,
-                backendUrl
+                backendUrl,
+                platform
         );
 
         JSObject ret = new JSObject();
@@ -297,6 +299,7 @@ public class NativeAlarmPlugin extends Plugin {
         String trainName = prefs.getString("trainName", "");
         String stationName = prefs.getString("ringing_station_name", prefs.getString("stationName", ""));
         String stationCode = prefs.getString("ringing_station_code", prefs.getString("stationCode", ""));
+        String platform = prefs.getString("ringing_platform", prefs.getString("platform", ""));
         int triggerMinutes = prefs.getInt("ringing_trigger_minutes", prefs.getInt("triggerMinutes", 30));
 
         JSObject ret = new JSObject();
@@ -306,6 +309,7 @@ public class NativeAlarmPlugin extends Plugin {
         ret.put("trainName", trainName);
         ret.put("stationName", stationName);
         ret.put("stationCode", stationCode);
+        ret.put("platform", platform);
         ret.put("triggerMinutes", triggerMinutes);
         ret.put("expectedArrival", prefs.getString("expectedArrival", ""));
         call.resolve(ret);

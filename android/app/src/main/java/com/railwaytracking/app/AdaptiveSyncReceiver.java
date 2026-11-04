@@ -72,6 +72,7 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
         final int triggerMinutes = targetAlarm.optInt("triggerMinutes", 30);
         final String journeyDate = targetAlarm.optString("journeyDate", "");
         final String backendUrl = targetAlarm.optString("backendUrl", "https://railway-tracking-backend-gwa2.onrender.com");
+        final String platform = targetAlarm.optString("platform", "");
         final long currentTargetMillis = targetAlarm.optLong("targetTriggerMillis", 0L);
 
         long now = System.currentTimeMillis();
@@ -79,7 +80,7 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
         // 1. If target time has already been reached, trigger alarm immediately!
         if (currentTargetMillis > 0 && now >= currentTargetMillis) {
             Log.d(TAG, "Target trigger time reached for [" + finalAlarmId + "]! Firing alarm.");
-            triggerAlarmNow(context, stationName, trainNumber, stationCode, triggerMinutes);
+            triggerAlarmNow(context, stationName, trainNumber, stationCode, platform, triggerMinutes);
             return;
         }
 
@@ -135,6 +136,7 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                 boolean stationFound = false;
                 String liveArrival = null;
                 boolean isAtStation = false;
+                String livePlatform = platform;
 
                 if (stations != null) {
                     for (int i = 0; i < stations.length(); i++) {
@@ -147,6 +149,9 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                             if (status.equals("AT_STATION") || status.equals("ARRIVED")) {
                                 isAtStation = true;
                             }
+                            if (st.has("platform") && !st.optString("platform").isEmpty()) {
+                                livePlatform = st.optString("platform");
+                            }
                             break;
                         }
                     }
@@ -155,7 +160,7 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                 // If train has physically arrived, wake user immediately!
                 if (isAtStation) {
                     Log.d(TAG, "Train " + trainNumber + " physically arrived at " + stationCode + "! Firing alarm immediately.");
-                    triggerAlarmNow(context, stationName, trainNumber, stationCode, triggerMinutes);
+                    triggerAlarmNow(context, stationName, trainNumber, stationCode, livePlatform, triggerMinutes);
                     return;
                 }
 
@@ -175,6 +180,7 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                         if (objToUpdate != null) {
                             objToUpdate.put("targetTriggerMillis", newTargetMillis);
                             objToUpdate.put("expectedArrival", liveArrival);
+                            objToUpdate.put("platform", livePlatform);
                             objToUpdate.put("lastSyncMillis", System.currentTimeMillis());
                             freshMap.put(finalAlarmId, objToUpdate);
                             freshPrefs.edit().putString(AdaptiveAlarmManager.PREF_ALARMS_MAP, freshMap.toString()).apply();
@@ -187,6 +193,7 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                                 trainName,
                                 stationCode,
                                 stationName,
+                                livePlatform,
                                 triggerMinutes
                         );
 
@@ -208,7 +215,7 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                         if (remainingToTarget <= 0) {
                             // Target reached or train running early: trigger alarm ASAP!
                             Log.d(TAG, "Pre-flight check: target reached or train running early for [" + finalAlarmId + "]! Triggering alarm now.");
-                            triggerAlarmNow(context, stationName, trainNumber, stationCode, triggerMinutes);
+                            triggerAlarmNow(context, stationName, trainNumber, stationCode, livePlatform, triggerMinutes);
                             return;
                         }
                         // Within 3 minutes of scheduled alarm: let AlarmClock ring in remaining seconds
@@ -240,13 +247,14 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
         });
     }
 
-    private void triggerAlarmNow(Context context, String stationName, String trainNumber, String stationCode, int triggerMinutes) {
+    private void triggerAlarmNow(Context context, String stationName, String trainNumber, String stationCode, String platform, int triggerMinutes) {
         Intent serviceIntent = new Intent(context, AlarmForegroundService.class);
         serviceIntent.putExtra("title", "🔔 " + stationName + " Approaching (" + triggerMinutes + "m Warning)");
         serviceIntent.putExtra("body", "Train " + trainNumber + " is nearing " + stationName + "! Tap to open or silence.");
         serviceIntent.putExtra("trainNumber", trainNumber);
         serviceIntent.putExtra("stationCode", stationCode);
         serviceIntent.putExtra("stationName", stationName);
+        serviceIntent.putExtra("platform", platform != null ? platform : "");
         serviceIntent.putExtra("triggerMinutes", triggerMinutes);
         serviceIntent.putExtra("alarmId", AdaptiveAlarmManager.buildAlarmId(trainNumber, stationCode));
 

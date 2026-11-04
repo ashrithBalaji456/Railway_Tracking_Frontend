@@ -74,6 +74,21 @@ public class AdaptiveAlarmManager {
             String journeyDate,
             String backendUrl
     ) {
+        armAlarm(context, trainNumber, trainName, stationCode, stationName, triggerMinutes, expectedArrival, journeyDate, backendUrl, "");
+    }
+
+    public synchronized void armAlarm(
+            Context context,
+            String trainNumber,
+            String trainName,
+            String stationCode,
+            String stationName,
+            int triggerMinutes,
+            String expectedArrival,
+            String journeyDate,
+            String backendUrl,
+            String platform
+    ) {
         long targetTriggerMillis = calculateTriggerMillis(expectedArrival, triggerMinutes);
         String alarmId = buildAlarmId(trainNumber, stationCode);
 
@@ -87,6 +102,7 @@ public class AdaptiveAlarmManager {
             alarmObj.put("trainName", trainName != null ? trainName : "Train " + trainNumber);
             alarmObj.put("stationCode", stationCode.toUpperCase());
             alarmObj.put("stationName", stationName);
+            alarmObj.put("platform", platform != null ? platform : "");
             alarmObj.put("triggerMinutes", triggerMinutes);
             alarmObj.put("expectedArrival", expectedArrival != null ? expectedArrival : "");
             alarmObj.put("journeyDate", journeyDate != null ? journeyDate : "");
@@ -104,6 +120,7 @@ public class AdaptiveAlarmManager {
                     .putString("trainName", trainName != null ? trainName : "Train " + trainNumber)
                     .putString("stationCode", stationCode.toUpperCase())
                     .putString("stationName", stationName)
+                    .putString("platform", platform != null ? platform : "")
                     .putInt("triggerMinutes", triggerMinutes)
                     .putString("expectedArrival", expectedArrival != null ? expectedArrival : "")
                     .putString("journeyDate", journeyDate != null ? journeyDate : "")
@@ -115,7 +132,7 @@ public class AdaptiveAlarmManager {
             Log.d(TAG, "Adaptive alarm armed for ID [" + alarmId + "] (" + stationName + ", Train " + trainNumber + "). Target: " + new Date(targetTriggerMillis));
 
             // 1. Schedule exact system alarm clock for this specific alarm
-            scheduleAlarmClock(context, targetTriggerMillis, trainNumber, trainName, stationCode, stationName, triggerMinutes);
+            scheduleAlarmClock(context, targetTriggerMillis, trainNumber, trainName, stationCode, stationName, platform, triggerMinutes);
 
             // 2. Schedule adaptive periodic background sync with 3-minute pre-flight check
             long timeUntilTarget = targetTriggerMillis - System.currentTimeMillis();
@@ -131,6 +148,19 @@ public class AdaptiveAlarmManager {
             }
             scheduleNextSync(context, trainNumber, stationCode, initialSyncDelay);
 
+            // 3. Start Foreground Telemetry Service to guarantee unthrottled network polling
+            try {
+                Intent trackingService = new Intent(context, AdaptiveTrackingService.class);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(trackingService);
+                } else {
+                    context.startService(trackingService);
+                }
+                Log.d(TAG, "Started AdaptiveTrackingService for live background telemetry polling.");
+            } catch (Exception ex) {
+                Log.e(TAG, "Failed launching AdaptiveTrackingService: " + ex.getMessage());
+            }
+
         } catch (Exception e) {
             Log.e(TAG, "Failed storing alarm for ID [" + alarmId + "]", e);
         }
@@ -143,6 +173,19 @@ public class AdaptiveAlarmManager {
             String trainName,
             String stationCode,
             String stationName,
+            int triggerMinutes
+    ) {
+        scheduleAlarmClock(context, targetTriggerMillis, trainNumber, trainName, stationCode, stationName, "", triggerMinutes);
+    }
+
+    public void scheduleAlarmClock(
+            Context context,
+            long targetTriggerMillis,
+            String trainNumber,
+            String trainName,
+            String stationCode,
+            String stationName,
+            String platform,
             int triggerMinutes
     ) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
@@ -158,6 +201,7 @@ public class AdaptiveAlarmManager {
         intent.putExtra("trainName", trainName);
         intent.putExtra("stationCode", stationCode);
         intent.putExtra("stationName", stationName);
+        intent.putExtra("platform", platform != null ? platform : "");
         intent.putExtra("triggerMinutes", triggerMinutes);
         intent.putExtra("alarmId", alarmId);
 
@@ -173,6 +217,7 @@ public class AdaptiveAlarmManager {
         showIntent.putExtra("from_alarm", true);
         showIntent.putExtra("trainNumber", trainNumber);
         showIntent.putExtra("stationCode", stationCode);
+        showIntent.putExtra("platform", platform != null ? platform : "");
         showIntent.putExtra("alarmId", alarmId);
         PendingIntent showPendingIntent = PendingIntent.getActivity(
                 context,
@@ -217,7 +262,12 @@ public class AdaptiveAlarmManager {
 
         long triggerAt = System.currentTimeMillis() + delayMillis;
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && delayMillis <= (8 * 60 * 1000L)) {
+                Intent showIntent = new Intent(context, MainActivity.class);
+                PendingIntent showPI = PendingIntent.getActivity(context, syncReqCode, showIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                AlarmManager.AlarmClockInfo clockInfo = new AlarmManager.AlarmClockInfo(triggerAt, showPI);
+                alarmManager.setAlarmClock(clockInfo, syncPendingIntent);
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, syncPendingIntent);
             } else {
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, syncPendingIntent);
@@ -340,6 +390,11 @@ public class AdaptiveAlarmManager {
     }
 
     private void stopAudioAndServices(Context context) {
+        try {
+            Intent stopTracking = new Intent(context, AdaptiveTrackingService.class);
+            context.stopService(stopTracking);
+        } catch (Exception ignored) {}
+
         try {
             Intent stopService = new Intent(context, AlarmForegroundService.class);
             context.stopService(stopService);
@@ -464,16 +519,24 @@ public class AdaptiveAlarmManager {
             cal.set(Calendar.SECOND, 0);
             cal.set(Calendar.MILLISECOND, 0);
 
-            // If parsed arrival time is earlier than current time today, it refers to tomorrow
-            if (cal.getTimeInMillis() <= System.currentTimeMillis()) {
+            long arrivalMillis = cal.getTimeInMillis();
+            long now = System.currentTimeMillis();
+
+            // If parsed arrival time was more than 30 mins ago today, it refers to tomorrow
+            if (arrivalMillis < (now - 30 * 60 * 1000L)) {
                 cal.add(Calendar.DAY_OF_YEAR, 1);
+                arrivalMillis = cal.getTimeInMillis();
             }
 
-            // Subtract advance warning minutes
-            cal.add(Calendar.MINUTE, -triggerMinutes);
+            // Target trigger time is (arrival - advance warning minutes)
+            long targetTrigger = arrivalMillis - (triggerMinutes * 60 * 1000L);
 
-            long calculated = cal.getTimeInMillis();
-            return Math.max(System.currentTimeMillis() + 10000L, calculated);
+            // If train is arriving sooner than the trigger window (or running early), trigger immediately (in 5s)
+            if (targetTrigger <= now && arrivalMillis > now) {
+                return now + 5000L;
+            }
+
+            return Math.max(now + 10000L, targetTrigger);
         } catch (Exception e) {
             Log.w(TAG, "Failed parsing arrival time '" + timeStr + "', fallback to default countdown", e);
             return System.currentTimeMillis() + (triggerMinutes * 60 * 1000L);

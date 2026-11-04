@@ -141,6 +141,7 @@ export const armAdaptiveNativeAlarm = async (options: {
   trainNumber: string;
   stationCode: string;
   stationName?: string;
+  platform?: string;
   triggerMinutes?: number;
   expectedArrival?: string;
   trainName?: string;
@@ -181,6 +182,7 @@ export const checkNativeAlarmRinging = async () => {
         trainName?: string;
         stationName?: string;
         stationCode?: string;
+        platform?: string;
         triggerMinutes?: number;
         expectedArrival?: string;
       }>('isAlarmRinging');
