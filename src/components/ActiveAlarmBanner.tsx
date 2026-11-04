@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { VolumeX, Clock, ShieldAlert } from 'lucide-react';
 import alarmAudioService, { type ActiveAlarmInfo } from '../utils/alarmAudioService';
+import { cancelNativeAlarm } from '../utils/nativeAlarmBridge';
 
 export default function ActiveAlarmBanner() {
   const [alarmInfo, setAlarmInfo] = useState<ActiveAlarmInfo | null>(() => {
@@ -29,6 +30,7 @@ export default function ActiveAlarmBanner() {
 
   const handleTurnOff = () => {
     alarmAudioService.stopAlarm();
+    cancelNativeAlarm();
     setAlarmInfo(null);
   };
 

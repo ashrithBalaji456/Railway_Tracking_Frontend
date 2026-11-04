@@ -14,6 +14,7 @@ import { getDepartedWindowInfo } from '../utils/liveStatusUtils';
 import StationWakeUpAlarmModal, { type WakeUpAlarmConfig } from '../components/StationWakeUpAlarmModal';
 import RingingAlarmOverlay from '../components/RingingAlarmOverlay';
 import { alarmAudioService } from '../utils/alarmAudioService';
+import { armAdaptiveNativeAlarm, cancelNativeAlarm } from '../utils/nativeAlarmBridge';
 import whatsappShareService from '../utils/whatsappShareService';
 import webNotificationService from '../utils/webNotificationService';
 
@@ -3683,6 +3684,7 @@ export default function TrainDetails() {
             type="button"
             onClick={() => {
               alarmAudioService.stopAlarm();
+              cancelNativeAlarm();
               setArmedAlarmConfig(null);
               localStorage.removeItem('rail_armed_alarm');
             }}
@@ -3705,8 +3707,25 @@ export default function TrainDetails() {
           onArmAlarm={(cfg) => {
             setArmedAlarmConfig(cfg);
             localStorage.setItem('rail_armed_alarm', JSON.stringify({ ...cfg, trainNumber: trainNumber || train?.trainNumber }));
+
+            const targetCode = cfg.stationCode.toUpperCase();
+            const targetStop = liveStatus?.stations?.find((ls: any) => ls.stationCode?.toUpperCase() === targetCode);
+            const routeStop = route?.stations?.find((rs: any) => rs.stationCode?.toUpperCase() === targetCode);
+            const expArrival = targetStop?.expectedArrival || targetStop?.arrivalTime || routeStop?.arrivalTime || '';
+
+            armAdaptiveNativeAlarm({
+              trainNumber: trainNumber || train?.trainNumber || '',
+              trainName: train?.trainName,
+              stationCode: cfg.stationCode,
+              stationName: cfg.stationName,
+              triggerMinutes: cfg.triggerMinutes,
+              expectedArrival: expArrival,
+              journeyDate: selectedJourneyDate || ''
+            });
           }}
           onDisarmAlarm={() => {
+            alarmAudioService.stopAlarm();
+            cancelNativeAlarm();
             setArmedAlarmConfig(null);
             localStorage.removeItem('rail_armed_alarm');
           }}
@@ -3719,6 +3738,7 @@ export default function TrainDetails() {
           isOpen={isAlarmRinging}
           onDismiss={() => {
             alarmAudioService.stopAlarm();
+            cancelNativeAlarm();
             setIsAlarmRinging(false);
             setArmedAlarmConfig(null);
             localStorage.removeItem('rail_armed_alarm');

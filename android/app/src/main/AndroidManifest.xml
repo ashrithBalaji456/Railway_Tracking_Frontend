@@ -45,6 +45,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- Adaptive Sync Receiver for 15-Minute Dynamic Delay Checks -->
+        <receiver
+            android:name=".AdaptiveSyncReceiver"
+            android:exported="false" />
+
         <!-- Foreground Service for un-killable background alarms & lock-screen audio -->
         <service
             android:name=".AlarmForegroundService"

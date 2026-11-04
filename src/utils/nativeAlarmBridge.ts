@@ -13,6 +13,21 @@ export interface NativeAlarmPluginInterface {
     seconds: number;
   }>;
   cancelAlarm(): Promise<{ cancelled: boolean }>;
+  armAdaptiveStationAlarm(options: {
+    trainNumber: string;
+    stationCode: string;
+    stationName?: string;
+    triggerMinutes?: number;
+    expectedArrival?: string;
+    trainName?: string;
+    journeyDate?: string;
+    backendUrl?: string;
+  }): Promise<{
+    armed: boolean;
+    trainNumber: string;
+    stationCode: string;
+    triggerMinutes: number;
+  }>;
   setCustomAlarmAudio(options: { base64: string }): Promise<{ saved: boolean; path: string; size: number }>;
   clearCustomAlarmAudio(): Promise<{ cleared: boolean }>;
   stopAlarm(): Promise<{ stopped: boolean }>;
@@ -77,6 +92,30 @@ export const cancelNativeAlarm = async () => {
       return await callNative<{ cancelled: boolean }>('cancelAlarm');
     } catch (e) {
       console.warn('Could not cancel native alarm:', e);
+    }
+  }
+  return null;
+};
+
+export const armAdaptiveNativeAlarm = async (options: {
+  trainNumber: string;
+  stationCode: string;
+  stationName?: string;
+  triggerMinutes?: number;
+  expectedArrival?: string;
+  trainName?: string;
+  journeyDate?: string;
+  backendUrl?: string;
+}) => {
+  if (isNativeApp()) {
+    try {
+      const defaultBackend = import.meta.env.VITE_API_BASE_URL || 'https://railway-tracking-backend-gwa2.onrender.com';
+      return await callNative('armAdaptiveStationAlarm', {
+        ...options,
+        backendUrl: options.backendUrl || defaultBackend
+      });
+    } catch (e) {
+      console.warn('Could not arm adaptive native alarm:', e);
     }
   }
   return null;

@@ -115,33 +115,58 @@ public class NativeAlarmPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void cancelAlarm(PluginCall call) {
+    public void armAdaptiveStationAlarm(PluginCall call) {
+        String trainNumber = call.getString("trainNumber");
+        String stationCode = call.getString("stationCode");
+        String stationName = call.getString("stationName", stationCode);
+        Integer triggerMinutes = call.getInt("triggerMinutes", 30);
+        String expectedArrival = call.getString("expectedArrival", "");
+        String trainName = call.getString("trainName", "Train " + trainNumber);
+        String journeyDate = call.getString("journeyDate", "");
+        String backendUrl = call.getString("backendUrl", "https://railway-tracking-backend-gwa2.onrender.com");
+
+        if (trainNumber == null || stationCode == null) {
+            call.reject("trainNumber and stationCode are required");
+            return;
+        }
+
         Context context = getContext();
 
-        try {
-            Intent stopService = new Intent(context, AlarmForegroundService.class);
-            context.stopService(stopService);
-        } catch (Exception ignored) {}
+        // Check exact alarm permission on Android 12+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            if (am != null && !am.canScheduleExactAlarms()) {
+                Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                intent.setData(Uri.parse("package:" + context.getPackageName()));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(intent);
+            }
+        }
 
-        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (alarmManager != null) {
-            Intent intent = new Intent(context, AlarmReceiver.class);
-            PendingIntent pendingIntent = PendingIntent.getBroadcast(
+        AdaptiveAlarmManager.getInstance().armAlarm(
                 context,
-                ALARM_REQ_CODE,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-            );
-            alarmManager.cancel(pendingIntent);
-        }
+                trainNumber,
+                trainName,
+                stationCode,
+                stationName,
+                triggerMinutes,
+                expectedArrival,
+                journeyDate,
+                backendUrl
+        );
 
-        AlarmSoundPlayer.getInstance().stopAlarm(context);
+        JSObject ret = new JSObject();
+        ret.put("armed", true);
+        ret.put("trainNumber", trainNumber);
+        ret.put("stationCode", stationCode);
+        ret.put("triggerMinutes", triggerMinutes);
+        call.resolve(ret);
+    }
 
-        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (nm != null) {
-            nm.cancel(AlarmReceiver.NOTIFICATION_ID);
-            nm.cancel(AlarmForegroundService.NOTIFICATION_ID);
-        }
+    @PluginMethod
+    public void cancelAlarm(PluginCall call) {
+        Context context = getContext();
+        AdaptiveAlarmManager.getInstance().cancelAlarm(context);
 
         JSObject ret = new JSObject();
         ret.put("cancelled", true);
