@@ -32,6 +32,20 @@ export interface NativeAlarmPluginInterface {
   clearCustomAlarmAudio(): Promise<{ cleared: boolean }>;
   stopAlarm(): Promise<{ stopped: boolean }>;
   isAlarmPlaying(): Promise<{ isPlaying: boolean }>;
+  isAlarmRinging(): Promise<{
+    isRinging: boolean;
+    trainNumber?: string;
+    trainName?: string;
+    stationName?: string;
+    stationCode?: string;
+    triggerMinutes?: number;
+    expectedArrival?: string;
+  }>;
+  snoozeAlarm(options?: { minutes?: number }): Promise<{
+    snoozed: boolean;
+    snoozeMinutes: number;
+    nextTriggerMillis: number;
+  }>;
   checkPermissions(): Promise<NativeAlarmPermissions>;
   requestOverlayPermission(): Promise<{ openedSettings?: boolean; alreadyGranted?: boolean }>;
   requestNotificationPermission(): Promise<{ requested: boolean }>;
@@ -127,6 +141,40 @@ export const stopNativeAlarm = async () => {
       return await callNative<{ stopped: boolean }>('stopAlarm');
     } catch (e) {
       console.warn('Could not stop native alarm:', e);
+    }
+  }
+  return null;
+};
+
+export const checkNativeAlarmRinging = async () => {
+  if (isNativeApp()) {
+    try {
+      return await callNative<{
+        isRinging: boolean;
+        trainNumber?: string;
+        trainName?: string;
+        stationName?: string;
+        stationCode?: string;
+        triggerMinutes?: number;
+        expectedArrival?: string;
+      }>('isAlarmRinging');
+    } catch (e) {
+      console.warn('Could not check native alarm ringing state:', e);
+    }
+  }
+  return { isRinging: false };
+};
+
+export const snoozeNativeAlarm = async (minutes: number = 5) => {
+  if (isNativeApp()) {
+    try {
+      return await callNative<{
+        snoozed: boolean;
+        snoozeMinutes: number;
+        nextTriggerMillis: number;
+      }>('snoozeAlarm', { minutes });
+    } catch (e) {
+      console.warn('Could not snooze native alarm:', e);
     }
   }
   return null;

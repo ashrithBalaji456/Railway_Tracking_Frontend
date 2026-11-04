@@ -10,7 +10,7 @@ import { translateName } from '../utils/transliteration';
 import { getStationDisplayName } from '../utils/stationUtils';
 import { searchHistoryService } from '../services/searchHistoryService';
 import { getStationGastronomyBadge, type StationDelicacy } from '../data/stationGastronomy';
-import { getDepartedWindowInfo } from '../utils/liveStatusUtils';
+import { getDepartedWindowInfo, formatDelayDisplay } from '../utils/liveStatusUtils';
 import StationWakeUpAlarmModal, { type WakeUpAlarmConfig } from '../components/StationWakeUpAlarmModal';
 import RingingAlarmOverlay from '../components/RingingAlarmOverlay';
 import { alarmAudioService } from '../utils/alarmAudioService';
@@ -314,15 +314,42 @@ export default function TrainDetails() {
     const isSkippedStation = (sc?: string) => 
       !sc ? false : (liveStatus.skippedStations && liveStatus.skippedStations.some((x: string) => x?.toUpperCase() === sc?.toUpperCase()));
 
-    const isDepartedStation = (sc?: string) => {
-      if (!sc) return false;
-      const st = liveStatus.stations?.find((s: any) => s.stationCode?.toUpperCase() === sc.toUpperCase());
-      if (!st) return false;
-      const s = (st.status || '').toLowerCase();
-      return s.includes('depart') || Boolean(st.actualDeparture);
-    };
+    // 1. Explicit station match from ground-truth live location text
+    // E.g. "departed at Makudi" -> MKDI, "at-station at Warangal" -> WL, "departed at Chintalpalli" -> CLE
+    if (liveStatus.lastLocationInfo && route?.stations) {
+      const locText = liveStatus.lastLocationInfo;
+      const locLower = locText.toLowerCase();
 
-    // 0. Reliable structured telemetry: active station stop with AT_STATION or ARRIVED status that has not departed
+      // Prefer exact station code matching (e.g. "(MKDI)" or " MKDI ")
+      const matchedByCode = route.stations.find((s: any) => 
+        s.stationCode && 
+        new RegExp(`\\b${s.stationCode}\\b`, 'i').test(locText) && 
+        !isSkippedStation(s.stationCode)
+      );
+      if (matchedByCode?.stationCode) {
+        return matchedByCode.stationCode.toUpperCase();
+      }
+
+      // Station name matching (e.g. "Makudi", "Chintalpalli", "Sirpur", "Warangal")
+      const matchedByName = route.stations.find((s: any) => {
+        if (!s.stationName || isSkippedStation(s.stationCode)) return false;
+        const sName = s.stationName.toLowerCase().trim();
+        if (sName.length < 3) return false;
+        return locLower.includes(sName);
+      });
+      if (matchedByName?.stationCode) {
+        return matchedByName.stationCode.toUpperCase();
+      }
+    }
+
+    // 2. Structured telemetry: if train has currentStationCode set and not cancelled, that is the reported position!
+    // Even if train has departed, its physical marker on track remains at/departed from currentStationCode.
+    // NEVER jump to nextStationCode (which in RailRadar is a major junction 5 to 30 stations away)!
+    if (liveStatus.currentStationCode && liveStatus.currentStationCode !== '-' && !isSkippedStation(liveStatus.currentStationCode)) {
+      return liveStatus.currentStationCode.toUpperCase();
+    }
+
+    // 3. Station stop explicitly marked AT_STATION or ARRIVED in stations array
     if (liveStatus.stations && liveStatus.stations.length > 0) {
       const atStationStop = liveStatus.stations.find((st: any) => {
         if (!st?.stationCode || isSkippedStation(st.stationCode)) return false;
@@ -335,48 +362,7 @@ export default function TrainDetails() {
       }
     }
 
-    // 1. Explicit station match from live location text (e.g. "at-station at Chennai Beach" -> MSB, "at-station at Mancheral" -> MCI)
-    if (liveStatus.lastLocationInfo && route?.stations) {
-      const locText = liveStatus.lastLocationInfo;
-      const locLower = locText.toLowerCase();
-      const isAtOrArrived = locLower.includes('at-station') || locLower.includes('arrived') || locLower.includes('at platform');
-      if (isAtOrArrived) {
-        // Prefer exact station code matching (e.g. "(MCI)" or " MCI ")
-        const matchedByCode = route.stations.find((s: any) => 
-          s.stationCode && 
-          new RegExp(`\\b${s.stationCode}\\b`, 'i').test(locText) && 
-          !isSkippedStation(s.stationCode) && 
-          !isDepartedStation(s.stationCode)
-        );
-        if (matchedByCode?.stationCode) {
-          return matchedByCode.stationCode.toUpperCase();
-        }
-
-        // Exact station name matching (excluding departed and skipped stations)
-        const matchedByName = route.stations.find((s: any) => {
-          if (!s.stationName || isSkippedStation(s.stationCode) || isDepartedStation(s.stationCode)) return false;
-          const sName = s.stationName.toLowerCase().trim();
-          if (sName.length < 3) return false;
-          return locLower.includes(sName) || locLower.replace(/[^a-z0-9]/g, '').includes(sName.replace(/[^a-z0-9]/g, ''));
-        });
-        if (matchedByName?.stationCode) {
-          return matchedByName.stationCode.toUpperCase();
-        }
-      }
-    }
-
-    // 2. If currentStationCode is set and is NOT cancelled/skipped, check if it has already departed
-    if (liveStatus.currentStationCode && liveStatus.currentStationCode !== '-' && !isSkippedStation(liveStatus.currentStationCode)) {
-      if (!isDepartedStation(liveStatus.currentStationCode)) {
-        return liveStatus.currentStationCode.toUpperCase();
-      }
-      // If currentStationCode has departed, train is in transit to nextStationCode
-      if (liveStatus.nextStationCode && !isSkippedStation(liveStatus.nextStationCode)) {
-        return liveStatus.nextStationCode.toUpperCase();
-      }
-    }
-
-    // 3. If scheduled origin or current station is cancelled, find the first non-cancelled active station (e.g. Chennai Beach MSB)
+    // 4. Fallback to first non-cancelled active station or nextStationCode
     const firstActiveStation = route?.stations?.find((s: any) => !isSkippedStation(s.stationCode));
     if (firstActiveStation && firstActiveStation.stationCode) {
       return firstActiveStation.stationCode.toUpperCase();
@@ -2872,14 +2858,14 @@ export default function TrainDetails() {
                     );
                     const isStopDeparted = liveStop?.status?.toUpperCase() === 'DEPARTED' || 
                                            liveStop?.status?.toLowerCase()?.includes('depart');
-                    const isTrainHere = showLive && !isStationCancelled && !isStopDeparted && bubbleStationCode === s.stationCode?.toUpperCase();
-                    const isAtStation = !isStopDeparted && (
-                      isTrainHere || 
+                    const isTrainHere = showLive && !isStationCancelled && bubbleStationCode === s.stationCode?.toUpperCase();
+                    const isDeparted = isStopDeparted || (liveStatus?.lastLocationInfo?.toLowerCase()?.includes('depart') && bubbleStationCode === s.stationCode?.toUpperCase());
+                    const isAtStation = !isDeparted && (
+                      (isTrainHere && (liveStatus?.speed == null || liveStatus?.speed <= 5) && !liveStatus?.lastLocationInfo?.toLowerCase()?.includes('depart')) || 
                       liveStop?.status?.toUpperCase() === 'ARRIVED' || 
                       liveStop?.status?.toUpperCase() === 'AT_STATION' || 
                       liveStop?.status?.toLowerCase()?.includes('at-station')
                     );
-                    const isDeparted = isStopDeparted;
 
                     return (
                       <div
@@ -3108,7 +3094,7 @@ export default function TrainDetails() {
                                   ? 'bg-amber-950/50 text-amber-400 border border-amber-900/40'
                                   : 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/30'
                               }`}>
-                                {liveStop.delayMinutes > 0 ? `+${liveStop.delayMinutes}m` : 'On Time'}
+                                {formatDelayDisplay(liveStop.delayMinutes)}
                               </span>
                             )}
                           </div>
@@ -3352,7 +3338,7 @@ export default function TrainDetails() {
                                                 ? 'bg-amber-950/50 text-amber-400 border border-amber-900/40'
                                                 : 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/30'
                                             }`}>
-                                              {passDelay > 0 ? `+${passDelay}m` : 'On Time'}
+                                              {formatDelayDisplay(passDelay)}
                                             </span>
                                           )}
                                         </>
@@ -3747,6 +3733,24 @@ export default function TrainDetails() {
             setIsAlarmRinging(false);
             setArmedAlarmConfig(null);
             localStorage.removeItem('rail_armed_alarm');
+          }}
+          onSnooze={() => {
+            alarmAudioService.stopAlarm();
+            setIsAlarmRinging(false);
+            if (armedAlarmConfig) {
+              const snoozeEta = 5;
+              const snoozedConfig = { ...armedAlarmConfig, triggerMinutes: snoozeEta };
+              setArmedAlarmConfig(snoozedConfig);
+              localStorage.setItem('rail_armed_alarm', JSON.stringify(snoozedConfig));
+              armAdaptiveNativeAlarm({
+                trainNumber: trainNumber || train?.trainNumber || '',
+                trainName: train?.trainName,
+                stationCode: armedAlarmConfig.stationCode,
+                stationName: armedAlarmConfig.stationName,
+                triggerMinutes: snoozeEta,
+                journeyDate: selectedJourneyDate || liveStatus?.startDate || ''
+              }).catch(() => {});
+            }
           }}
           trainNumber={trainNumber || train?.trainNumber || ''}
           trainName={train?.trainName}

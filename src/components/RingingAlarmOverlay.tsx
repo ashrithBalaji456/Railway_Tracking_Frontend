@@ -1,8 +1,9 @@
-import { Bell, AlertOctagon, Check, Luggage, Volume2, Train } from 'lucide-react';
+import { Bell, AlertOctagon, Check, Luggage, Volume2, Train, Clock } from 'lucide-react';
 
 interface RingingAlarmOverlayProps {
   isOpen: boolean;
   onDismiss: () => void;
+  onSnooze?: () => void;
   trainNumber: string;
   trainName?: string;
   stationName: string;
@@ -15,6 +16,7 @@ interface RingingAlarmOverlayProps {
 export default function RingingAlarmOverlay({
   isOpen,
   onDismiss,
+  onSnooze,
   trainNumber,
   trainName,
   stationName,
@@ -92,16 +94,27 @@ export default function RingingAlarmOverlay({
         </div>
       </div>
 
-      {/* Big Dismiss Button */}
-      <div className="w-full max-w-xl pt-4">
+      {/* Big Dismiss and Snooze Buttons */}
+      <div className="w-full max-w-xl pt-4 space-y-3">
         <button
           type="button"
           onClick={onDismiss}
-          className="w-full py-5 px-6 rounded-2xl bg-white hover:bg-slate-100 text-rose-700 hover:text-rose-800 text-lg sm:text-xl font-black uppercase tracking-wider shadow-2xl flex items-center justify-center gap-3 transition-transform active:scale-95 cursor-pointer"
+          className="w-full py-4 sm:py-5 px-6 rounded-2xl bg-white hover:bg-slate-100 text-rose-700 hover:text-rose-800 text-base sm:text-xl font-black uppercase tracking-wider shadow-2xl flex items-center justify-center gap-3 transition-transform active:scale-95 cursor-pointer"
         >
-          <Check className="w-7 h-7 stroke-[3]" />
+          <Check className="w-6 h-6 sm:w-7 sm:h-7 stroke-[3]" />
           <span>I AM AWAKE &bull; STOP ALARM</span>
         </button>
+
+        {onSnooze && (
+          <button
+            type="button"
+            onClick={onSnooze}
+            className="w-full py-3.5 px-6 rounded-xl bg-black/60 hover:bg-black/80 text-amber-300 border border-amber-400/50 text-sm sm:text-base font-bold uppercase tracking-wider shadow-lg flex items-center justify-center gap-2.5 transition-all active:scale-95 cursor-pointer"
+          >
+            <Clock className="w-5 h-5 text-amber-300" />
+            <span>Snooze for 5 Minutes</span>
+          </button>
+        )}
       </div>
     </div>
   );

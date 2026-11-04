@@ -115,3 +115,18 @@ export function formatTimeForDisplay(tStr?: string | null): string {
   return clean;
 }
 
+/**
+ * Formats train delay minutes into a human-friendly format:
+ * - <= 0 or null -> 'On Time'
+ * - < 60 -> '+45m'
+ * - >= 60 -> '+14h 48m' (or '+14h' if remainder is 0)
+ */
+export function formatDelayDisplay(minutes?: number | null): string {
+  if (minutes == null || minutes <= 0) return 'On Time';
+  if (minutes < 60) return `+${minutes}m`;
+  const hrs = Math.floor(minutes / 60);
+  const remMins = minutes % 60;
+  return remMins > 0 ? `+${hrs}h ${remMins}m` : `+${hrs}h`;
+}
+
+

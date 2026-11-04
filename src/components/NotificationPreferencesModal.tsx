@@ -611,31 +611,33 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
                 </div>
 
                 {armedAlarm ? (
-                  <div className="p-3 rounded-xl bg-rose-950/20 border border-rose-500/30 flex items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="text-xs font-bold text-white flex items-center gap-2">
-                        <Train className="w-3.5 h-3.5 text-rose-400" />
+                  <div className="p-3.5 rounded-xl bg-rose-950/20 border border-rose-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1.5 min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5 flex-wrap">
+                        <Train className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                         <span>Train {armedAlarm.trainNumber}</span>
                         <span className="text-slate-400">• Approaching</span>
-                        <span className="text-rose-300 font-mono">{armedAlarm.stationCode}</span>
+                        <span className="text-rose-300 font-mono font-bold bg-rose-950/60 px-1.5 py-0.5 rounded border border-rose-800/40">{armedAlarm.stationCode}</span>
                         {armedAlarm.stationName && (
-                          <span className="text-slate-400 text-[11px]">({armedAlarm.stationName})</span>
+                          <span className="text-slate-300 text-[11px]">({armedAlarm.stationName})</span>
                         )}
                       </div>
-                      <div className="text-[11px] text-slate-400 flex items-center gap-3">
+                      <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-1">
                         <span>Trigger: <strong>{armedAlarm.triggerMinutes || armedAlarm.thresholdMinutes || 30} mins</strong> prior</span>
                         <span>Tone: <strong className="capitalize">{(armedAlarm.toneType || armedAlarm.tone || 'digital_clock').replace(/_/g, ' ')}</strong></span>
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={handleDisarmAlarm}
-                      className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-rose-600/30 transition-all cursor-pointer shrink-0"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Disarm</span>
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center pt-1 sm:pt-0">
+                      <button
+                        type="button"
+                        onClick={handleDisarmAlarm}
+                        className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-rose-600/30 transition-all cursor-pointer active:scale-95"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Disarm</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="p-4 rounded-xl border border-dashed border-slate-800 text-center">

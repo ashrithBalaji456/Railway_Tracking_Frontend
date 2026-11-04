@@ -248,6 +248,57 @@ public class NativeAlarmPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void isAlarmRinging(PluginCall call) {
+        boolean isPlaying = AlarmSoundPlayer.getInstance().isPlaying();
+        Context context = getContext();
+        android.content.SharedPreferences prefs = context.getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE);
+
+        JSObject ret = new JSObject();
+        ret.put("isRinging", isPlaying);
+        ret.put("trainNumber", prefs.getString("trainNumber", ""));
+        ret.put("trainName", prefs.getString("trainName", ""));
+        ret.put("stationName", prefs.getString("stationName", ""));
+        ret.put("stationCode", prefs.getString("stationCode", ""));
+        ret.put("triggerMinutes", prefs.getInt("triggerMinutes", 30));
+        ret.put("expectedArrival", prefs.getString("expectedArrival", ""));
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void snoozeAlarm(PluginCall call) {
+        int snoozeMinutes = call.getInt("minutes", 5);
+        Context context = getContext();
+
+        // 1. Stop current loud audio & foreground service
+        try {
+            Intent stopService = new Intent(context, AlarmForegroundService.class);
+            context.stopService(stopService);
+        } catch (Exception ignored) {}
+        AlarmSoundPlayer.getInstance().stopAlarm(context);
+
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm != null) {
+            nm.cancel(AlarmReceiver.NOTIFICATION_ID);
+            nm.cancel(AlarmForegroundService.NOTIFICATION_ID);
+        }
+
+        // 2. Schedule re-trigger in 5 minutes
+        long nextTriggerMillis = System.currentTimeMillis() + (snoozeMinutes * 60 * 1000L);
+        android.content.SharedPreferences prefs = context.getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE);
+        String stationName = prefs.getString("stationName", "Station");
+        String trainNumber = prefs.getString("trainNumber", "");
+        AdaptiveAlarmManager.getInstance().scheduleAlarmClock(context, nextTriggerMillis, stationName, trainNumber, snoozeMinutes);
+
+        Log.d(TAG, "Alarm snoozed for " + snoozeMinutes + " minutes; will re-ring at " + new java.util.Date(nextTriggerMillis));
+
+        JSObject ret = new JSObject();
+        ret.put("snoozed", true);
+        ret.put("snoozeMinutes", snoozeMinutes);
+        ret.put("nextTriggerMillis", nextTriggerMillis);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
     public void checkPermissions(PluginCall call) {
         Context context = getContext();
         boolean notificationsGranted = true;

@@ -2955,3 +2955,94 @@ flowchart TD
      ```
   Now, if a user clicks on "My Bookings" or "Favorites" or arms a feature requiring authentication, logging in immediately returns them to where they were.
 
+---
+
+### 16.8. 🛰️ Train Position Synchronization, Multi-Hour Delay Formatting, and Uninterrupted Continuous Ringing with Snooze
+
+#### 1. Visual Flow & Architecture Overview
+
+```mermaid
+flowchart TD
+    subgraph LiveMarker["1. Live Train Marker & Station Status Integrity"]
+        A1["Train departed Makudi (MKDI)"] --> B1["Old Code: MKDI departed -> jump to nextStationCode (Balharshah)"]
+        B1 --> C1["💥 Balharshah got LIVE badge & marked 'AT STATION' prematurely<br/>Intermediate stops (Wirur, Wihirgaon) marked 'DEPARTED'"]
+        A1 --> D1["Fix: Lock sequence marker to currentStationCode (MKDI)"]
+        D1 --> E1["✅ Live badge stays at Makudi with DEPARTED<br/>All subsequent stops (Wirur, Balharshah) show UPCOMING!"]
+    end
+
+    subgraph DelayDisplay["2. Delay Time Formatting"]
+        A2["Raw delay: 888 minutes / 437 minutes"] --> B2["Old Code: displayed +888m / +437m"]
+        B2 --> C2["Fix: formatDelayDisplay() converts >= 60m into hours & minutes"]
+        C2 --> D2["✅ +14h 48m & +7h 17m (Clear, intuitive passenger telemetry)"]
+    end
+
+    subgraph AlarmRinging["3. Global Continuous Alarm & 5-Min Snooze"]
+        A3["AlarmManager fires hardware alarm"] --> B3["AlarmForegroundService launches"]
+        B3 --> C3["Silent Notification Channel eliminates 5-second audio cutoff"]
+        B3 --> D3["AlarmSoundPlayer loops self-contained energetic rail chime on STREAM_ALARM"]
+        B3 --> E3["Global RingingAlarmOverlay opens everywhere in app with 2 options:"]
+        E3 --> F3["🛑 STOP ALARM (I AM AWAKE) -> silences player, cancels service"]
+        E3 --> G3["⏰ SNOOZE 5 MINS -> silences now, reschedules hardware alarm in 5 minutes!"]
+    end
+```
+
+---
+
+#### Q13: Why was the LIVE tag placed at Balharshah / Vijayawada and intermediate stations marked DEPARTED when the train only departed Makudi / Chintalpalli?
+* **The Root Cause:**
+  In `TrainDetails.tsx`, `bubbleStationCode` had a flawed rule:
+  ```typescript
+  if (!isDepartedStation(liveStatus.currentStationCode)) {
+    return liveStatus.currentStationCode.toUpperCase();
+  }
+  // If currentStationCode has departed, train is in transit to nextStationCode
+  if (liveStatus.nextStationCode) {
+    return liveStatus.nextStationCode.toUpperCase();
+  }
+  ```
+  In Indian Railways feeds (RailRadar / NTES), `nextStationCode` does **NOT** represent the immediate next railway track station; it represents the **next major commercial halt**, which may be 40 to 200 km away across 6 to 30 non-stopping intermediate stations!
+  Because Makudi (`MKDI`) or Chintalpalli (`CLE`) had departed, the code prematurely jumped all the way to `nextStationCode` (Balharshah `BPQ` / Vijayawada `BZA`).
+  This triggered three cascading errors:
+  1. The **LIVE** train icon was drawn on Balharshah / Vijayawada.
+  2. Because `isTrainHere` was true for Balharshah, it showed **"AT STATION"** even though the train was 40 km away!
+  3. Non-stopping stations between Makudi and Balharshah (Wirur, Wihirgaon, Manikgarh) were compared against Balharshah's sequence number (`seq < currentBubbleSeq`), causing them to falsely display **"DEPARTED"**!
+* **The Resolution:**
+  - `bubbleStationCode` now locks onto the ground-truth reported in `lastLocationInfo` ("departed at Makudi") and `currentStationCode`.
+  - When a train departs Makudi, its physical position on the line remains at/departed from Makudi (`MKDI`). It never jumps ahead to the next commercial halt.
+  - `isTrainHere` displays the Live marker on Makudi with its confirmed `DEPARTED` badge.
+  - All stations after Makudi (Wirur, Wihirgaon, Manikgarh, Balharshah) have `seq > currentBubbleSeq` and correctly display **`UPCOMING`**!
+
+---
+
+#### Q14: Why was delay showing as `+888m` or `+437m`, and how is it formatted now?
+* **The Root Cause:**
+  Raw delay minutes from the API were printed directly using template strings: `+${liveStop.delayMinutes}m`. For massive Indian Railways delays (e.g. 888 minutes = 14 hours 48 minutes), `+888m` was confusing and difficult for passengers to decipher.
+* **The Resolution:**
+  Implemented `formatDelayDisplay()` in `liveStatusUtils.ts`:
+  - Delays $< 60$ minutes: display as `+45m`.
+  - Delays $\ge 60$ minutes: convert to hours and minutes, e.g. `+14h 48m`, `+7h 17m`.
+  - Exact hours: e.g. `+14h`.
+  - On-time trains: display as `On Time`.
+
+---
+
+#### Q15: Why did the alarm only ring for 5 seconds from the phone's alarm app, why did the app freeze without a stop button, and how does the new continuous loop and 5-minute snooze work?
+* **The Root Cause:**
+  1. **5-Second Cutoff:** In `AlarmForegroundService.java`, the `NotificationChannel` was assigned `channel.setSound(alarmSound, audioAttributes)`. When Android posts a high-priority heads-up notification, its internal notification player plays the sound as a one-shot notification chime (3–5 seconds) and preempts audio focus from `MediaPlayer`.
+  2. **App Freezing / No Stop UI:** `RingingAlarmOverlay` was originally only rendered inside `TrainDetails.tsx`. When the alarm fired while the phone was locked or on another screen, launching `MainActivity` opened the home screen or modal where no ringing overlay existed. The user had no visible Stop or Snooze buttons to interact with.
+  3. **Missing Tone Files:** Android phones that blocked content URIs for default system alarms failed to loop `MediaPlayer`.
+* **The Resolution:**
+  1. **Continuous Looping Audio:**
+     - The notification channel is now configured with `channel.setSound(null, null)` (silent notification banner) so that Android's one-shot sound does not interrupt or steal audio focus.
+     - `AlarmSoundPlayer` generates a self-contained, energetic 4-second multi-chord railway chime PCM WAV file (`default_rail_alarm.wav`) directly in app storage. It plays via `Uri.fromFile()`, guaranteeing zero permission or content-URI failures.
+     - `MediaPlayer` sets `setLooping(true)`, sets `OnCompletionListener` to replay continuously, and elevates volume on `STREAM_ALARM`.
+  2. **Global Full-Screen Ringing UI (`ActiveAlarmBanner` + `RingingAlarmOverlay`):**
+     - Mounted globally in `App.tsx`.
+     - Polls and listens to native alarm ringing state (`checkNativeAlarmRinging()`).
+     - As soon as the alarm fires, the app displays the full-screen pulsating `RingingAlarmOverlay` with live train details, expected platform, and deboarding checklist across any screen.
+  3. **5-Minute Snooze:**
+     - Added **"Snooze for 5 Minutes"** button in both the full-screen overlay and banner.
+     - Tapping Snooze immediately silences the current sound and schedules a new exact hardware alarm clock for `now + 5 minutes` in Android's `AlarmManager`.
+     - When 5 minutes elapse, the alarm rings again with full audio until the passenger taps **"I AM AWAKE • STOP ALARM"**!
+
+

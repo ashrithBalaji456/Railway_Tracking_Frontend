@@ -119,18 +119,15 @@ public class AlarmForegroundService extends Service {
             channel.setDescription("Continuous foreground departure alarms");
             channel.enableVibration(true);
             channel.setVibrationPattern(new long[]{0, 500, 250, 500, 250, 1000});
-            AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .build();
-            channel.setSound(alarmSound, audioAttributes);
+            // Keep notification channel sound silent so AlarmSoundPlayer has exclusive looping control on STREAM_ALARM
+            channel.setSound(null, null);
             channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
             channel.setBypassDnd(true);
             nm.createNotificationChannel(channel);
         }
 
         Intent mainIntent = new Intent(this, MainActivity.class);
-        mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         mainIntent.putExtra("from_alarm", true);
         PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(
             this,
@@ -157,6 +154,7 @@ public class AlarmForegroundService extends Service {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
             .setAutoCancel(false)
+            .setSound(null)
             .setContentIntent(fullScreenPendingIntent)
             .setFullScreenIntent(fullScreenPendingIntent, true)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "🛑 STOP ALARM", stopPendingIntent)
