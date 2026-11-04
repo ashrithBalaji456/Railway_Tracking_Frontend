@@ -212,7 +212,8 @@ export default function AlarmCockpitModal({ isOpen, onClose }: AlarmCockpitModal
         if (webNotificationService.isSupported() && webNotificationService.getPermission() !== 'granted') {
           const granted = await webNotificationService.requestPermission();
           if (!granted) {
-            setNotifTestStatus('⚠️ Notification permission not granted in browser.');
+            webNotificationService.playAlertChime();
+            setNotifTestStatus('⚠️ Notifications blocked in browser. Tap the 🔒 or ⚙️ icon in the Chrome URL bar (next to vercel.app), tap Permissions, and set Notifications to Allow.');
             return;
           }
         }

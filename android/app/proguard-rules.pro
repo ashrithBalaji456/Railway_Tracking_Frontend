@@ -1,24 +1,22 @@
 # Add project specific ProGuard rules here.
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Keep Capacitor Core & Plugins
+-keep class com.getcapacitor.** { *; }
+-keep interface com.getcapacitor.** { *; }
+-keep class * extends com.getcapacitor.Plugin { *; }
+-keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
+-keep @com.getcapacitor.NativePlugin class * { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-# Keep Capacitor plugins and app classes
--keep public class * extends com.getcapacitor.Plugin { *; }
+-keepclassmembers class * {
+    @com.getcapacitor.PluginMethod *;
+    @com.getcapacitor.annotation.PermissionCallback *;
+    @com.getcapacitor.annotation.ActivityCallback *;
+}
+
+# Keep Railway Tracking App classes
 -keep class com.railwaytracking.app.** { *; }
-
+-keepclassmembers class com.railwaytracking.app.** { *; }

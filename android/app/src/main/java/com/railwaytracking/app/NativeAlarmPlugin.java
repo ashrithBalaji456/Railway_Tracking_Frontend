@@ -26,6 +26,8 @@ import com.getcapacitor.annotation.Permission;
 import java.io.File;
 import java.io.FileOutputStream;
 
+@SuppressWarnings("deprecation")
+@com.getcapacitor.NativePlugin(name = "NativeAlarm")
 @CapacitorPlugin(name = "NativeAlarm")
 public class NativeAlarmPlugin extends Plugin {
 
