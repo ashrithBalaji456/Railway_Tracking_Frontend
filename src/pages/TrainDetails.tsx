@@ -441,16 +441,22 @@ export default function TrainDetails() {
         shouldTrigger = true;
       } else if (stopsDifference === 1) {
         // "1 stop away":
-        // Must strictly respect the user's configured trigger window (e.g. 30 mins).
-        // Only trigger if:
-        // a) Dynamic time countdown is reached (diffMinutes <= triggerMinutes)
-        // b) OR train is physically right at the station entry/signals (distanceRemaining <= 5 km)
-        // c) Fallback: if telemetry is completely absent (neither time nor distance exists)
+        // Prioritize user's requested time buffer (e.g. 30 mins) so passenger is never rushed:
+        // 1. Primary: Dynamic countdown reaches user's threshold (diffMinutes <= triggerMinutes, e.g. <= 30m)
+        // 2. Telemetry Fallback: If time ETA is missing from feed, estimate distance using ~55 km/h train approach speed
+        //    (e.g., 30 mins -> ~25 km buffer, 45 mins -> ~38 km buffer)
+        // 3. Emergency Parachute: Train physically entering outer yard signals (<= 5 km)
+        // 4. Zero Telemetry Fallback: Neither time nor distance exists in the feed
         const isTimeTriggered = diffMinutes != null && diffMinutes > 0 && diffMinutes <= armedAlarmConfig.triggerMinutes;
-        const isStationYardClose = distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= 5;
+        
+        // Approximate ~0.85 km per minute of advance warning (at 50-60 km/h approach speed)
+        const proportionalDistanceKm = Math.max(10, Math.round(armedAlarmConfig.triggerMinutes * 0.85));
+        const isDistanceProportionalTriggered = diffMinutes == null && distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= proportionalDistanceKm;
+        
+        const isEmergencyYardParachute = distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= 5;
         const noTelemetryAvailable = distanceRemaining == null && diffMinutes == null;
 
-        if (isTimeTriggered || isStationYardClose || noTelemetryAvailable) {
+        if (isTimeTriggered || isDistanceProportionalTriggered || isEmergencyYardParachute || noTelemetryAvailable) {
           shouldTrigger = true;
         }
       }

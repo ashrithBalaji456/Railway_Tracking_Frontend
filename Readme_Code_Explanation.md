@@ -3116,5 +3116,56 @@ flowchart TD
   - **Strict Time Gate for 1-Stop Away:** When `stopsDifference === 1`, the alarm will **NOT** fire until `diffMinutes <= armedAlarmConfig.triggerMinutes`, unless the train is physically within immediate yard/signal entry (`distanceRemaining <= 5 km`).
   - As a result, for an arrival at 12:02 AM with a 30-minute alarm, the alarm will stay quiet at 11:23 PM and will ring precisely at **11:32 PM** (or adapt to delay if the train slows down)!
 
+---
+
+#### Q17: If the emergency fallback distance is 5 km, won't the passenger feel completely hurried and rushed when they set a 30-minute alarm? How does RailTrack guarantee a relaxed buffer?
+* **The Passenger's Concern:**
+  If a train travels at 80–110 km/h, 5 km is covered in less than 3 to 4 minutes! If an alarm only went off at 5 km, a passenger who set a 30-minute advance alarm would wake up panicking, rushing to pack bags, find shoes, and get to the exit doors.
+* **How RailTrack Guarantees the Full 30-Minute Window:**
+  ```mermaid
+  flowchart TD
+      subgraph "Multi-Tier Priority Architecture for 30-Minute Alarm"
+          A["User arms alarm for 30 minutes prior"] --> B["Tier 1: Hardware OS AlarmClock (Fail-Proof Primary)"]
+          B --> B1["Pre-programmed in Android AlarmManager for exactly Target Time - 30 mins"]
+          B1 --> B2["Rings at 11:32 PM even if phone locked, asleep in Doze, or app is killed!"]
+          
+          A --> C["Tier 2: Dynamic Live Telemetry Countdown (diffMinutes <= 30)"]
+          C --> C1["Continuously monitors dynamic train speed & live ETA"]
+          C1 --> C2["Rings exactly when diffMinutes <= 30 mins (train is ~25 to 35 km away!)"]
+          
+          A --> D["Tier 3: Missing-Telemetry Proportional Distance Fallback"]
+          D --> D1["If railway API drops arrival time telemetry (diffMinutes == null)"]
+          D1 --> D2["Adaptive distance calculated at ~0.85 km/min: 30 mins = 25 km buffer!"]
+          D2 --> D3["Alarm rings at 25 km away, giving 25 to 30 mins of calm preparation!"]
+          
+          A --> E["Tier 4: Extreme Emergency Parachute (distanceRemaining <= 5 km)"]
+          E --> E1["ONLY reached if Tiers 1, 2, and 3 were somehow impossible"]
+          E1 --> E2["e.g. Passenger opens app for the first time while train is already pulling into yard"]
+      end
+  ```
+
+* **Detailed Breakdown of the 4 Tiers:**
+  1. **Tier 1 — The Android Hardware AlarmClock (Exact 30-Minute Wakeup):**
+     - When the passenger selects "30 mins prior" for a 12:02 AM arrival, Android's native `AlarmManager` registers an exact hardware alarm for **11:32 PM**.
+     - This does not depend on GPS, internet, or the app running. Even in Doze mode or deep sleep, the hardware clock wakes the device at 11:32 PM, guaranteeing the passenger has the full 30 minutes!
+  2. **Tier 2 — Dynamic Live Countdown (`diffMinutes <= 30`):**
+     - Under normal operation with live telemetry, the alarm rings when the dynamic countdown `diffMinutes <= 30`.
+     - On Indian Railways tracks, a train 30 minutes before arrival is physically **25 to 35 km away**.
+     - The passenger is woken up while the train is still traversing the previous block section, with zero rush or hurry.
+  3. **Tier 3 — Proportional Distance Fallback (When Time Telemetry is Missing):**
+     - If the railway API feed ever has missing, corrupted, or null `expectedArrival` timestamps (`diffMinutes == null`), the system **never** waits for 5 km.
+     - Instead, it calculates proportional approach distance at ~0.85 km per minute:
+       ```typescript
+       const proportionalDistanceKm = Math.max(10, Math.round(armedAlarmConfig.triggerMinutes * 0.85));
+       // For a 30-minute setting: Math.round(30 * 0.85) = ~25 km!
+       // For a 45-minute setting: Math.round(45 * 0.85) = ~38 km!
+       ```
+     - Even without time timestamps, the alarm fires at **25 km away**, ensuring the passenger still enjoys their relaxed ~25-30 minute waking buffer!
+  4. **Tier 4 — The 5 km Emergency Parachute:**
+     - The $\le 5\text{ km}$ yard signal condition is **NOT** the normal alarm trigger.
+     - It is solely an emergency safety parachute for catastrophic anomalies (for example, if the passenger fell asleep before arming the alarm, and only armed it as the train was already decelerating into the outer junction).
+     - It prevents the disaster of overshooting the station and waking up in the next city.
+
+
 
 
