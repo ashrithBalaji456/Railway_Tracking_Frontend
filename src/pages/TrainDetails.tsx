@@ -3705,8 +3705,13 @@ export default function TrainDetails() {
           station={selectedAlarmStation}
           currentArmedConfig={armedAlarmConfig}
           onArmAlarm={(cfg) => {
+            const effectiveJourneyDate = selectedJourneyDate || liveStatus?.startDate || '';
             setArmedAlarmConfig(cfg);
-            localStorage.setItem('rail_armed_alarm', JSON.stringify({ ...cfg, trainNumber: trainNumber || train?.trainNumber }));
+            localStorage.setItem('rail_armed_alarm', JSON.stringify({
+              ...cfg,
+              trainNumber: trainNumber || train?.trainNumber,
+              journeyDate: effectiveJourneyDate
+            }));
 
             const targetCode = cfg.stationCode.toUpperCase();
             const targetStop = liveStatus?.stations?.find((ls: any) => ls.stationCode?.toUpperCase() === targetCode);
@@ -3720,7 +3725,7 @@ export default function TrainDetails() {
               stationName: cfg.stationName,
               triggerMinutes: cfg.triggerMinutes,
               expectedArrival: expArrival,
-              journeyDate: selectedJourneyDate || ''
+              journeyDate: effectiveJourneyDate
             });
           }}
           onDisarmAlarm={() => {
