@@ -26,6 +26,33 @@ export interface NativeAlarmPluginInterface {
 
 const NativeAlarm = registerPlugin<NativeAlarmPluginInterface>('NativeAlarm');
 
+/**
+ * Universal Native Invoker:
+ * Directly calls Capacitor's native bridge (cap.nativePromise), bypassing
+ * any PluginHeaders registration desync or reflection delays on Android.
+ */
+const callNative = async <T = any>(methodName: string, options: any = {}): Promise<T> => {
+  const win = typeof window !== 'undefined' ? (window as any) : null;
+  const cap = win?.Capacitor;
+
+  // 1. Direct native bridge call via nativePromise (Primary JNI channel)
+  if (cap && typeof cap.nativePromise === 'function') {
+    return await cap.nativePromise('NativeAlarm', methodName, options);
+  }
+
+  // 2. Direct plugin instance from window.Capacitor.Plugins
+  if (cap?.Plugins?.NativeAlarm && typeof cap.Plugins.NativeAlarm[methodName] === 'function') {
+    return await cap.Plugins.NativeAlarm[methodName](options);
+  }
+
+  // 3. Registered plugin proxy fallback
+  if (NativeAlarm && typeof (NativeAlarm as any)[methodName] === 'function') {
+    return await (NativeAlarm as any)[methodName](options);
+  }
+
+  throw new Error(`NativeAlarm.${methodName} is not available on this platform.`);
+};
+
 export const isNativeApp = (): boolean => {
   return Capacitor.isNativePlatform();
 };
@@ -36,7 +63,10 @@ export const scheduleNativeAlarm = async (
   body: string = 'Your train departure alarm is ringing now! Tap to open.'
 ) => {
   if (isNativeApp()) {
-    return await NativeAlarm.scheduleExactAlarm({ seconds, title, body });
+    return await callNative<{ scheduled: boolean; triggerAtMillis: number; seconds: number }>(
+      'scheduleExactAlarm',
+      { seconds, title, body }
+    );
   }
   return null;
 };
@@ -44,7 +74,7 @@ export const scheduleNativeAlarm = async (
 export const cancelNativeAlarm = async () => {
   if (isNativeApp()) {
     try {
-      return await NativeAlarm.cancelAlarm();
+      return await callNative<{ cancelled: boolean }>('cancelAlarm');
     } catch (e) {
       console.warn('Could not cancel native alarm:', e);
     }
@@ -55,7 +85,7 @@ export const cancelNativeAlarm = async () => {
 export const stopNativeAlarm = async () => {
   if (isNativeApp()) {
     try {
-      return await NativeAlarm.stopAlarm();
+      return await callNative<{ stopped: boolean }>('stopAlarm');
     } catch (e) {
       console.warn('Could not stop native alarm:', e);
     }
@@ -71,7 +101,7 @@ export const syncCustomAudioToNative = async (blob: Blob): Promise<boolean> => {
       try {
         const resultStr = reader.result as string;
         const base64data = resultStr.includes(',') ? resultStr.split(',')[1] : resultStr;
-        await NativeAlarm.setCustomAlarmAudio({ base64: base64data });
+        await callNative('setCustomAlarmAudio', { base64: base64data });
         console.log('Successfully synced custom audio to Android native storage');
         resolve(true);
       } catch (err) {
@@ -87,7 +117,7 @@ export const syncCustomAudioToNative = async (blob: Blob): Promise<boolean> => {
 export const clearNativeCustomAudio = async () => {
   if (isNativeApp()) {
     try {
-      await NativeAlarm.clearCustomAlarmAudio();
+      await callNative('clearCustomAlarmAudio');
     } catch (err) {
       console.warn('Failed to clear native custom audio:', err);
     }
@@ -97,7 +127,7 @@ export const clearNativeCustomAudio = async () => {
 export const checkNativeAlarmPermissions = async (): Promise<NativeAlarmPermissions | null> => {
   if (isNativeApp()) {
     try {
-      return await NativeAlarm.checkPermissions();
+      return await callNative<NativeAlarmPermissions>('checkPermissions');
     } catch (e) {
       console.warn('Error checking native permissions:', e);
     }
@@ -108,7 +138,9 @@ export const checkNativeAlarmPermissions = async (): Promise<NativeAlarmPermissi
 export const requestNativeOverlayPermission = async () => {
   if (isNativeApp()) {
     try {
-      return await NativeAlarm.requestOverlayPermission();
+      return await callNative<{ openedSettings?: boolean; alreadyGranted?: boolean }>(
+        'requestOverlayPermission'
+      );
     } catch (e) {
       console.warn('Error requesting overlay permission:', e);
     }
@@ -119,7 +151,7 @@ export const requestNativeOverlayPermission = async () => {
 export const requestNativeNotificationPermission = async () => {
   if (isNativeApp()) {
     try {
-      return await NativeAlarm.requestNotificationPermission();
+      return await callNative<{ requested: boolean }>('requestNotificationPermission');
     } catch (e) {
       console.warn('Error requesting notification permission:', e);
     }
@@ -130,7 +162,7 @@ export const requestNativeNotificationPermission = async () => {
 export const openNativeNotificationSettings = async () => {
   if (isNativeApp()) {
     try {
-      return await NativeAlarm.openNotificationSettings();
+      return await callNative<{ opened: boolean }>('openNotificationSettings');
     } catch (e) {
       console.warn('Error opening notification settings:', e);
     }
@@ -141,7 +173,7 @@ export const openNativeNotificationSettings = async () => {
 export const triggerTestNotification = async (title?: string, body?: string): Promise<boolean> => {
   if (isNativeApp()) {
     try {
-      await NativeAlarm.sendTestNotification({
+      await callNative<{ sent: boolean }>('sendTestNotification', {
         title: title || '🔔 RailTrack Notification Test',
         body: body || 'Real-time train delay alerts and departure alarms are operational on your device!'
       });

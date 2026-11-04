@@ -17,6 +17,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(NativeAlarmPlugin.class);
+        this.initialPlugins.add(NativeAlarmPlugin.class);
         super.onCreate(savedInstanceState);
         if (getBridge() != null) {
             getBridge().registerPlugin(NativeAlarmPlugin.class);

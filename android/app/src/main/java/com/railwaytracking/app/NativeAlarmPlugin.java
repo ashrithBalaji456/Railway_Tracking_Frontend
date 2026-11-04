@@ -29,6 +29,10 @@ import java.io.FileOutputStream;
 @CapacitorPlugin(name = "NativeAlarm")
 public class NativeAlarmPlugin extends Plugin {
 
+    public NativeAlarmPlugin() {
+        super();
+    }
+
     private static final String TAG = "NativeAlarmPlugin";
     private static final int ALARM_REQ_CODE = 8801;
 
