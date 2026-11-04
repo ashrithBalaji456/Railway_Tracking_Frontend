@@ -108,6 +108,14 @@ This documentation is designed specifically for developers, students, or system 
 
 12. [End-to-End User Interaction Walkthrough](#12-end-to-end-user-interaction-walkthrough)
 
+13. [Smart Dynamic Departure Wake-Up Alarm & Travel Reminder Cockpit](#13--priority-3-smart-dynamic-departure-wake-up-alarm--travel-reminder-cockpit)
+
+14. [Custom Alarm Ringtones (MP3/WAV) & Lock-Screen Test Countdown](#14--custom-alarm-ringtones-mp3wav--2-minute-lock-screen-test-countdown)
+
+15. [Disruption Management, Punctuality & Fares UI Integration](#15-disruption-management-punctuality--fares-ui-integration)
+
+16. [Deep-Dive: Station Wake-Up Alarm Engine, Indian Railways Operational Rules & Technical Q&A](#16-️-deep-dive-station-wake-up-alarm-engine-indian-railways-operational-rules--technical-qa)
+
 
 
 ---
@@ -1588,7 +1596,7 @@ This section documents the frontend views and components integrated for rail dis
 
 
 
-### 15.1. `src/pages/DisruptionsPage.tsx`
+### 16.1. `src/pages/DisruptionsPage.tsx`
 
 * **Route:** `/disruptions`
 
@@ -1608,7 +1616,7 @@ This section documents the frontend views and components integrated for rail dis
 
 
 
-### 15.2. `src/pages/TrainDetails.tsx` Extensions
+### 16.2. `src/pages/TrainDetails.tsx` Extensions
 
 * **Concise Red Disruption Alert Banner:** Mounted conditionally at the top of the details view and directly above the route schedule timeline whenever cancellations, diversions, or station skips occur. Rather than displaying cluttered raw station codes, it formats a clear passenger-friendly notice matching official railway tracker standards: `"This train is partially cancelled between [Origin Station] and [Active Station]. It will start from [Active Station]."` with an interactive `✕` dismiss button.
 
@@ -1687,7 +1695,7 @@ This section documents the frontend views and components integrated for rail dis
   * **Strict Component-Sum Invariance:** Guaranteed that the total fare badge and class cards strictly reflect the exact sum of the itemized breakdown components (Base Fare + Superfast Surcharge + Reservation Fee + GST), eliminating any stale or desynchronized API overrides.
 
 
-### 15.3. `src/pages/JourneyPlanner.tsx` Mobile-First Stacked Layout & Delay Overlay
+### 16.3. `src/pages/JourneyPlanner.tsx` Mobile-First Stacked Layout & Delay Overlay
 
 * **Clean "Down by Down" Form Layout:** Re-engineered the query card from a squished multi-column layout to a mobile-first stacked design:
 
@@ -1705,7 +1713,7 @@ This section documents the frontend views and components integrated for rail dis
 
 
 
-### 15.4. Navigation & Types
+### 16.4. Navigation & Types
 
 * **`src/components/Navbar.tsx`:** Added responsive desktop and mobile navigation links with `AlertTriangle` icon linking to `/disruptions`.
 
@@ -2593,3 +2601,143 @@ File path: `src/pages/TrainDetails.tsx`
   6. Select **"2 Minutes (Recommended)"** and click **"Arm Test Alarm"**.
   7. **Lock your phone screen** and place your device on your desk.
   8. When 2 minutes elapse, your phone will light up with a native lock-screen notification and continuously blast your custom MP3 with vibration until you tap **"🛑 Turn Off Alarm"**!
+
+
+---
+
+## 16. 🛰️ Deep-Dive: Station Wake-Up Alarm Engine, Indian Railways Operational Rules & Technical Q&A
+
+### 15.1. High-Level Architectural Flow: How a Wake-Up Alarm Triggers
+
+When a passenger arms a wake-up alarm (e.g., *"Wake me up 1 hour before New Delhi"*), the application coordinates across three asynchronous engines:
+
+```mermaid
+flowchart TD
+    User["Passenger Arms Alarm<br/>(e.g., 60 mins before NDLS)"] --> Arm["Persist to LocalStorage / IndexedDB & Acquire WakeLock"]
+    Arm --> NativeBridge["Native Bridge: AlarmManager.setAlarmClock()<br/>& Notification Permission Check"]
+    
+    subgraph Live Polling Engine
+        Tick["5s - 15s Telemetry Heartbeat<br/>(TrainDetails.tsx)"]
+        LiveAPI["Fetch Live GPS & NTES Telemetry"]
+        Tick --> LiveAPI
+        LiveAPI --> Calc["Compute Real-Time ETA:<br/>diffMinutes = ExpectedArrival - CurrentTime"]
+    end
+    
+    Calc --> Eval{"Trigger Evaluation Engine"}
+    
+    Eval -- "diffMinutes <= Armed Warning Window" --> Fire["🔔 FIRE CONTINUOUS ALARM"]
+    Eval -- "Status == AT_STATION or ARRIVED" --> Fire
+    Eval -- "stopsDifference == 1 AND (Distance <= 35km OR diffMinutes <= 45m)" --> Fire
+    Eval -- "Train still hours/hundreds of km away" --> Sleep["⏳ Silent Sleep Mode"]
+    
+    Fire --> Audio["Continuous Audio: Synth Siren / Custom MP3 (AlarmAudioService)"]
+    Fire --> FGS["Android AlarmForegroundService<br/>(CPU WakeLock + Media Playback)"]
+    Fire --> Push["Native High-Priority Heads-Up Banner<br/>(Full-Screen Intent Over Lock-Screen)"]
+    Fire --> Email["Backup Brevo Transactional Email Alert"]
+    Fire --> Banner["Safe-Area Red Notch Banner with Snooze & Turn-Off"]
+```
+
+---
+
+### 15.2. Technical Implementation Layers: Web vs. Native Android APK
+
+| Capability | Web Application (Vercel) | Native Android APK (Capacitor + Java) |
+| :--- | :--- | :--- |
+| **Execution Context** | Browser Tab / WebView DOM | Native OS Process with Background Services |
+| **Background Policy** | Throttled / suspended when tab inactive or phone locked | Unrestricted via `AlarmForegroundService` & `PARTIAL_WAKE_LOCK` |
+| **Timer Reliability** | JS `setTimeout` / `setInterval` clamped to 1min or frozen | `AlarmManager.setAlarmClock()` bypasses Doze Mode and OEM task killers |
+| **Audio Playback** | Web Audio API / HTML5 Audio (paused on screen lock) | `MediaPlayer` / `RingtoneManager` running in Foreground Service |
+| **Lock-Screen Display** | HTML5 Notifications (if permission granted in browser) | Full-screen intent with `setShowWhenLocked(true)` and `setTurnScreenOn(true)` |
+| **Custom Audio Storage** | Client `IndexedDB` (`railtrack_alarm_sounds_db`) | Android Internal Storage & IndexedDB asset streaming |
+
+---
+
+### 15.3. Real-World Indian Railways Operational Mechanics
+
+#### 1. Scheduled Commercial Halts vs. Wayside Passing Stations
+* **Commercial Halts:** Stations scheduled in the public timetable where the train officially stops for passenger boarding and deboarding, assigned a specific arrival time, departure time, and halt duration.
+* **Passing / Flag Stations & Signal Cabins:** Hundreds of intermediate technical passing stations exist along Indian rail corridors (e.g., wayside passing loops, automatic block signaling cabins). Trains run through these at line speed (110–130 km/h) without halting.
+* **Data Feed Reality:** Public tracking APIs (NTES, CRIS, RailRadar) structure route timetables strictly around **Commercial Halts**. Intermediate passing stations are operational block points and are not passenger stations.
+
+#### 2. Slack Time (Slant Time) & Dynamic Delay Compression
+* **What is Slack Time?** In Indian Railways, timetable planners intentionally insert extra "slack time" (running time padding) in the schedule between the second-to-last station and the final terminal, or before major junction hubs.
+* **Why it exists:** Freight train precedence, platform congestion at major terminals, and maintenance blocks frequently delay trains. Slack time gives the loco pilot scheduled buffer time to absorb delays.
+* **The "Vanishing Delay" Phenomenon:** A train might depart an intermediate station 3 hours late. However, because the upcoming stretch has 1.5 hours of scheduled slack time and a clear green corridor, the train reaches the destination only 1 hour late—**2 hours of delay vanished!**
+* **How RailTrack Handles This:** Our engine does **not** rely on static scheduled timetable arrival times. It continuously evaluates the **dynamic live expected arrival time** returned by NTES/GPS telemetry. If the train makes up time across a slack section, the expected arrival automatically pulls forward, ensuring the passenger is alerted based on true physical ETA rather than stale schedule projections.
+
+---
+
+### 15.4. Master Technical Q&A (Frequently Asked Architectural Questions)
+
+#### Q1: How is the alarm triggered when a user sets it to "1 hour before arrival"? What is the exact step-by-step implementation flow?
+1. **Arming Phase:**
+   * The user selects a target station and sets the advance warning window (e.g., 60 minutes) in `StationWakeUpAlarmModal.tsx`.
+   * Configuration is saved to local state/storage, and `AlarmAudioService.acquireWakeLock()` requests a screen wake lock.
+   * If on Android, `NativeAlarmPlugin.java` schedules an exact system alarm timestamp with `AlarmManager.setAlarmClock()`.
+2. **Monitoring Phase:**
+   * `TrainDetails.tsx` polls the live train telemetry feed every 5–15 seconds.
+   * Each cycle calculates `diffMinutes = ExpectedArrival - CurrentTime`.
+3. **Trigger Phase:**
+   * When `diffMinutes <= 60`, `shouldTrigger` evaluates to `true`.
+   * `alarmAudioService.startContinuousAlarm()` triggers synthesized siren pulses or custom MP3 playback.
+   * The Android bridge fires `AlarmForegroundService` with high-priority audio and vibration.
+   * A persistent red top notification banner (`ActiveAlarmBanner.tsx`) displays the train number, target station, ETA badge, and buttons for **[Snooze 5m]** and **[🛑 Turn Off Alarm]**.
+   * A backup HTML alert is dispatched to the passenger's email via Brevo.
+
+---
+
+#### Q2: In Indian Railways, slack time can make a 3-hour delay shrink or vanish between stations. How does our app prevent waking passengers at the wrong time?
+* **Problem:** If an app calculates alarms using `Scheduled Time + Initial Delay`, and the train makes up 2 hours due to slack time, the alarm would fire 2 hours too late—after the train has already arrived!
+* **Our Solution:** RailTrack continuously recalculates ETA on every telemetry cycle using the **live dynamic expected arrival**:
+  $$\\text{diffMinutes} = \\text{liveStop.expectedArrival} - \\text{now}$$
+* If the loco pilot accelerates through a slack section and cuts the delay from 180 mins down to 60 mins, `liveStop.expectedArrival` updates in real time. The alarm trigger dynamically shifts forward with the train's actual physical pace, guaranteeing the passenger wakes up with their requested notice period intact.
+
+---
+
+#### Q3: Does "1 station away" consider non-stopping passing stations or scheduled commercial halts? What happens when a train runs 300 to 400 km non-stop?
+* **Stopping vs. Non-Stopping:** The route list consists exclusively of **scheduled commercial halts**. Intermediate non-stopping wayside stations are not passenger halts.
+* **The 400 km Non-Stop Problem:** On trains like the Mumbai/Howrah Rajdhani or Vande Bharat, stretches like New Delhi $\\rightarrow$ Kanpur Central are **440 km non-stop (~4.5 hours)**. On the scheduled halt list, Kanpur Central is sequence #2 and New Delhi is sequence #1. Thus, immediately upon departing New Delhi, Kanpur is "1 station away" ($\\text{targetSeq} - \\text{currentSeq} = 1$).
+* **How Our Code Overcomes This:** We implemented a **Proximity Safety Guard** in `TrainDetails.tsx`:
+  ```ts
+  if (stopsDifference === 1) {
+    const isDistanceClose = distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= 35;
+    const isTimeClose = diffMinutes != null && diffMinutes > 0 && diffMinutes <= Math.max(armedAlarmConfig.triggerMinutes, 45);
+    
+    if (isDistanceClose || isTimeClose) {
+      shouldTrigger = true;
+    }
+  }
+  ```
+  If the train is 400 km away, both `isDistanceClose` (400 km $\\le$ 35 km is False) and `isTimeClose` (270 mins $\\le$ 45 mins is False) prevent the alarm from ringing. The alarm stays silent until the train is physically close.
+
+---
+
+#### Q4: How does it calculate when a user chooses 3 hours? A train doesn't take 3 hours to cross 35 km — does the 35 km limit block a 3-hour alarm?
+* **No, the 35 km limit does NOT block a 3-hour alarm.**
+* **Explanation:** 
+  * The primary trigger is **Check 1: Dynamic Live ETA** (`diffMinutes <= armedAlarmConfig.triggerMinutes`).
+  * When a user sets **3 hours (180 mins)**, Check 1 tests:
+    $$\\text{diffMinutes} \\le 180$$
+  * When the train is 3 hours away from the station (which could be ~200–260 km away at highway rail speed), Check 1 evaluates to **true** and **rings the alarm immediately**.
+  * The **35 km limit** lives exclusively inside **Check 2 (the sequence fallback)**. It only acts as a safety brake for short alarms (like 15 or 30 minutes) to prevent them from misfiring on 400 km non-stop runs.
+
+---
+
+#### Q5: Why did the alarm previously fail to ring when opening WhatsApp or locking the screen, and how did the native Android Foreground Service fix it?
+* **Root Cause:**
+  1. When a user switches to WhatsApp or locks the screen, Android's OS puts background web tabs (Chrome / WebView) into deep freeze to preserve battery.
+  2. JavaScript timers (`setTimeout`, `setInterval`) are throttled or suspended completely.
+  3. Audio played via Web Audio or standard background receivers is terminated by Android's low-memory killer (OOM).
+* **Fix Implemented:**
+  1. **`AlarmManager.setAlarmClock()`**: Uses Android's highest-priority alarm clock API, which is immune to Doze Mode and OEM battery optimizations (MIUI, ColorOS, OxygenOS).
+  2. **`AlarmForegroundService.java`**: When triggered, it spawns an explicit Android Foreground Service with type `mediaPlayback`, holds a `PowerManager.PARTIAL_WAKE_LOCK` to keep the CPU awake, and streams audio continuously via `RingtoneManager` and `MediaPlayer` until the user taps turn-off.
+  3. **Full-Screen Activity Intent**: Wakes the screen even when locked via `setShowWhenLocked(true)` and `setTurnScreenOn(true)`.
+
+---
+
+#### Q6: Does deploying to Vercel automatically update the mobile APK? Why is native APK installation needed for Android Java changes?
+* **Vercel** only hosts web assets (HTML, CSS, compiled JavaScript/TypeScript bundles).
+* **Native Android Java Code** (such as `MainActivity.java`, `AlarmForegroundService.java`, `AlarmReceiver.java`, `AndroidManifest.xml`, and ProGuard configuration) compiles into native bytecode (`classes.dex`) and is packaged into the **APK file** (`app-debug.apk`).
+* Vercel cannot touch or rewrite compiled native Android Java classes on a user's phone. Therefore:
+  * Pure UI/React styling updates deployed to Vercel reflect immediately on web and in web-routed apps.
+  * Native background services, exact alarm permissions, and audio foreground managers **must be installed directly via the updated APK**.
