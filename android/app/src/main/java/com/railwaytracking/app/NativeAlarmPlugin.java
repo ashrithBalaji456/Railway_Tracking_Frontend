@@ -26,12 +26,7 @@ import com.getcapacitor.annotation.Permission;
 import java.io.File;
 import java.io.FileOutputStream;
 
-@CapacitorPlugin(
-    name = "NativeAlarm",
-    permissions = {
-        @Permission(strings = { Manifest.permission.POST_NOTIFICATIONS }, alias = "notifications")
-    }
-)
+@CapacitorPlugin(name = "NativeAlarm")
 public class NativeAlarmPlugin extends Plugin {
 
     private static final String TAG = "NativeAlarmPlugin";

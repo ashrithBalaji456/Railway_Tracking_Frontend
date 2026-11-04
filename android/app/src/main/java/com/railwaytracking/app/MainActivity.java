@@ -18,6 +18,9 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(NativeAlarmPlugin.class);
         super.onCreate(savedInstanceState);
+        if (getBridge() != null) {
+            getBridge().registerPlugin(NativeAlarmPlugin.class);
+        }
 
         // 1. Turn on screen and show activity above keyguard when an alarm rings
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
