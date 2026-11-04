@@ -23,6 +23,7 @@ import {
   checkNativeAlarmPermissions, 
   requestNativeOverlayPermission, 
   requestNativeNotificationPermission,
+  openNativeNotificationSettings,
   triggerTestNotification,
   type NativeAlarmPermissions
 } from '../utils/nativeAlarmBridge';
@@ -303,7 +304,10 @@ export default function LockScreenTestAlarmModal({
   };
 
   const handleGrantNotifications = async () => {
-    await requestNativeNotificationPermission();
+    try {
+      await requestNativeNotificationPermission();
+      await openNativeNotificationSettings();
+    } catch {}
     setTimeout(async () => {
       const p = await checkNativeAlarmPermissions();
       if (p) setNativePerms(p);

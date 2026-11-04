@@ -19,11 +19,14 @@ export default function PermissionPromptBanner() {
   useEffect(() => {
     let isMounted = true;
 
+    // Check if user already skipped for this session
+    const isDismissed = sessionStorage.getItem('rail_permission_modal_dismissed') === 'true';
+
     if (isNativeApp()) {
       // 1. Immediately trigger native Android notification permission dialog on startup
       requestNativeNotificationPermission().catch(() => {});
 
-      // 2. Poll permission state and display modal if any critical permission is missing
+      // 2. Poll permission state and display modal if missing and not dismissed
       const pollPermissions = async () => {
         try {
           const perms = await checkNativeAlarmPermissions();
@@ -31,39 +34,82 @@ export default function PermissionPromptBanner() {
           if (perms) {
             setNativePerms(perms);
             if (!perms.notifications || !perms.overlay) {
-              setShowModal(true);
+              if (!sessionStorage.getItem('rail_permission_modal_dismissed')) {
+                setShowModal(true);
+              }
             } else {
               setShowModal(false);
             }
           } else {
-            setShowModal(true);
+            if (!sessionStorage.getItem('rail_permission_modal_dismissed')) {
+              setShowModal(true);
+            }
           }
         } catch {
-          if (isMounted) setShowModal(true);
+          if (isMounted && !sessionStorage.getItem('rail_permission_modal_dismissed')) {
+            setShowModal(true);
+          }
         }
       };
 
       pollPermissions();
-      const interval = setInterval(pollPermissions, 1500);
+      // Low-frequency polling only to detect background permission changes
+      const interval = setInterval(pollPermissions, 3000);
+
+      // 3. Immediately re-check when user returns from Android Settings
+      const handleVisibilityChange = async () => {
+        if (document.visibilityState === 'visible') {
+          try {
+            const perms = await checkNativeAlarmPermissions();
+            if (!isMounted) return;
+            if (perms) {
+              setNativePerms(perms);
+              if (perms.notifications && perms.overlay) {
+                setGrantedSuccess(true);
+                try {
+                  await triggerTestNotification(
+                    '🔔 RailTrack Notifications Active',
+                    'Lock-screen alerts and departure wake-up alarms are operational!'
+                  );
+                } catch {}
+                setTimeout(() => {
+                  if (isMounted) {
+                    setShowModal(false);
+                    sessionStorage.setItem('rail_permission_modal_dismissed', 'true');
+                  }
+                }, 2000);
+              }
+            }
+          } catch {}
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
       return () => {
         isMounted = false;
         clearInterval(interval);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
       };
     }
 
     // Web browser handling: prompt immediately on load
-    if (webNotificationService.isSupported()) {
+    if (webNotificationService.isSupported() && !isDismissed) {
       const current = webNotificationService.getPermission();
       if (current === 'default') {
         setShowModal(true);
-        // Attempt immediate web prompt
         webNotificationService.requestPermission().then((granted) => {
           if (!isMounted) return;
           if (granted) {
             setGrantedSuccess(true);
             webNotificationService.playAlertChime();
             webNotificationService.sendSampleDepartureAlert();
-            setTimeout(() => setShowModal(false), 2500);
+            setTimeout(() => {
+              if (isMounted) {
+                setShowModal(false);
+                sessionStorage.setItem('rail_permission_modal_dismissed', 'true');
+              }
+            }, 2500);
           }
         }).catch(() => {});
       }
@@ -78,27 +124,17 @@ export default function PermissionPromptBanner() {
 
   const handleRequestNotification = async () => {
     if (isNativeApp()) {
-      await requestNativeNotificationPermission();
-      setTimeout(async () => {
-        const perms = await checkNativeAlarmPermissions();
-        if (perms) {
-          setNativePerms(perms);
-          if (perms.notifications) {
-            if (perms.overlay) {
-              setGrantedSuccess(true);
-              try {
-                await triggerTestNotification(
-                  '🔔 RailTrack Notifications Active',
-                  'Lock-screen alerts and departure wake-up alarms are operational!'
-                );
-              } catch {}
-              setTimeout(() => setShowModal(false), 2500);
-            }
-          } else {
-            await openNativeNotificationSettings();
-          }
-        }
-      }, 1000);
+      try {
+        await requestNativeNotificationPermission();
+      } catch (err) {
+        console.warn('requestNativeNotificationPermission failed:', err);
+      }
+      // Immediately open app notification settings so user can toggle on if OS prompt is suppressed
+      try {
+        await openNativeNotificationSettings();
+      } catch (err) {
+        console.warn('openNativeNotificationSettings failed:', err);
+      }
       return;
     }
 
@@ -108,25 +144,25 @@ export default function PermissionPromptBanner() {
       setGrantedSuccess(true);
       webNotificationService.playAlertChime();
       webNotificationService.sendSampleDepartureAlert();
-      setTimeout(() => setShowModal(false), 2500);
+      setTimeout(() => {
+        setShowModal(false);
+        sessionStorage.setItem('rail_permission_modal_dismissed', 'true');
+      }, 2500);
     }
   };
 
   const handleRequestOverlay = async () => {
-    await requestNativeOverlayPermission();
-    setTimeout(async () => {
-      const perms = await checkNativeAlarmPermissions();
-      if (perms) {
-        setNativePerms(perms);
-        if (perms.notifications && perms.overlay) {
-          setGrantedSuccess(true);
-          setTimeout(() => setShowModal(false), 2500);
-        }
+    if (isNativeApp()) {
+      try {
+        await requestNativeOverlayPermission();
+      } catch (err) {
+        console.warn('requestNativeOverlayPermission failed:', err);
       }
-    }, 1500);
+    }
   };
 
   const handleDismiss = () => {
+    sessionStorage.setItem('rail_permission_modal_dismissed', 'true');
     setShowModal(false);
   };
 
@@ -206,7 +242,7 @@ export default function PermissionPromptBanner() {
                   <button
                     type="button"
                     onClick={handleRequestNotification}
-                    className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 transition cursor-pointer flex items-center gap-1"
+                    className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 transition cursor-pointer flex items-center gap-1 active:scale-95"
                   >
                     <span>Allow</span>
                     <ArrowRight className="w-3 h-3" />
@@ -236,7 +272,7 @@ export default function PermissionPromptBanner() {
                     <button
                       type="button"
                       onClick={handleRequestOverlay}
-                      className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition cursor-pointer flex items-center gap-1"
+                      className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition cursor-pointer flex items-center gap-1 active:scale-95"
                     >
                       <span>Enable</span>
                       <ExternalLink className="w-3 h-3" />
@@ -252,7 +288,7 @@ export default function PermissionPromptBanner() {
               <button
                 type="button"
                 onClick={handleDismiss}
-                className="text-slate-400 hover:text-white transition cursor-pointer"
+                className="text-slate-400 hover:text-white transition cursor-pointer px-2 py-1 rounded hover:bg-slate-800"
               >
                 Skip for now
               </button>

@@ -216,16 +216,62 @@ public class NativeAlarmPlugin extends Plugin {
     @PluginMethod
     public void requestOverlayPermission(PluginCall call) {
         Context context = getContext();
+        android.app.Activity activity = getActivity();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (!Settings.canDrawOverlays(context)) {
-                Intent intent = new Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:" + context.getPackageName())
-                );
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                context.startActivity(intent);
+                boolean opened = false;
+                // Strategy 1: Package-specific overlay settings
+                try {
+                    Intent intent = new Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:" + context.getPackageName())
+                    );
+                    if (activity != null) {
+                        activity.startActivity(intent);
+                    } else {
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        context.startActivity(intent);
+                    }
+                    opened = true;
+                } catch (Exception ex1) {
+                    Log.w(TAG, "Package overlay intent failed: " + ex1.getMessage());
+                }
+
+                // Strategy 2: Generic overlay list (ColorOS/Realme UI/MIUI/OxygenOS fallback)
+                if (!opened) {
+                    try {
+                        Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
+                        if (activity != null) {
+                            activity.startActivity(intent);
+                        } else {
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            context.startActivity(intent);
+                        }
+                        opened = true;
+                    } catch (Exception ex2) {
+                        Log.w(TAG, "Generic overlay intent failed: " + ex2.getMessage());
+                    }
+                }
+
+                // Strategy 3: App details settings fallback
+                if (!opened) {
+                    try {
+                        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                        intent.setData(Uri.parse("package:" + context.getPackageName()));
+                        if (activity != null) {
+                            activity.startActivity(intent);
+                        } else {
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            context.startActivity(intent);
+                        }
+                        opened = true;
+                    } catch (Exception ex3) {
+                        Log.e(TAG, "All overlay intent attempts failed", ex3);
+                    }
+                }
+
                 JSObject ret = new JSObject();
-                ret.put("openedSettings", true);
+                ret.put("openedSettings", opened);
                 call.resolve(ret);
                 return;
             }
@@ -238,41 +284,69 @@ public class NativeAlarmPlugin extends Plugin {
     @PluginMethod
     public void requestNotificationPermission(PluginCall call) {
         Context context = getContext();
+        android.app.Activity activity = getActivity();
+        boolean alreadyGranted = true;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                if (getActivity() != null) {
-                    ActivityCompat.requestPermissions(
-                        getActivity(),
-                        new String[]{ Manifest.permission.POST_NOTIFICATIONS },
-                        2001
-                    );
-                }
+            alreadyGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+            if (!alreadyGranted && activity != null) {
+                ActivityCompat.requestPermissions(
+                    activity,
+                    new String[]{ Manifest.permission.POST_NOTIFICATIONS },
+                    2001
+                );
             }
         }
         JSObject ret = new JSObject();
         ret.put("requested", true);
+        ret.put("alreadyGranted", alreadyGranted);
         call.resolve(ret);
     }
 
     @PluginMethod
     public void openNotificationSettings(PluginCall call) {
         Context context = getContext();
+        android.app.Activity activity = getActivity();
+        boolean opened = false;
         try {
-            Intent intent = new Intent();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                intent.setAction(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
-                intent.putExtra(Settings.EXTRA_APP_PACKAGE, context.getPackageName());
-            } else {
-                intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                intent.setData(Uri.parse("package:" + context.getPackageName()));
+                try {
+                    Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+                    intent.putExtra(Settings.EXTRA_APP_PACKAGE, context.getPackageName());
+                    intent.putExtra("android.provider.extra.APP_PACKAGE", context.getPackageName());
+                    intent.putExtra("app_package", context.getPackageName());
+                    if (activity != null) {
+                        activity.startActivity(intent);
+                    } else {
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        context.startActivity(intent);
+                    }
+                    opened = true;
+                } catch (Exception e1) {
+                    Log.w(TAG, "Notification settings intent failed, trying app details: " + e1.getMessage());
+                }
             }
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(intent);
+
+            if (!opened) {
+                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                intent.setData(Uri.parse("package:" + context.getPackageName()));
+                if (activity != null) {
+                    activity.startActivity(intent);
+                } else {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    context.startActivity(intent);
+                }
+                opened = true;
+            }
+
             JSObject ret = new JSObject();
-            ret.put("opened", true);
+            ret.put("opened", opened);
             call.resolve(ret);
         } catch (Exception e) {
-            call.reject("Could not open notification settings: " + e.getMessage());
+            Log.e(TAG, "Failed to open notification settings", e);
+            JSObject ret = new JSObject();
+            ret.put("opened", false);
+            ret.put("error", e.getMessage());
+            call.resolve(ret);
         }
     }
 
