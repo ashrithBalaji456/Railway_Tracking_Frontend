@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, ShieldCheck, X, CheckCircle2, Smartphone, ExternalLink } from 'lucide-react';
+import { Bell, ShieldCheck, X, CheckCircle2, Smartphone, ExternalLink, ArrowRight } from 'lucide-react';
 import webNotificationService from '../utils/webNotificationService';
 import { 
   isNativeApp, 
@@ -12,38 +12,71 @@ import {
 } from '../utils/nativeAlarmBridge';
 
 export default function PermissionPromptBanner() {
-  const [showBanner, setShowBanner] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [grantedSuccess, setGrantedSuccess] = useState(false);
   const [nativePerms, setNativePerms] = useState<NativeAlarmPermissions | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     if (isNativeApp()) {
-      checkNativeAlarmPermissions().then((perms) => {
-        if (perms) {
-          setNativePerms(perms);
-          if (!perms.notifications || !perms.overlay) {
-            const timer = setTimeout(() => setShowBanner(true), 800);
-            return () => clearTimeout(timer);
+      // 1. Immediately trigger native Android notification permission dialog on startup
+      requestNativeNotificationPermission().catch(() => {});
+
+      // 2. Poll permission state and display modal if any critical permission is missing
+      const pollPermissions = async () => {
+        try {
+          const perms = await checkNativeAlarmPermissions();
+          if (!isMounted) return;
+          if (perms) {
+            setNativePerms(perms);
+            if (!perms.notifications || !perms.overlay) {
+              setShowModal(true);
+            } else {
+              setShowModal(false);
+            }
+          } else {
+            setShowModal(true);
           }
+        } catch {
+          if (isMounted) setShowModal(true);
         }
-      });
-      return;
+      };
+
+      pollPermissions();
+      const interval = setInterval(pollPermissions, 1500);
+      return () => {
+        isMounted = false;
+        clearInterval(interval);
+      };
     }
 
-    // Web fallback
-    const isDismissed = localStorage.getItem('rail_notification_prompt_dismissed');
-    if (isDismissed) return;
-    if (!webNotificationService.isSupported()) return;
-    const currentPermission = webNotificationService.getPermission();
-    if (currentPermission === 'default') {
-      const timer = setTimeout(() => setShowBanner(true), 1500);
-      return () => clearTimeout(timer);
+    // Web browser handling: prompt immediately on load
+    if (webNotificationService.isSupported()) {
+      const current = webNotificationService.getPermission();
+      if (current === 'default') {
+        setShowModal(true);
+        // Attempt immediate web prompt
+        webNotificationService.requestPermission().then((granted) => {
+          if (!isMounted) return;
+          if (granted) {
+            setGrantedSuccess(true);
+            webNotificationService.playAlertChime();
+            webNotificationService.sendSampleDepartureAlert();
+            setTimeout(() => setShowModal(false), 2500);
+          }
+        }).catch(() => {});
+      }
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  if (!showBanner) return null;
+  if (!showModal) return null;
 
-  const handleRequestPermission = async () => {
+  const handleRequestNotification = async () => {
     if (isNativeApp()) {
       await requestNativeNotificationPermission();
       setTimeout(async () => {
@@ -51,14 +84,16 @@ export default function PermissionPromptBanner() {
         if (perms) {
           setNativePerms(perms);
           if (perms.notifications) {
-            setGrantedSuccess(true);
-            try {
-              await triggerTestNotification(
-                '🔔 RailTrack Notifications Active',
-                'Lock-screen alerts and departure wake-up alarms are now enabled!'
-              );
-            } catch (err) {}
-            setTimeout(() => setShowBanner(false), 3500);
+            if (perms.overlay) {
+              setGrantedSuccess(true);
+              try {
+                await triggerTestNotification(
+                  '🔔 RailTrack Notifications Active',
+                  'Lock-screen alerts and departure wake-up alarms are operational!'
+                );
+              } catch {}
+              setTimeout(() => setShowModal(false), 2500);
+            }
           } else {
             await openNativeNotificationSettings();
           }
@@ -67,15 +102,13 @@ export default function PermissionPromptBanner() {
       return;
     }
 
+    // Web browser
     const granted = await webNotificationService.requestPermission();
     if (granted) {
       setGrantedSuccess(true);
       webNotificationService.playAlertChime();
       webNotificationService.sendSampleDepartureAlert();
-      setTimeout(() => setShowBanner(false), 3500);
-    } else {
-      localStorage.setItem('rail_notification_prompt_dismissed', 'true');
-      setShowBanner(false);
+      setTimeout(() => setShowModal(false), 2500);
     }
   };
 
@@ -83,95 +116,150 @@ export default function PermissionPromptBanner() {
     await requestNativeOverlayPermission();
     setTimeout(async () => {
       const perms = await checkNativeAlarmPermissions();
-      if (perms) setNativePerms(perms);
+      if (perms) {
+        setNativePerms(perms);
+        if (perms.notifications && perms.overlay) {
+          setGrantedSuccess(true);
+          setTimeout(() => setShowModal(false), 2500);
+        }
+      }
     }, 1500);
   };
 
   const handleDismiss = () => {
-    localStorage.setItem('rail_notification_prompt_dismissed', 'true');
-    setShowBanner(false);
+    setShowModal(false);
   };
 
   return (
-    <div className="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-6 z-50 max-w-md w-full bg-slate-900/95 backdrop-blur-xl border border-indigo-500/40 rounded-2xl p-4 sm:p-5 shadow-2xl shadow-indigo-950/60 text-slate-100 animate-in slide-in-from-bottom-5 duration-300">
-      {grantedSuccess ? (
-        <div className="flex items-center gap-3 text-emerald-400">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-white">Notifications Activated!</h4>
-            <p className="text-xs text-emerald-300 mt-0.5">
-              Lock-screen travel alerts and departure wake-up alarms are now active.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-3.5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0 text-indigo-400 mt-0.5">
-                <Bell className="w-5 h-5 animate-pulse" />
-              </div>
-              <div>
-                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 mb-1">
-                  <ShieldCheck className="w-3 h-3" />
-                  <span>Lock-Screen Alerts</span>
-                </div>
-                <h4 className="text-sm font-bold text-white leading-snug">
-                  {isNativeApp() ? 'Enable Android Alarm & Notification Permissions' : 'Enable Real-Time Train Alerts & Alarms?'}
-                </h4>
-              </div>
+    <div className="fixed inset-0 z-[120] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="max-w-md w-full bg-slate-900 border border-indigo-500/40 rounded-2xl p-5 sm:p-6 shadow-2xl shadow-indigo-950/80 text-slate-100 relative overflow-hidden animate-in zoom-in-95 duration-200">
+        {/* Glow ambient background */}
+        <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        {grantedSuccess ? (
+          <div className="flex flex-col items-center text-center py-4 space-y-3">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 animate-bounce">
+              <CheckCircle2 className="w-8 h-8" />
             </div>
-
-            <button
-              type="button"
-              onClick={handleDismiss}
-              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer shrink-0"
-              title="Dismiss for now"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div>
+              <h3 className="text-lg font-black text-white">All Permissions Enabled!</h3>
+              <p className="text-xs text-emerald-300 mt-1 max-w-xs leading-relaxed">
+                RailTrack can now wake your phone on the lock screen and deliver real-time train alerts.
+              </p>
+            </div>
           </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                  <Bell className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 mb-0.5">
+                    <ShieldCheck className="w-3 h-3" />
+                    <span>Required Setup</span>
+                  </div>
+                  <h3 className="text-base font-black text-white">
+                    {isNativeApp() ? 'Enable Travel Alarm Permissions' : 'Enable Real-Time Train Alerts'}
+                  </h3>
+                </div>
+              </div>
 
-          <p className="text-xs text-slate-300 leading-relaxed">
-            {isNativeApp()
-              ? 'Allow RailTrack to post urgent train notifications and display the alarm screen over your lock screen when your departure is near.'
-              : 'Get instant delay warnings, IRCTC chart preparation notifications, and departure wake-up alarms even when your phone is locked.'}
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
-            <button
-              type="button"
-              onClick={handleRequestPermission}
-              className="flex-1 py-2 px-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-indigo-600/30 transition cursor-pointer"
-            >
-              <Bell className="w-3.5 h-3.5" />
-              <span>Enable Notifications</span>
-            </button>
-
-            {isNativeApp() && !nativePerms?.overlay && (
               <button
                 type="button"
-                onClick={handleRequestOverlay}
-                className="py-2 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                onClick={handleDismiss}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer shrink-0"
+                title="Dismiss"
               >
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>Display Over Apps</span>
-                <ExternalLink className="w-3 h-3" />
+                <X className="w-4 h-4" />
               </button>
-            )}
+            </div>
 
-            <button
-              type="button"
-              onClick={handleDismiss}
-              className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-bold transition cursor-pointer"
-            >
-              Later
-            </button>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              {isNativeApp()
+                ? 'To ensure your departure alarms wake you even when your phone is locked or muted, RailTrack requires two device permissions:'
+                : 'Allow notifications to get instant train delay updates, platform changes, and wake-up reminders.'}
+            </p>
+
+            {/* Permission Cards */}
+            <div className="space-y-2.5 pt-1">
+              {/* 1. Notifications Card */}
+              <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 shrink-0">
+                    <Bell className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white">1. System Notifications</h4>
+                    <p className="text-[10px] text-slate-400">Heads-up alert & lock-screen alarm banner</p>
+                  </div>
+                </div>
+
+                {nativePerms?.notifications ? (
+                  <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/30">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Granted
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleRequestNotification}
+                    className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 transition cursor-pointer flex items-center gap-1"
+                  >
+                    <span>Allow</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              {/* 2. Display Over Other Apps Card (Android Native Only) */}
+              {isNativeApp() && (
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 shrink-0">
+                      <Smartphone className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white">2. Display Over Other Apps</h4>
+                      <p className="text-[10px] text-slate-400">Wakes screen & displays full-screen alarm</p>
+                    </div>
+                  </div>
+
+                  {nativePerms?.overlay ? (
+                    <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/30">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Granted
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleRequestOverlay}
+                      className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition cursor-pointer flex items-center gap-1"
+                    >
+                      <span>Enable</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="pt-2 flex items-center justify-between text-slate-500 text-[11px]">
+              <span>You can adjust this anytime in device settings</span>
+              <button
+                type="button"
+                onClick={handleDismiss}
+                className="text-slate-400 hover:text-white transition cursor-pointer"
+              >
+                Skip for now
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
