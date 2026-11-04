@@ -395,11 +395,14 @@ export default function TrainDetails() {
       try {
         const [h, m] = expArr.split(':').map(Number);
         const now = new Date();
-        const targetTime = new Date();
+        const targetTime = new Date(now);
         targetTime.setHours(h, m, 0, 0);
-        let diff = Math.round((targetTime.getTime() - now.getTime()) / (1000 * 60));
-        if (diff < -720) diff += 1440;
-        diffMinutes = diff;
+        // Midnight rollover guard: If parsed arrival time is earlier than current time today,
+        // it means the train is arriving across midnight on the next calendar day.
+        if (targetTime.getTime() <= now.getTime()) {
+          targetTime.setDate(targetTime.getDate() + 1);
+        }
+        diffMinutes = Math.round((targetTime.getTime() - now.getTime()) / (1000 * 60));
         if (diffMinutes > 0 && diffMinutes <= armedAlarmConfig.triggerMinutes) {
           shouldTrigger = true;
           computedEta = diffMinutes;
@@ -420,7 +423,7 @@ export default function TrainDetails() {
     // 3. Station sequence & proximity guard:
     // Indian Railways timetable routes only list scheduled commercial stopping stations.
     // In long-distance superfast/Rajdhani runs, trains may travel 200-450 km non-stop between halts.
-    // We must NEVER fire "1 stop away" blindly if the train is still hours or hundreds of kilometers away!
+    // We must NEVER fire "1 stop away" blindly if the train is still hours or tens of kilometers away!
     const currentBubbleStation = route?.stations?.find(
       (st: any) => st.stationCode?.toUpperCase() === bubbleStationCode
     );
@@ -437,15 +440,17 @@ export default function TrainDetails() {
         // Train is already at the target station sequence
         shouldTrigger = true;
       } else if (stopsDifference === 1) {
-        // "1 stop away" is only valid if the train is physically close (<= 35 km)
-        // OR the dynamic ETA is within the warning threshold (e.g. <= max(triggerMinutes, 45)).
-        const isDistanceClose = distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= 35;
-        const isTimeClose = diffMinutes != null && diffMinutes > 0 && diffMinutes <= Math.max(armedAlarmConfig.triggerMinutes, 45);
-
-        // If neither distance nor time telemetry is provided by API feed, use as fallback
+        // "1 stop away":
+        // Must strictly respect the user's configured trigger window (e.g. 30 mins).
+        // Only trigger if:
+        // a) Dynamic time countdown is reached (diffMinutes <= triggerMinutes)
+        // b) OR train is physically right at the station entry/signals (distanceRemaining <= 5 km)
+        // c) Fallback: if telemetry is completely absent (neither time nor distance exists)
+        const isTimeTriggered = diffMinutes != null && diffMinutes > 0 && diffMinutes <= armedAlarmConfig.triggerMinutes;
+        const isStationYardClose = distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= 5;
         const noTelemetryAvailable = distanceRemaining == null && diffMinutes == null;
 
-        if (isDistanceClose || isTimeClose || noTelemetryAvailable) {
+        if (isTimeTriggered || isStationYardClose || noTelemetryAvailable) {
           shouldTrigger = true;
         }
       }

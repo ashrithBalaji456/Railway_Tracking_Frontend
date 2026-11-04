@@ -3045,4 +3045,76 @@ flowchart TD
      - Tapping Snooze immediately silences the current sound and schedules a new exact hardware alarm clock for `now + 5 minutes` in Android's `AlarmManager`.
      - When 5 minutes elapse, the alarm rings again with full audio until the passenger taps **"I AM AWAKE • STOP ALARM"**!
 
+---
+
+#### Q16: Why did an alarm armed for 30 minutes prior ring early at 11:23 PM (when train was still 30 km away at Rechni Road and reaching Mancherial at 12:02 AM), and why were zero RailRadar API calls logged between 11:13 PM and 11:32 PM?
+* **The Observed Phenomenon:**
+  - **Train:** 12722 (Dakshin SF Express, MCI-HYB)
+  - **Target Station:** Mancherial (`MCI`), Expected Arrival: `12:00 AM / 12:02 AM`
+  - **Action:** User armed the alarm at `11:13 PM` with setting **30 minutes prior**.
+  - **Expected Firing Time:** `12:02 AM - 30 minutes = 11:32 PM`.
+  - **Actual Firing Time:** The alarm triggered at `11:23 PM` (9 minutes too early!), while the train was only approaching Rechni Road (30 km away from MCI).
+  - **RailRadar Developer Logs:** The logs showed the last API calls at `23:13:51` (11:13 PM), with zero outbound calls between 11:13 PM and 11:32 PM.
+
+* **Detailed Root Cause Analysis:**
+  ```mermaid
+  flowchart TD
+      subgraph "Sequence of Events (11:13 PM to 11:32 PM)"
+          A["11:13 PM: User Arms Alarm<br/>Trigger: 30 mins prior<br/>Target Arr: 12:02 AM"] --> B["Native AlarmManager schedules AlarmClock for 11:32 PM"]
+          B --> C["Native AdaptiveAlarmManager schedules first background sync in 15 mins (11:28 PM)"]
+          A --> D["React Foreground useEffect in TrainDetails.tsx runs live telemetry checks"]
+          D --> E{"11:23 PM Check in TrainDetails.tsx:<br/>Train at Rechni Road / Bellampalli"}
+          E -->|Commercial Timetable Stops| F["Bellampalli = Stop N-1 (38 km)<br/>Mancherial = Stop N (58 km)<br/>stopsDifference = 1"]
+          F -->|Distance Remaining = 20 km| G["isDistanceClose = (20 km <= 35 km) is TRUE!"]
+          F -->|Math.max(30, 45) = 45 mins| H["isTimeClose = (39 mins <= 45 mins) is TRUE!"]
+          G --> I["Flawed Proximity Rule:<br/>if (isDistanceClose || isTimeClose) shouldTrigger = TRUE"]
+          H --> I
+          I --> J["11:23 PM: Alarm triggered 9 mins prematurely by React foreground!"]
+          J --> K["Alarm rings continuously in app UI & user interacts/disarms"]
+          K --> L["Disarming cancels pending 11:28 PM background sync intent"]
+          L --> M["Zero RailRadar API calls appear between 11:13 PM and 11:32 PM!"]
+      end
+  ```
+
+  1. **The 1-Stop Proximity Inflation Bug (`Math.max(triggerMinutes, 45)`):**
+     In `TrainDetails.tsx`, the proximity check contained the following logic:
+     ```typescript
+     if (stopsDifference === 1) {
+       const isDistanceClose = distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= 35;
+       const isTimeClose = diffMinutes != null && diffMinutes > 0 && diffMinutes <= Math.max(armedAlarmConfig.triggerMinutes, 45);
+       if (isDistanceClose || isTimeClose || noTelemetryAvailable) {
+         shouldTrigger = true;
+       }
+     }
+     ```
+     - Indian Railways routes only list commercial stopping stations. Intermediate pass-through stations (Ralapet, Asifabad Road, Repalliwada, Rechni Road) are non-stopping.
+     - Therefore, Bellampalli (`BPA`, 38 km) is immediately followed by Mancherial (`MCI`, 58 km).
+     - As soon as the train was in the Bellampalli sector, `stopsDifference === 1`.
+     - The distance remaining was $58 - 38 = 20\text{ km}$, which satisfies $\le 35\text{ km}$ (`isDistanceClose = true`).
+     - Furthermore, `Math.max(30, 45)` **artificially inflated** the user's 30-minute threshold to 45 minutes! At 11:23 PM, `diffMinutes` was 39 minutes ($12:02\text{ AM} - 11:23\text{ PM} = 39\text{ mins}$), which is $\le 45$ (`isTimeClose = true`).
+     - Because `isDistanceClose || isTimeClose` evaluated to true, the foreground React loop triggered the alarm at 11:23 PM!
+
+  2. **Why Zero RailRadar API Calls Appeared in Developer Logs:**
+     - **Background Sync Was Not Yet Due:** The native `AdaptiveAlarmManager` scheduled its first background check for 15 minutes after arming: $11:13\text{ PM} + 15\text{ mins} = \mathbf{11:28\text{ PM}}$.
+     - **Foreground Preemption:** Because the React foreground effect fired the alarm at 11:23 PM (5 minutes before the background sync was scheduled), user interaction/disarming cancelled the pending background alarm broadcast before 11:28 PM could ever fire!
+     - **Spring Boot Redis Caching:** When requests do go to the backend (`/api/v1/trains/12722/live`), Spring Boot caches live status in Redis with a 2-minute TTL. Even if the frontend refreshed, requests hitting cached Redis keys return instantly without triggering outbound HTTP calls to RailRadar or incrementing RailRadar developer log counters.
+
+  3. **The Midnight Rollover Edge Case:**
+     - In JavaScript, `new Date().setHours(0, 2, 0, 0)` sets the time to `00:02:00` of the *current* calendar day.
+     - At `11:13 PM` (23:13) on November 4, `00:02:00` was 23 hours in the past!
+     - The old heuristic `if (diff < -720) diff += 1440` was fragile.
+     - We replaced this with strict date rollover:
+       ```typescript
+       if (targetTime.getTime() <= now.getTime()) {
+         targetTime.setDate(targetTime.getDate() + 1);
+       }
+       ```
+
+* **The Code Resolution:**
+  In `TrainDetails.tsx`:
+  - **Removed Artificial Inflation:** Eliminated `Math.max(triggerMinutes, 45)`. The alarm now strictly respects the user-configured `triggerMinutes` (e.g. 30 minutes).
+  - **Strict Time Gate for 1-Stop Away:** When `stopsDifference === 1`, the alarm will **NOT** fire until `diffMinutes <= armedAlarmConfig.triggerMinutes`, unless the train is physically within immediate yard/signal entry (`distanceRemaining <= 5 km`).
+  - As a result, for an arrival at 12:02 AM with a 30-minute alarm, the alarm will stay quiet at 11:23 PM and will ring precisely at **11:32 PM** (or adapt to delay if the train slows down)!
+
+
 
