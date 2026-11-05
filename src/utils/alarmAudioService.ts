@@ -207,22 +207,34 @@ class AlarmAudioService {
     const tone = options.toneType || 'digital_clock';
     this.acquireWakeLock();
 
-    // 1. Sound Playback (Custom MP3 or Synthetic Beeps)
-    if (options.customSoundUrl) {
-      try {
-        const audio = new Audio(options.customSoundUrl);
-        audio.loop = true;
-        audio.volume = 1.0;
-        audio.onended = () => {
-          if (this.isAlarmPlaying) {
-            audio.currentTime = 0;
-            audio.play().catch(() => {});
-          }
-        };
-        audio.play().catch((e) => console.warn('Custom audio playback failed:', e));
-        this.customAudioElement = audio;
-      } catch (err) {
-        console.warn('Custom audio start error, falling back to synthesizer:', err);
+    // 1. Sound Playback:
+    // If running inside native Android APK, native AlarmForegroundService / AlarmSoundPlayer
+    // exclusively plays audio at maximum hardware volume via STREAM_ALARM.
+    // Creating duplicate web Audio() here would cause AudioFocus contention and Android throttling!
+    const isNative = isNativeApp();
+    if (!isNative) {
+      if (options.customSoundUrl) {
+        try {
+          const audio = new Audio(options.customSoundUrl);
+          audio.loop = true;
+          audio.volume = 1.0;
+          audio.onended = () => {
+            if (this.isAlarmPlaying) {
+              audio.currentTime = 0;
+              audio.play().catch(() => {});
+            }
+          };
+          audio.play().catch((e) => console.warn('Custom audio playback failed:', e));
+          this.customAudioElement = audio;
+        } catch (err) {
+          console.warn('Custom audio start error, falling back to synthesizer:', err);
+          this.playPulse(tone, 0.35);
+          this.alarmInterval = setInterval(() => {
+            if (!this.isAlarmPlaying) return;
+            this.playPulse(tone, 0.35);
+          }, 700);
+        }
+      } else {
         this.playPulse(tone, 0.35);
         this.alarmInterval = setInterval(() => {
           if (!this.isAlarmPlaying) return;
@@ -230,11 +242,7 @@ class AlarmAudioService {
         }, 700);
       }
     } else {
-      this.playPulse(tone, 0.35);
-      this.alarmInterval = setInterval(() => {
-        if (!this.isAlarmPlaying) return;
-        this.playPulse(tone, 0.35);
-      }, 700);
+      console.log('Running in native Android APK: hardware AlarmSoundPlayer owns audio playback.');
     }
 
     // 2. Continuous Device Vibration

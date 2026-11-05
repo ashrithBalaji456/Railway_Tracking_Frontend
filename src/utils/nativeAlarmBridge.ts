@@ -31,6 +31,8 @@ export interface NativeAlarmPluginInterface {
     triggerMinutes: number;
   }>;
   setCustomAlarmAudio(options: { base64: string }): Promise<{ saved: boolean; path: string; size: number }>;
+  startCustomAudioUpload(): Promise<{ ready: boolean }>;
+  appendCustomAudioChunk(options: { chunk: string; isLast: boolean }): Promise<{ saved: boolean; isComplete: boolean; size?: number; currentSize?: number }>;
   clearCustomAlarmAudio(): Promise<{ cleared: boolean }>;
   stopAlarm(): Promise<{ stopped: boolean }>;
   isAlarmPlaying(): Promise<{ isPlaying: boolean }>;
@@ -210,23 +212,44 @@ export const snoozeNativeAlarm = async (minutes: number = 5, options?: { trainNu
 
 export const syncCustomAudioToNative = async (blob: Blob): Promise<boolean> => {
   if (!isNativeApp()) return false;
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      try {
-        const resultStr = reader.result as string;
-        const base64data = resultStr.includes(',') ? resultStr.split(',')[1] : resultStr;
-        await callNative('setCustomAlarmAudio', { base64: base64data });
-        console.log('Successfully synced custom audio to Android native storage');
-        resolve(true);
-      } catch (err) {
-        console.warn('Failed to sync custom audio to native:', err);
-        resolve(false);
+  try {
+    // 1. Initialize fresh temp file on native Android storage
+    await callNative('startCustomAudioUpload');
+
+    // 2. Read full blob into an ArrayBuffer for safe, high-speed binary chunking
+    const arrayBuffer = await blob.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const totalBytes = uint8Array.byteLength;
+    const CHUNK_SIZE = 128 * 1024; // 128 KB chunks (safe within Android Binder 1MB transaction ceiling)
+
+    let offset = 0;
+    while (offset < totalBytes) {
+      const end = Math.min(offset + CHUNK_SIZE, totalBytes);
+      const chunkSlice = uint8Array.subarray(offset, end);
+      const isLast = end >= totalBytes;
+
+      // Fast binary byte-string to base64 encoding
+      let binaryStr = '';
+      const sliceLen = chunkSlice.byteLength;
+      for (let i = 0; i < sliceLen; i++) {
+        binaryStr += String.fromCharCode(chunkSlice[i]);
       }
-    };
-    reader.onerror = () => resolve(false);
-    reader.readAsDataURL(blob);
-  });
+      const chunkBase64 = btoa(binaryStr);
+
+      await callNative('appendCustomAudioChunk', {
+        chunk: chunkBase64,
+        isLast
+      });
+
+      offset = end;
+    }
+
+    console.log(`[NativeAlarmBridge] Successfully streamed full ${totalBytes} bytes (${(totalBytes / 1024).toFixed(1)} KB) of custom alarm audio to Android native storage!`);
+    return true;
+  } catch (err) {
+    console.warn('[NativeAlarmBridge] Failed streaming chunked custom audio to native:', err);
+    return false;
+  }
 };
 
 export const clearNativeCustomAudio = async () => {

@@ -215,6 +215,83 @@ public class NativeAlarmPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void startCustomAudioUpload(PluginCall call) {
+        try {
+            File tempFile = new File(getContext().getFilesDir(), "custom_alarm_sound.mp3.tmp");
+            if (tempFile.exists()) {
+                tempFile.delete();
+            }
+            boolean created = tempFile.createNewFile();
+            Log.d(TAG, "Initialized custom alarm sound upload temp file: " + tempFile.getAbsolutePath() + " (created: " + created + ")");
+            JSObject ret = new JSObject();
+            ret.put("ready", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed initializing custom audio upload: " + e.getMessage());
+            call.reject("Failed initializing custom audio upload: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void appendCustomAudioChunk(PluginCall call) {
+        String chunkBase64 = call.getString("chunk");
+        Boolean isLast = call.getBoolean("isLast", false);
+
+        if (chunkBase64 == null) {
+            chunkBase64 = "";
+        }
+
+        try {
+            File tempFile = new File(getContext().getFilesDir(), "custom_alarm_sound.mp3.tmp");
+            if (!chunkBase64.isEmpty()) {
+                byte[] chunkBytes = Base64.decode(chunkBase64, Base64.DEFAULT);
+                try (FileOutputStream fos = new FileOutputStream(tempFile, true)) {
+                    fos.write(chunkBytes);
+                    fos.flush();
+                }
+            }
+
+            if (isLast != null && isLast) {
+                File targetFile = new File(getContext().getFilesDir(), "custom_alarm_sound.mp3");
+                if (targetFile.exists()) {
+                    targetFile.delete();
+                }
+                boolean renamed = tempFile.renameTo(targetFile);
+                if (!renamed) {
+                    try (java.io.FileInputStream fis = new java.io.FileInputStream(tempFile);
+                         FileOutputStream fos = new FileOutputStream(targetFile)) {
+                        byte[] buf = new byte[8192];
+                        int r;
+                        while ((r = fis.read(buf)) != -1) {
+                            fos.write(buf, 0, r);
+                        }
+                        fos.flush();
+                    }
+                    tempFile.delete();
+                }
+                long finalSize = targetFile.length();
+                Log.d(TAG, "Custom alarm audio chunk upload completed! Total verified file size: " + finalSize + " bytes (" + (finalSize / 1024) + " KB)");
+
+                JSObject ret = new JSObject();
+                ret.put("saved", true);
+                ret.put("isComplete", true);
+                ret.put("path", targetFile.getAbsolutePath());
+                ret.put("size", finalSize);
+                call.resolve(ret);
+            } else {
+                JSObject ret = new JSObject();
+                ret.put("saved", true);
+                ret.put("isComplete", false);
+                ret.put("currentSize", tempFile.length());
+                call.resolve(ret);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed appending audio chunk: " + e.getMessage());
+            call.reject("Failed appending chunk: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
     public void setCustomAlarmAudio(PluginCall call) {
         String base64Data = call.getString("base64");
         if (base64Data == null || base64Data.isEmpty()) {

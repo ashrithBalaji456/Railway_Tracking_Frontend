@@ -49,14 +49,14 @@ public class AlarmSoundPlayer {
         }
 
         try {
-            // 1. Acquire Full Screen & CPU WakeLock to guarantee the phone wakes up and stays on
+            // 1. Acquire CPU WakeLock to guarantee background audio processing is never frozen
             PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
             if (pm != null && (wakeLock == null || !wakeLock.isHeld())) {
                 wakeLock = pm.newWakeLock(
-                    PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE,
+                    PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
                     "railtrack:alarm_sound_wakelock"
                 );
-                wakeLock.acquire(15 * 60 * 1000L); // 15 minutes max timeout
+                wakeLock.acquire(15 * 60 * 1000L); // 15 minutes max safety timeout
             }
 
             // 2. Request Exclusive Alarm AudioFocus so no other app or WebView audio ducks or pauses the alarm
@@ -89,13 +89,22 @@ public class AlarmSoundPlayer {
             }
 
             // 3. Determine sound source: User's custom uploaded MP3 or Android System Alarm Ringtone
-            Uri soundUri = null;
             File customFile = new File(context.getFilesDir(), "custom_alarm_sound.mp3");
-            if (customFile.exists() && customFile.length() > 500) {
-                soundUri = Uri.fromFile(customFile);
-                Log.d(TAG, "Using custom uploaded alarm MP3: " + customFile.getAbsolutePath() + " (" + customFile.length() + " bytes)");
+            boolean usePhysicalCustomFile = customFile.exists() && customFile.length() > 50000;
+
+            // 4. Initialize and start primary MediaPlayer
+            stopMediaPlayerOnly();
+            mediaPlayer = new MediaPlayer();
+            mediaPlayer.setWakeMode(context, PowerManager.PARTIAL_WAKE_LOCK);
+            mediaPlayer.setAudioAttributes(audioAttributes);
+
+            if (usePhysicalCustomFile) {
+                Log.d(TAG, "Playing verified custom MP3 audio: " + customFile.getAbsolutePath() + " (" + customFile.length() + " bytes)");
+                try (java.io.FileInputStream fis = new java.io.FileInputStream(customFile)) {
+                    mediaPlayer.setDataSource(fis.getFD());
+                }
             } else {
-                soundUri = RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_ALARM);
+                Uri soundUri = RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_ALARM);
                 if (soundUri == null) {
                     soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
                 }
@@ -106,14 +115,9 @@ public class AlarmSoundPlayer {
                     soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                 }
                 Log.d(TAG, "Using Android System Alarm tone: " + soundUri);
+                mediaPlayer.setDataSource(context, soundUri);
             }
 
-            // 4. Initialize and start primary MediaPlayer
-            stopMediaPlayerOnly();
-            mediaPlayer = new MediaPlayer();
-            mediaPlayer.setWakeMode(context, PowerManager.PARTIAL_WAKE_LOCK);
-            mediaPlayer.setDataSource(context, soundUri);
-            mediaPlayer.setAudioAttributes(audioAttributes);
             mediaPlayer.setLooping(true);
 
             mediaPlayer.setOnErrorListener((mp, what, extra) -> {
@@ -135,7 +139,7 @@ public class AlarmSoundPlayer {
             mediaPlayer.prepare();
             mediaPlayer.start();
             isPlaying = true;
-            Log.d(TAG, "Alarm MediaPlayer successfully started looping continuously");
+            Log.d(TAG, "Alarm MediaPlayer successfully started looping continuously (playing full track indefinitely)");
 
             // 5. Start continuous rhythmic vibration pattern
             vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
