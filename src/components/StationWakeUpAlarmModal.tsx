@@ -119,7 +119,7 @@ export default function StationWakeUpAlarmModal({
     setTimeout(() => setPreviewingCustom(false), 3500);
   };
 
-  const handleSaveAndArm = () => {
+  const handleSaveAndArm = async () => {
     if ('Notification' in window && Notification.permission !== 'granted') {
       Notification.requestPermission();
     }
@@ -127,9 +127,13 @@ export default function StationWakeUpAlarmModal({
 
     const isCustom = selectedSoundMode === 'custom' && !!customSound;
     if (isCustom && customSound?.blob) {
-      syncCustomAudioToNative(customSound.blob).catch(() => {});
+      try {
+        await syncCustomAudioToNative(customSound.blob);
+      } catch (e) {
+        console.warn('Audio sync error before arming:', e);
+      }
     }
-    onArmAlarm({
+    await onArmAlarm({
       trainNumber,
       trainName,
       stationCode: station.stationCode,
