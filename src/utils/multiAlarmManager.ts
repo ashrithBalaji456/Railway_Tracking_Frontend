@@ -2,9 +2,12 @@ import {
   armAdaptiveNativeAlarm, 
   cancelAdaptiveStationAlarm, 
   cancelNativeAlarm, 
-  snoozeNativeAlarm 
+  snoozeNativeAlarm,
+  isNativeApp,
+  syncCustomAudioToNative
 } from './nativeAlarmBridge';
 import alarmAudioService, { type AlarmToneType } from './alarmAudioService';
+import customAlarmSoundService from './customAlarmSoundService';
 
 export interface WakeUpAlarmConfig {
   id?: string; // trainNumber_stationCode
@@ -93,6 +96,20 @@ class MultiAlarmManager {
 
     localStorage.setItem(STORAGE_KEY_LIST, JSON.stringify(updated));
     localStorage.setItem(STORAGE_KEY_LEGACY, JSON.stringify(fullConfig));
+
+    // Ensure custom MP3 is synced to native storage if configured
+    try {
+      const sounds = await customAlarmSoundService.getAllSounds();
+      let targetSound = fullConfig.customSoundId
+        ? sounds.find((s: any) => s.id === fullConfig.customSoundId)
+        : await customAlarmSoundService.getDefaultSound();
+
+      if (targetSound?.blob && isNativeApp()) {
+        await syncCustomAudioToNative(targetSound.blob);
+      }
+    } catch (e) {
+      console.warn('Could not sync custom alarm sound to native in armAlarm:', e);
+    }
 
     // Arm native Android AlarmClock and Adaptive Sync
     await armAdaptiveNativeAlarm({

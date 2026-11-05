@@ -237,6 +237,26 @@ public class AdaptiveAlarmManager {
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, targetTriggerMillis, pendingIntent);
             }
             Log.d(TAG, "Scheduled system AlarmClock for ID [" + alarmId + "] at: " + new Date(targetTriggerMillis));
+
+            // Schedule 5-second CPU Pre-Wakeup so CPU and audio hardware are 100% warm before alarm rings
+            long preWakeMillis = targetTriggerMillis - 5000L;
+            if (preWakeMillis > System.currentTimeMillis()) {
+                Intent preWakeIntent = new Intent(context, AlarmReceiver.class);
+                preWakeIntent.setAction(AlarmReceiver.ACTION_PREWAKE);
+                preWakeIntent.putExtra("alarmId", alarmId);
+                PendingIntent piPreWake = PendingIntent.getBroadcast(
+                    context,
+                    reqCode + 500,
+                    preWakeIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                );
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    alarmManager.setAlarmClock(new AlarmManager.AlarmClockInfo(preWakeMillis, showPendingIntent), piPreWake);
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, preWakeMillis, piPreWake);
+                }
+                Log.d(TAG, "Scheduled 5-second CPU Pre-Wakeup for ID [" + alarmId + "] at: " + new Date(preWakeMillis));
+            }
         } catch (SecurityException se) {
             Log.e(TAG, "SecurityException scheduling alarm clock: " + se.getMessage());
         }
@@ -307,6 +327,15 @@ public class AdaptiveAlarmManager {
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
             );
             alarmManager.cancel(piAlarm);
+
+            Intent preWakeIntent = new Intent(context, AlarmReceiver.class);
+            PendingIntent piPreWake = PendingIntent.getBroadcast(
+                    context,
+                    alarmReq + 500,
+                    preWakeIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+            alarmManager.cancel(piPreWake);
 
             int syncReq = getSyncReqCode(trainNumber, stationCode);
             Intent syncIntent = new Intent(context, AdaptiveSyncReceiver.class);

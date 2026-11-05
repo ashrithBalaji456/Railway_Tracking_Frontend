@@ -352,6 +352,42 @@ public class NativeAlarmPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void startAlarm(PluginCall call) {
+        Context context = getContext();
+        String title = call.getString("title", "🌅 RailTrack Wake-Up Alarm!");
+        String body = call.getString("body", "Train departure alert is ringing!");
+        String trainNumber = call.getString("trainNumber", "");
+        String stationName = call.getString("stationName", "");
+        String stationCode = call.getString("stationCode", "");
+        String platform = call.getString("platform", "");
+        int triggerMinutes = call.getInt("triggerMinutes", 30);
+
+        Intent serviceIntent = new Intent(context, AlarmForegroundService.class);
+        serviceIntent.putExtra("title", title);
+        serviceIntent.putExtra("body", body);
+        serviceIntent.putExtra("trainNumber", trainNumber);
+        serviceIntent.putExtra("stationCode", stationCode);
+        serviceIntent.putExtra("stationName", stationName);
+        serviceIntent.putExtra("platform", platform);
+        serviceIntent.putExtra("triggerMinutes", triggerMinutes);
+        serviceIntent.putExtra("alarmId", AdaptiveAlarmManager.buildAlarmId(trainNumber, stationCode));
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent);
+            } else {
+                context.startService(serviceIntent);
+            }
+        } catch (Exception ex) {
+            AlarmSoundPlayer.getInstance().startAlarm(context);
+        }
+
+        JSObject ret = new JSObject();
+        ret.put("started", true);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
     public void stopAlarm(PluginCall call) {
         Context context = getContext();
 

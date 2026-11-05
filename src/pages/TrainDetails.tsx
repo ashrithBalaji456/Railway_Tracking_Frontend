@@ -476,6 +476,8 @@ export default function TrainDetails() {
             customSoundName: alarmCfg.customSoundName || defSound?.name,
             trainNumber: trainNumber || train?.trainNumber,
             stationName: alarmCfg.stationName,
+            stationCode: alarmCfg.stationCode,
+            platform: liveStop?.platform || routeStop?.platform,
             etaMinutes: computedEta
           });
         }).catch(() => {
@@ -483,6 +485,8 @@ export default function TrainDetails() {
             toneType: alarmCfg.toneType === 'custom' ? 'digital_clock' : (alarmCfg.toneType as AlarmToneType),
             trainNumber: trainNumber || train?.trainNumber,
             stationName: alarmCfg.stationName,
+            stationCode: alarmCfg.stationCode,
+            platform: liveStop?.platform || routeStop?.platform,
             etaMinutes: computedEta
           });
         });

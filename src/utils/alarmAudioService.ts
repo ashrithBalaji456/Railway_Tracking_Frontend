@@ -4,7 +4,7 @@
  * screen wake locks, and repeating speech synthesizers to reliably wake passengers.
  */
 
-import { stopNativeAlarm, isNativeApp, triggerTestNotification } from './nativeAlarmBridge';
+import { stopNativeAlarm, isNativeApp, triggerTestNotification, startNativeAlarm } from './nativeAlarmBridge';
 
 export type AlarmToneType = 'digital_clock' | 'emergency_siren' | 'train_horn';
 
@@ -242,7 +242,16 @@ class AlarmAudioService {
         }, 700);
       }
     } else {
-      console.log('Running in native Android APK: hardware AlarmSoundPlayer owns audio playback.');
+      console.log('Running in native Android APK: triggering hardware AlarmSoundPlayer and Foreground Service.');
+      startNativeAlarm({
+        title: `🔔 ${options.stationName || 'Destination'} Approaching`,
+        body: `Train ${options.trainNumber || ''} is nearing ${options.stationName || 'your station'}! Wake up and prepare.`,
+        trainNumber: options.trainNumber,
+        stationName: options.stationName,
+        stationCode: options.stationCode,
+        platform: options.platform,
+        triggerMinutes: options.etaMinutes
+      }).catch((err) => console.warn('Native alarm trigger error:', err));
     }
 
     // 2. Continuous Device Vibration

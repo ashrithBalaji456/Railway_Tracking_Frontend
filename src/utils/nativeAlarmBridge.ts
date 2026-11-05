@@ -34,6 +34,15 @@ export interface NativeAlarmPluginInterface {
   startCustomAudioUpload(): Promise<{ ready: boolean }>;
   appendCustomAudioChunk(options: { chunk: string; isLast: boolean }): Promise<{ saved: boolean; isComplete: boolean; size?: number; currentSize?: number }>;
   clearCustomAlarmAudio(): Promise<{ cleared: boolean }>;
+  startAlarm(options?: {
+    title?: string;
+    body?: string;
+    trainNumber?: string;
+    stationName?: string;
+    stationCode?: string;
+    platform?: string;
+    triggerMinutes?: number;
+  }): Promise<{ started: boolean }>;
   stopAlarm(): Promise<{ stopped: boolean }>;
   isAlarmPlaying(): Promise<{ isPlaying: boolean }>;
   isAlarmRinging(): Promise<{
@@ -159,6 +168,25 @@ export const armAdaptiveNativeAlarm = async (options: {
       });
     } catch (e) {
       console.warn('Could not arm adaptive native alarm:', e);
+    }
+  }
+  return null;
+};
+
+export const startNativeAlarm = async (options?: {
+  title?: string;
+  body?: string;
+  trainNumber?: string;
+  stationName?: string;
+  stationCode?: string;
+  platform?: string;
+  triggerMinutes?: number;
+}) => {
+  if (isNativeApp()) {
+    try {
+      return await callNative<{ started: boolean }>('startAlarm', options || {});
+    } catch (e) {
+      console.warn('Could not start native alarm:', e);
     }
   }
   return null;

@@ -29,7 +29,8 @@ public class AlarmSoundPlayer {
     private MediaPlayer mediaPlayer;
     private Ringtone fallbackRingtone;
     private Vibrator vibrator;
-    private PowerManager.WakeLock wakeLock;
+    private PowerManager.WakeLock cpuWakeLock;
+    private PowerManager.WakeLock screenWakeLock;
     private AudioFocusRequest audioFocusRequest;
     private boolean isPlaying = false;
 
@@ -49,14 +50,23 @@ public class AlarmSoundPlayer {
         }
 
         try {
-            // 1. Acquire Bright Screen & CPU WakeLock to guarantee the display and audio hardware wake up
+            // 1. Acquire CPU WakeLock (keeps CPU running through deep Doze) + Screen WakeLock (lights up display)
             PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-            if (pm != null && (wakeLock == null || !wakeLock.isHeld())) {
-                wakeLock = pm.newWakeLock(
-                    PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE,
-                    "railtrack:alarm_sound_wakelock"
-                );
-                wakeLock.acquire(15 * 60 * 1000L); // 15 minutes max safety timeout
+            if (pm != null) {
+                if (cpuWakeLock == null || !cpuWakeLock.isHeld()) {
+                    cpuWakeLock = pm.newWakeLock(
+                        PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                        "railtrack:alarm_sound_cpu_wakelock"
+                    );
+                    cpuWakeLock.acquire(15 * 60 * 1000L);
+                }
+                if (screenWakeLock == null || !screenWakeLock.isHeld()) {
+                    screenWakeLock = pm.newWakeLock(
+                        PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE,
+                        "railtrack:alarm_sound_screen_wakelock"
+                    );
+                    screenWakeLock.acquire(15 * 60 * 1000L);
+                }
             }
 
             // 2. Request Exclusive Alarm AudioFocus so no other app or WebView audio ducks or pauses the alarm
@@ -67,11 +77,15 @@ public class AlarmSoundPlayer {
                 .build();
 
             if (am != null) {
-                // Ensure alarm stream volume is near maximum
-                int maxVol = am.getStreamMaxVolume(AudioManager.STREAM_ALARM);
-                int curVol = am.getStreamVolume(AudioManager.STREAM_ALARM);
-                if (curVol < (int)(maxVol * 0.85)) {
-                    am.setStreamVolume(AudioManager.STREAM_ALARM, (int)(maxVol * 0.90), 0);
+                // Ensure alarm stream volume is near maximum (safely caught for OEM DND restrictions)
+                try {
+                    int maxVol = am.getStreamMaxVolume(AudioManager.STREAM_ALARM);
+                    int curVol = am.getStreamVolume(AudioManager.STREAM_ALARM);
+                    if (curVol < (int)(maxVol * 0.85)) {
+                        am.setStreamVolume(AudioManager.STREAM_ALARM, (int)(maxVol * 0.90), 0);
+                    }
+                } catch (Exception volEx) {
+                    Log.w(TAG, "Volume adjustment bypassed: " + volEx.getMessage());
                 }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -166,6 +180,18 @@ public class AlarmSoundPlayer {
                 if (ringtoneUri == null) {
                     ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
                 }
+                // Ensure vibrator is also running during fallback
+                if (vibrator == null) {
+                    vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+                    if (vibrator != null && vibrator.hasVibrator()) {
+                        long[] pattern = { 0, 800, 400, 800, 400, 1200 };
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            vibrator.vibrate(VibrationEffect.createWaveform(pattern, 0));
+                        } else {
+                            vibrator.vibrate(pattern, 0);
+                        }
+                    }
+                }
                 fallbackRingtone = RingtoneManager.getRingtone(context, ringtoneUri);
                 if (fallbackRingtone != null) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -220,11 +246,17 @@ public class AlarmSoundPlayer {
             audioFocusRequest = null;
         }
 
-        if (wakeLock != null && wakeLock.isHeld()) {
+        if (cpuWakeLock != null && cpuWakeLock.isHeld()) {
             try {
-                wakeLock.release();
+                cpuWakeLock.release();
             } catch (Exception ignored) {}
-            wakeLock = null;
+            cpuWakeLock = null;
+        }
+        if (screenWakeLock != null && screenWakeLock.isHeld()) {
+            try {
+                screenWakeLock.release();
+            } catch (Exception ignored) {}
+            screenWakeLock = null;
         }
 
         isPlaying = false;

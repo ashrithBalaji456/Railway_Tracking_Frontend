@@ -11,16 +11,48 @@ public class AlarmReceiver extends BroadcastReceiver {
     public static final String CHANNEL_ID = "railtrack_high_priority_alarm_v2";
     public static final String CHANNEL_NAME = "RailTrack Urgent Train Alarms";
     public static final int NOTIFICATION_ID = 9901;
+    public static final String ACTION_PREWAKE = "com.railwaytracking.app.ACTION_PREWAKE";
     private static final String TAG = "AlarmReceiver";
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        if (intent != null && ACTION_PREWAKE.equals(intent.getAction())) {
+            Log.d(TAG, "5-Second CPU Pre-Wakeup triggered! Waking CPU and screen to prepare audio hardware.");
+            try {
+                android.os.PowerManager pm = (android.os.PowerManager) context.getSystemService(Context.POWER_SERVICE);
+                if (pm != null) {
+                    android.os.PowerManager.WakeLock cpuLock = pm.newWakeLock(
+                        android.os.PowerManager.PARTIAL_WAKE_LOCK | android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                        "railtrack:prewake_cpu"
+                    );
+                    cpuLock.acquire(15000L); // Keep CPU awake through the 5s transition into the alarm
+
+                    android.os.PowerManager.WakeLock screenLock = pm.newWakeLock(
+                        android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK |
+                        android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP |
+                        android.os.PowerManager.ON_AFTER_RELEASE,
+                        "railtrack:prewake_screen"
+                    );
+                    screenLock.acquire(10000L);
+                }
+            } catch (Exception ex) {
+                Log.w(TAG, "Pre-wakeup lock error: " + ex.getMessage());
+            }
+            return;
+        }
+
         Log.d(TAG, "AlarmReceiver fired! Starting AlarmForegroundService.");
 
         // Wake screen and CPU immediately on alarm trigger so device is 100% active
         try {
             android.os.PowerManager pm = (android.os.PowerManager) context.getSystemService(Context.POWER_SERVICE);
             if (pm != null) {
+                android.os.PowerManager.WakeLock cpuLock = pm.newWakeLock(
+                    android.os.PowerManager.PARTIAL_WAKE_LOCK | android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                    "railtrack:alarm_receiver_cpu"
+                );
+                cpuLock.acquire(20000L); // 20s transition CPU guarantee
+
                 android.os.PowerManager.WakeLock screenLock = pm.newWakeLock(
                     android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK |
                     android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP |
