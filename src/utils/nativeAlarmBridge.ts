@@ -24,6 +24,7 @@ export interface NativeAlarmPluginInterface {
     trainName?: string;
     journeyDate?: string;
     backendUrl?: string;
+    backupEmail?: string;
   }): Promise<{
     armed: boolean;
     trainNumber: string;
@@ -38,10 +39,12 @@ export interface NativeAlarmPluginInterface {
     title?: string;
     body?: string;
     trainNumber?: string;
+    trainName?: string;
     stationName?: string;
     stationCode?: string;
     platform?: string;
     triggerMinutes?: number;
+    backupEmail?: string;
   }): Promise<{ started: boolean }>;
   stopAlarm(): Promise<{ stopped: boolean }>;
   isAlarmPlaying(): Promise<{ isPlaying: boolean }>;
@@ -158,6 +161,7 @@ export const armAdaptiveNativeAlarm = async (options: {
   trainName?: string;
   journeyDate?: string;
   backendUrl?: string;
+  backupEmail?: string;
 }) => {
   if (isNativeApp()) {
     try {
@@ -177,10 +181,12 @@ export const startNativeAlarm = async (options?: {
   title?: string;
   body?: string;
   trainNumber?: string;
+  trainName?: string;
   stationName?: string;
   stationCode?: string;
   platform?: string;
   triggerMinutes?: number;
+  backupEmail?: string;
 }) => {
   if (isNativeApp()) {
     try {

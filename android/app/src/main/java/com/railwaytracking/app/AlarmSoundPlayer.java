@@ -13,6 +13,10 @@ import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.Log;
+import android.content.res.AssetFileDescriptor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import java.io.File;
 
@@ -33,6 +37,7 @@ public class AlarmSoundPlayer {
     private PowerManager.WakeLock screenWakeLock;
     private AudioFocusRequest audioFocusRequest;
     private boolean isPlaying = false;
+    private ScheduledExecutorService watchdogExecutor;
 
     private AlarmSoundPlayer() {}
 
@@ -107,7 +112,8 @@ public class AlarmSoundPlayer {
             boolean usePhysicalCustomFile = customFile.exists() && customFile.length() > 1024;
 
             // 4. Initialize and start primary MediaPlayer
-            stopMediaPlayerOnly();
+            stopWatchdog();
+        stopMediaPlayerOnly();
             mediaPlayer = new MediaPlayer();
             mediaPlayer.setWakeMode(context, PowerManager.PARTIAL_WAKE_LOCK);
             mediaPlayer.setAudioAttributes(audioAttributes);
@@ -127,7 +133,18 @@ public class AlarmSoundPlayer {
                     soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                 }
                 Log.d(TAG, "Using Android System Alarm tone: " + soundUri);
-                mediaPlayer.setDataSource(context, soundUri);
+                try {
+                    AssetFileDescriptor afd = context.getContentResolver().openAssetFileDescriptor(soundUri, "r");
+                    if (afd != null) {
+                        mediaPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                        afd.close();
+                    } else {
+                        mediaPlayer.setDataSource(context, soundUri);
+                    }
+                } catch (Exception afdEx) {
+                    Log.w(TAG, "AssetFileDescriptor fallback, direct URI: " + afdEx.getMessage());
+                    mediaPlayer.setDataSource(context, soundUri);
+                }
             }
 
             mediaPlayer.setLooping(true);
@@ -153,7 +170,7 @@ public class AlarmSoundPlayer {
             isPlaying = true;
             Log.d(TAG, "Alarm MediaPlayer successfully started looping continuously (playing full track indefinitely)");
 
-            // 5. Start continuous rhythmic vibration pattern
+            // 5. Start continuous rhythmic vibration pattern (loops indefinitely until stopped)
             vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
             if (vibrator != null && vibrator.hasVibrator()) {
                 long[] pattern = { 0, 800, 400, 800, 400, 1200 };
@@ -163,6 +180,9 @@ public class AlarmSoundPlayer {
                     vibrator.vibrate(pattern, 0);
                 }
             }
+
+            // 6. Active Watchdog: Auto-restart playback if stopped while isPlaying is true
+            startWatchdog(context);
 
         } catch (Exception e) {
             Log.e(TAG, "Failed launching MediaPlayer alarm, switching immediately to Ringtone fallback: " + e.getMessage(), e);
@@ -209,6 +229,35 @@ public class AlarmSoundPlayer {
             }
         } catch (Exception ex) {
             Log.e(TAG, "Ringtone fallback failed: " + ex.getMessage(), ex);
+        }
+    }
+
+    private synchronized void startWatchdog(Context context) {
+        stopWatchdog();
+        watchdogExecutor = Executors.newSingleThreadScheduledExecutor();
+        watchdogExecutor.scheduleWithFixedDelay(() -> {
+            if (!isPlaying) return;
+            try {
+                if (mediaPlayer != null && !mediaPlayer.isPlaying()) {
+                    Log.d(TAG, "Watchdog detected MediaPlayer stopped! Restarting playback loop.");
+                    mediaPlayer.seekTo(0);
+                    mediaPlayer.start();
+                } else if (fallbackRingtone != null && !fallbackRingtone.isPlaying()) {
+                    Log.d(TAG, "Watchdog detected Ringtone stopped! Restarting Ringtone loop.");
+                    fallbackRingtone.play();
+                }
+            } catch (Exception ex) {
+                Log.w(TAG, "Watchdog loop exception: " + ex.getMessage());
+            }
+        }, 1, 1, TimeUnit.SECONDS);
+    }
+
+    private synchronized void stopWatchdog() {
+        if (watchdogExecutor != null) {
+            try {
+                watchdogExecutor.shutdownNow();
+            } catch (Exception ignored) {}
+            watchdogExecutor = null;
         }
     }
 

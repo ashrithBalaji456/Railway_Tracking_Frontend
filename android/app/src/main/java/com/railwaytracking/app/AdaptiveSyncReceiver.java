@@ -322,6 +322,14 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
         serviceIntent.putExtra("triggerMinutes", triggerMinutes);
         serviceIntent.putExtra("alarmId", AdaptiveAlarmManager.buildAlarmId(trainNumber, stationCode));
 
+        SharedPreferences prefs = context.getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE);
+        JSONObject alarmsMap = AdaptiveAlarmManager.getAlarmsMap(prefs);
+        JSONObject target = alarmsMap.optJSONObject(AdaptiveAlarmManager.buildAlarmId(trainNumber, stationCode));
+        if (target != null) {
+            serviceIntent.putExtra("trainName", target.optString("trainName", "Train " + trainNumber));
+            serviceIntent.putExtra("backupEmail", target.optString("backupEmail", ""));
+        }
+
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(serviceIntent);

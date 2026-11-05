@@ -48,10 +48,16 @@ export default function RingingAlarmOverlay({
         </div>
 
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold uppercase tracking-wider">
-            <Train className="w-3.5 h-3.5" />
-            <span>Train {trainNumber} {trainName ? `• ${trainName}` : ''}</span>
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs sm:text-sm font-black uppercase tracking-wider">
+            <Train className="w-4 h-4" />
+            <span>Train {trainNumber}</span>
+            {trainName && <span className="text-white font-extrabold">• {trainName}</span>}
           </div>
+          {trainName && (
+            <div className="text-xl sm:text-2xl font-black text-amber-300 tracking-tight">
+              {trainName}
+            </div>
+          )}
           <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
             {stationName}
           </h1>

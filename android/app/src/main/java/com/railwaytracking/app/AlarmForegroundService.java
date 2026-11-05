@@ -119,8 +119,26 @@ public class AlarmForegroundService extends Service {
             startForeground(NOTIFICATION_ID, notification);
         }
 
+        // Post ongoing alert notification with "STOP ALARM" action into top status bar
+        NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm != null) {
+            nm.notify(NOTIFICATION_ID, notification);
+        }
+
         // Start loud audio + vibration loops
         AlarmSoundPlayer.getInstance().startAlarm(this);
+
+        // Dispatch emergency approaching email asynchronously if configured
+        final String backupEmail = intent != null ? intent.getStringExtra("backupEmail") : null;
+        if (backupEmail != null && backupEmail.contains("@")) {
+            final String trainNum = intent.getStringExtra("trainNumber");
+            final String trainNam = intent.getStringExtra("trainName");
+            final String stnCode = intent.getStringExtra("stationCode");
+            final String stnName = intent.getStringExtra("stationName");
+            final String pf = intent.getStringExtra("platform");
+            final int tm = intent.getIntExtra("triggerMinutes", 30);
+            dispatchBackupEmail(backupEmail, trainNum, trainNam, stnCode, stnName, pf, tm);
+        }
 
         // Attempt to bring MainActivity over lock screen only if phone is locked or screen off
         try {
@@ -178,7 +196,7 @@ public class AlarmForegroundService extends Service {
         );
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(getApplicationInfo().icon != 0 ? getApplicationInfo().icon : android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(body)
             .setPriority(NotificationCompat.PRIORITY_MAX)
@@ -191,6 +209,39 @@ public class AlarmForegroundService extends Service {
             .setFullScreenIntent(fullScreenPendingIntent, true)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "🛑 STOP ALARM", stopPendingIntent)
             .build();
+    }
+
+    private void dispatchBackupEmail(String email, String trainNumber, String trainName, String stationCode, String stationName, String platform, int etaMinutes) {
+        new Thread(() -> {
+            try {
+                java.net.URL url = new java.net.URL("https://railway-tracking-backend-gwa2.onrender.com/api/v1/alarm/approaching");
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
+                conn.setConnectTimeout(8000);
+                conn.setReadTimeout(8000);
+
+                org.json.JSONObject payload = new org.json.JSONObject();
+                payload.put("email", email.trim());
+                payload.put("trainNumber", trainNumber != null ? trainNumber : "");
+                payload.put("trainName", trainName != null ? trainName : "Express");
+                payload.put("stationCode", stationCode != null ? stationCode : "");
+                payload.put("stationName", stationName != null ? stationName : "");
+                payload.put("etaMinutes", etaMinutes);
+                payload.put("platform", platform != null ? platform : "");
+
+                try (java.io.OutputStream os = conn.getOutputStream()) {
+                    os.write(payload.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    os.flush();
+                }
+
+                int code = conn.getResponseCode();
+                Log.d(TAG, "Dispatched emergency wake-up email to " + email + ", response code: " + code);
+            } catch (Exception e) {
+                Log.w(TAG, "Failed dispatching backup email from service: " + e.getMessage());
+            }
+        }).start();
     }
 
     public void stopAlarm() {

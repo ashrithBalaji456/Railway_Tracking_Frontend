@@ -452,9 +452,11 @@ export default function TrainDetails() {
 
       if (shouldTrigger) {
         hasTriggeredAlarmRef.current = true;
+        const effectiveTrainName = train?.trainName || liveStatus?.trainName || alarmCfg.trainName || '';
         const alarmPayload = {
           stationCode: alarmCfg.stationCode,
           stationName: alarmCfg.stationName,
+          trainName: effectiveTrainName,
           etaMinutes: computedEta,
           distanceKm: routeStop?.distance,
           platform: liveStop?.platform || routeStop?.platform
@@ -475,6 +477,7 @@ export default function TrainDetails() {
             customSoundUrl: customUrl,
             customSoundName: alarmCfg.customSoundName || defSound?.name,
             trainNumber: trainNumber || train?.trainNumber,
+            trainName: effectiveTrainName,
             stationName: alarmCfg.stationName,
             stationCode: alarmCfg.stationCode,
             platform: liveStop?.platform || routeStop?.platform,
@@ -484,6 +487,7 @@ export default function TrainDetails() {
           alarmAudioService.startContinuousAlarm({
             toneType: alarmCfg.toneType === 'custom' ? 'digital_clock' : (alarmCfg.toneType as AlarmToneType),
             trainNumber: trainNumber || train?.trainNumber,
+            trainName: effectiveTrainName,
             stationName: alarmCfg.stationName,
             stationCode: alarmCfg.stationCode,
             platform: liveStop?.platform || routeStop?.platform,
@@ -491,17 +495,22 @@ export default function TrainDetails() {
           });
         });
 
-        if (alarmCfg.backupEmail) {
+        const targetEmail = (alarmCfg.backupEmail || localStorage.getItem('email') || '').trim();
+        if (targetEmail && targetEmail.includes('@')) {
           api.post('/api/v1/alarm/approaching', {
-            email: alarmCfg.backupEmail,
-            trainNumber: trainNumber || train?.trainNumber,
-            trainName: train?.trainName,
-            stationCode: alarmCfg.stationCode,
-            stationName: alarmCfg.stationName,
-            etaMinutes: computedEta,
-            distanceKm: routeStop?.distance,
-            platform: liveStop?.platform || routeStop?.platform
-          }).catch((err) => console.warn('Failed to send backup alarm email:', err));
+            email: targetEmail,
+            trainNumber: String(trainNumber || train?.trainNumber || '').trim(),
+            trainName: String(effectiveTrainName || 'Express').trim(),
+            stationCode: String(alarmCfg.stationCode || '').trim().toUpperCase(),
+            stationName: String(alarmCfg.stationName || '').trim(),
+            etaMinutes: computedEta ? Math.round(Number(computedEta)) : 30,
+            distanceKm: routeStop?.distance ? Math.round(Number(routeStop.distance)) : undefined,
+            platform: String(liveStop?.platform || routeStop?.platform || alarmCfg?.platform || '').trim()
+          }).then((res) => {
+            console.log('Emergency station wake-up email successfully sent to ' + targetEmail, res);
+          }).catch((err) => {
+            console.warn('Emergency station wake-up email error:', err?.message || err);
+          });
         }
 
         break;
@@ -3784,7 +3793,7 @@ export default function TrainDetails() {
             }
           }}
           trainNumber={trainNumber || train?.trainNumber || ''}
-          trainName={train?.trainName}
+          trainName={ringingAlarmData?.trainName || train?.trainName || liveStatus?.trainName || ''}
           stationName={ringingAlarmData.stationName}
           stationCode={ringingAlarmData.stationCode}
           etaMinutes={ringingAlarmData.etaMinutes}

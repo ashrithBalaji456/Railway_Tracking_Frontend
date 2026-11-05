@@ -74,7 +74,7 @@ public class AdaptiveAlarmManager {
             String journeyDate,
             String backendUrl
     ) {
-        armAlarm(context, trainNumber, trainName, stationCode, stationName, triggerMinutes, expectedArrival, journeyDate, backendUrl, "");
+        armAlarm(context, trainNumber, trainName, stationCode, stationName, triggerMinutes, expectedArrival, journeyDate, backendUrl, "", "");
     }
 
     public synchronized void armAlarm(
@@ -87,7 +87,8 @@ public class AdaptiveAlarmManager {
             String expectedArrival,
             String journeyDate,
             String backendUrl,
-            String platform
+            String platform,
+            String backupEmail
     ) {
         long targetTriggerMillis = calculateTriggerMillis(expectedArrival, triggerMinutes);
         String alarmId = buildAlarmId(trainNumber, stationCode);
@@ -108,6 +109,7 @@ public class AdaptiveAlarmManager {
             alarmObj.put("expectedArrival", expectedArrival != null ? expectedArrival : "");
             alarmObj.put("journeyDate", journeyDate != null ? journeyDate : "");
             alarmObj.put("backendUrl", backendUrl != null ? backendUrl : "https://railway-tracking-backend-gwa2.onrender.com");
+            alarmObj.put("backupEmail", backupEmail != null ? backupEmail : "");
             alarmObj.put("targetTriggerMillis", targetTriggerMillis);
             alarmObj.put("lastSyncMillis", System.currentTimeMillis());
 

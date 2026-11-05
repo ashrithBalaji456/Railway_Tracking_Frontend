@@ -125,6 +125,7 @@ public class NativeAlarmPlugin extends Plugin {
         String journeyDate = call.getString("journeyDate", "");
         String backendUrl = call.getString("backendUrl", "https://railway-tracking-backend-gwa2.onrender.com");
         String platform = call.getString("platform", "");
+        String backupEmail = call.getString("backupEmail", "");
 
         if (trainNumber == null || stationCode == null) {
             call.reject("trainNumber and stationCode are required");
@@ -154,7 +155,8 @@ public class NativeAlarmPlugin extends Plugin {
                 expectedArrival,
                 journeyDate,
                 backendUrl,
-                platform
+                platform,
+                backupEmail
         );
 
         JSObject ret = new JSObject();
@@ -357,16 +359,20 @@ public class NativeAlarmPlugin extends Plugin {
         String title = call.getString("title", "🌅 RailTrack Wake-Up Alarm!");
         String body = call.getString("body", "Train departure alert is ringing!");
         String trainNumber = call.getString("trainNumber", "");
+        String trainName = call.getString("trainName", "");
         String stationName = call.getString("stationName", "");
         String stationCode = call.getString("stationCode", "");
         String platform = call.getString("platform", "");
+        String backupEmail = call.getString("backupEmail", "");
         int triggerMinutes = call.getInt("triggerMinutes", 30);
 
         Intent serviceIntent = new Intent(context, AlarmForegroundService.class);
         serviceIntent.putExtra("title", title);
         serviceIntent.putExtra("body", body);
         serviceIntent.putExtra("trainNumber", trainNumber);
+        serviceIntent.putExtra("trainName", trainName);
         serviceIntent.putExtra("stationCode", stationCode);
+        serviceIntent.putExtra("backupEmail", backupEmail);
         serviceIntent.putExtra("stationName", stationName);
         serviceIntent.putExtra("platform", platform);
         serviceIntent.putExtra("triggerMinutes", triggerMinutes);

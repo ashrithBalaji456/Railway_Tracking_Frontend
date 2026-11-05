@@ -120,7 +120,8 @@ class MultiAlarmManager {
       platform: fullConfig.platform,
       triggerMinutes: fullConfig.triggerMinutes,
       expectedArrival: fullConfig.expectedArrival,
-      journeyDate: fullConfig.journeyDate
+      journeyDate: fullConfig.journeyDate,
+      backupEmail: fullConfig.backupEmail
     });
 
     this.notifyUpdate();

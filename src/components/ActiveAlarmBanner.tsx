@@ -39,6 +39,7 @@ export default function ActiveAlarmBanner() {
           setAlarmInfo({
             isPlaying: true,
             trainNumber: res.trainNumber || config?.trainNumber || '',
+            trainName: res.trainName || config?.trainName || '',
             stationCode: res.stationCode || config?.stationCode || '',
             stationName: res.stationName || config?.stationName || 'Your Destination',
             platform: (res.platform && res.platform !== 'null') ? res.platform : ((config?.platform && config?.platform !== 'null') ? config.platform : ''),
@@ -157,6 +158,7 @@ export default function ActiveAlarmBanner() {
         onDismiss={handleTurnOff}
         onSnooze={handleSnooze}
         trainNumber={alarmInfo.trainNumber || ''}
+        trainName={alarmInfo.trainName || ''}
         stationName={alarmInfo.stationName || 'Upcoming Station'}
         stationCode={alarmInfo.stationCode || ''}
         platform={alarmInfo.platform}

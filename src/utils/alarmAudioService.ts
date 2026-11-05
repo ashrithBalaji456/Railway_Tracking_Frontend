@@ -11,6 +11,7 @@ export type AlarmToneType = 'digital_clock' | 'emergency_siren' | 'train_horn';
 export interface ActiveAlarmInfo {
   isPlaying: boolean;
   trainNumber?: string;
+  trainName?: string;
   stationName?: string;
   stationCode?: string;
   platform?: string;
@@ -195,11 +196,13 @@ class AlarmAudioService {
     customSoundUrl?: string;
     customSoundName?: string;
     trainNumber?: string;
+    trainName?: string;
     stationName?: string;
     stationCode?: string;
     platform?: string;
     distanceKm?: number;
     etaMinutes?: number;
+    backupEmail?: string;
   }): void {
     if (this.isAlarmPlaying) return;
     this.isAlarmPlaying = true;
@@ -207,34 +210,22 @@ class AlarmAudioService {
     const tone = options.toneType || 'digital_clock';
     this.acquireWakeLock();
 
-    // 1. Sound Playback:
-    // If running inside native Android APK, native AlarmForegroundService / AlarmSoundPlayer
-    // exclusively plays audio at maximum hardware volume via STREAM_ALARM.
-    // Creating duplicate web Audio() here would cause AudioFocus contention and Android throttling!
-    const isNative = isNativeApp();
-    if (!isNative) {
-      if (options.customSoundUrl) {
-        try {
-          const audio = new Audio(options.customSoundUrl);
-          audio.loop = true;
-          audio.volume = 1.0;
-          audio.onended = () => {
-            if (this.isAlarmPlaying) {
-              audio.currentTime = 0;
-              audio.play().catch(() => {});
-            }
-          };
-          audio.play().catch((e) => console.warn('Custom audio playback failed:', e));
-          this.customAudioElement = audio;
-        } catch (err) {
-          console.warn('Custom audio start error, falling back to synthesizer:', err);
-          this.playPulse(tone, 0.35);
-          this.alarmInterval = setInterval(() => {
-            if (!this.isAlarmPlaying) return;
-            this.playPulse(tone, 0.35);
-          }, 700);
-        }
-      } else {
+    // 1. Web Layer Sound Playback (Plays immediately within the WebView/browser)
+    if (options.customSoundUrl) {
+      try {
+        const audio = new Audio(options.customSoundUrl);
+        audio.loop = true;
+        audio.volume = 1.0;
+        audio.onended = () => {
+          if (this.isAlarmPlaying) {
+            audio.currentTime = 0;
+            audio.play().catch(() => {});
+          }
+        };
+        audio.play().catch((e) => console.warn('Custom audio playback failed:', e));
+        this.customAudioElement = audio;
+      } catch (err) {
+        console.warn('Custom audio start error, falling back to synthesizer:', err);
         this.playPulse(tone, 0.35);
         this.alarmInterval = setInterval(() => {
           if (!this.isAlarmPlaying) return;
@@ -242,15 +233,27 @@ class AlarmAudioService {
         }, 700);
       }
     } else {
+      this.playPulse(tone, 0.35);
+      this.alarmInterval = setInterval(() => {
+        if (!this.isAlarmPlaying) return;
+        this.playPulse(tone, 0.35);
+      }, 700);
+    }
+
+    // 2. Native Android Hardware Player & Un-killable Foreground Service
+    const isNative = isNativeApp();
+    if (isNative) {
       console.log('Running in native Android APK: triggering hardware AlarmSoundPlayer and Foreground Service.');
       startNativeAlarm({
         title: `🔔 ${options.stationName || 'Destination'} Approaching`,
-        body: `Train ${options.trainNumber || ''} is nearing ${options.stationName || 'your station'}! Wake up and prepare.`,
+        body: `Train ${options.trainName ? options.trainName + ' (' + (options.trainNumber || '') + ')' : (options.trainNumber || '')} is nearing ${options.stationName || 'your station'}! Wake up and prepare.`,
         trainNumber: options.trainNumber,
+        trainName: options.trainName,
         stationName: options.stationName,
         stationCode: options.stationCode,
         platform: options.platform,
-        triggerMinutes: options.etaMinutes
+        triggerMinutes: options.etaMinutes,
+        backupEmail: options.backupEmail
       }).catch((err) => console.warn('Native alarm trigger error:', err));
     }
 
@@ -296,6 +299,7 @@ class AlarmAudioService {
     this.currentAlarmInfo = {
       isPlaying: true,
       trainNumber: options.trainNumber,
+      trainName: options.trainName,
       stationName: options.stationName,
       stationCode: options.stationCode,
       platform: options.platform,
