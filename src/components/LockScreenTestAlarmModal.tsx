@@ -105,6 +105,9 @@ export default function LockScreenTestAlarmModal({
    * from freezing JavaScript timers when the phone screen is locked.
    */
   const startBackgroundAudioAnchor = () => {
+    if (isNativeApp()) {
+      return; // Android hardware AlarmClock handles exact background wake-up without audio hacks
+    }
     try {
       // 1. Silent looping Audio element (anchors Media Session in Android)
       const silentWavUri = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';

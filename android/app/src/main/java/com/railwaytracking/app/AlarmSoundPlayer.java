@@ -49,11 +49,11 @@ public class AlarmSoundPlayer {
         }
 
         try {
-            // 1. Acquire CPU WakeLock to guarantee background audio processing is never frozen
+            // 1. Acquire Bright Screen & CPU WakeLock to guarantee the display and audio hardware wake up
             PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
             if (pm != null && (wakeLock == null || !wakeLock.isHeld())) {
                 wakeLock = pm.newWakeLock(
-                    PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                    PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE,
                     "railtrack:alarm_sound_wakelock"
                 );
                 wakeLock.acquire(15 * 60 * 1000L); // 15 minutes max safety timeout
@@ -100,9 +100,7 @@ public class AlarmSoundPlayer {
 
             if (usePhysicalCustomFile) {
                 Log.d(TAG, "Playing verified custom MP3 audio: " + customFile.getAbsolutePath() + " (" + customFile.length() + " bytes)");
-                try (java.io.FileInputStream fis = new java.io.FileInputStream(customFile)) {
-                    mediaPlayer.setDataSource(fis.getFD());
-                }
+                mediaPlayer.setDataSource(customFile.getAbsolutePath());
             } else {
                 Uri soundUri = RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_ALARM);
                 if (soundUri == null) {

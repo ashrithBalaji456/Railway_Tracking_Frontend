@@ -17,6 +17,22 @@ public class AlarmReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         Log.d(TAG, "AlarmReceiver fired! Starting AlarmForegroundService.");
 
+        // Wake screen and CPU immediately on alarm trigger so device is 100% active
+        try {
+            android.os.PowerManager pm = (android.os.PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            if (pm != null) {
+                android.os.PowerManager.WakeLock screenLock = pm.newWakeLock(
+                    android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK |
+                    android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP |
+                    android.os.PowerManager.ON_AFTER_RELEASE,
+                    "railtrack:alarm_receiver_screen_wakeup"
+                );
+                screenLock.acquire(10000L); // Keep screen lit for 10s
+            }
+        } catch (Exception ex) {
+            Log.w(TAG, "Screen wakeup lock warning: " + ex.getMessage());
+        }
+
         String title = intent != null ? intent.getStringExtra("title") : null;
         if (title == null || title.isBlank()) {
             title = "🌅 RailTrack Wake-Up Alarm!";

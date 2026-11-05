@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { VolumeX, Clock, ShieldAlert } from 'lucide-react';
 import alarmAudioService, { type ActiveAlarmInfo } from '../utils/alarmAudioService';
-import { stopNativeAlarm, checkNativeAlarmRinging, isNativeApp, syncCustomAudioToNative } from '../utils/nativeAlarmBridge';
-import customAlarmSoundService from '../utils/customAlarmSoundService';
+import { stopNativeAlarm, checkNativeAlarmRinging } from '../utils/nativeAlarmBridge';
 import multiAlarmManager from '../utils/multiAlarmManager';
 import RingingAlarmOverlay from './RingingAlarmOverlay';
 
@@ -25,24 +24,6 @@ export default function ActiveAlarmBanner() {
     return () => {
       window.removeEventListener('rail-alarm-state', handleAlarmState);
     };
-  }, []);
-
-  useEffect(() => {
-    // Ensure existing user's custom alarm song is streamed chunk-by-chunk to Android storage on boot
-    const syncAudioOnBoot = async () => {
-      try {
-        if (isNativeApp()) {
-          const defaultSound = await customAlarmSoundService.getDefaultSound();
-          if (defaultSound && defaultSound.blob) {
-            console.log('[ActiveAlarmBanner] Syncing default custom alarm song to native storage:', defaultSound.name);
-            await syncCustomAudioToNative(defaultSound.blob);
-          }
-        }
-      } catch (e) {
-        console.warn('[ActiveAlarmBanner] Audio sync on boot error:', e);
-      }
-    };
-    syncAudioOnBoot();
   }, []);
 
   useEffect(() => {

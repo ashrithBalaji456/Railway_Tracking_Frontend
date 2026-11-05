@@ -216,6 +216,14 @@ public class NativeAlarmPlugin extends Plugin {
 
     @PluginMethod
     public void startCustomAudioUpload(PluginCall call) {
+        if (AlarmSoundPlayer.getInstance().isPlaying()) {
+            Log.w(TAG, "Cannot modify alarm audio file while alarm is actively ringing!");
+            JSObject ret = new JSObject();
+            ret.put("ready", false);
+            ret.put("skipped", true);
+            call.resolve(ret);
+            return;
+        }
         try {
             File tempFile = new File(getContext().getFilesDir(), "custom_alarm_sound.mp3.tmp");
             if (tempFile.exists()) {
@@ -234,6 +242,14 @@ public class NativeAlarmPlugin extends Plugin {
 
     @PluginMethod
     public void appendCustomAudioChunk(PluginCall call) {
+        if (AlarmSoundPlayer.getInstance().isPlaying()) {
+            Log.w(TAG, "Cannot append audio chunk while alarm is actively ringing!");
+            JSObject ret = new JSObject();
+            ret.put("saved", false);
+            ret.put("skipped", true);
+            call.resolve(ret);
+            return;
+        }
         String chunkBase64 = call.getString("chunk");
         Boolean isLast = call.getBoolean("isLast", false);
 
