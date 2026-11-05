@@ -143,10 +143,23 @@ class AlarmAudioService {
   }
 
   /**
+   * Stop any preview playback without affecting active ringing alarms
+   */
+  stopPreview(): void {
+    if (this.customAudioElement && !this.isAlarmPlaying) {
+      try {
+        this.customAudioElement.pause();
+        this.customAudioElement.currentTime = 0;
+      } catch (e) {}
+      this.customAudioElement = null;
+    }
+  }
+
+  /**
    * Preview a 2.5-second test sound so the user can test their volume
    */
   previewTone(toneType: AlarmToneType = 'digital_clock'): void {
-    this.stopAlarm();
+    this.stopPreview();
     let pulses = 0;
     const interval = setInterval(() => {
       this.playPulse(toneType, 0.28);
@@ -157,7 +170,7 @@ class AlarmAudioService {
     }, 450);
 
     // Optional short test vibration
-    if ('vibrate' in navigator) {
+    if ('vibrate' in navigator && !isNativeApp()) {
       navigator.vibrate([200, 100, 200]);
     }
   }
@@ -166,7 +179,7 @@ class AlarmAudioService {
    * Preview a 3.5-second snippet of a custom uploaded sound file
    */
   previewCustomSound(soundUrl: string): void {
-    this.stopAlarm();
+    this.stopPreview();
     try {
       const audio = new Audio(soundUrl);
       audio.volume = 1.0;
@@ -183,7 +196,7 @@ class AlarmAudioService {
       console.warn('Error playing custom preview:', e);
     }
 
-    if ('vibrate' in navigator) {
+    if ('vibrate' in navigator && !isNativeApp()) {
       navigator.vibrate([200, 100, 200]);
     }
   }

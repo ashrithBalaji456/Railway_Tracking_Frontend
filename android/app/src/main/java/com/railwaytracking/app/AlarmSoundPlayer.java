@@ -1,7 +1,6 @@
 package com.railwaytracking.app;
 
 import android.content.Context;
-import android.content.res.AssetFileDescriptor;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
@@ -31,7 +30,6 @@ public class AlarmSoundPlayer {
     private static AlarmSoundPlayer instance;
 
     private MediaPlayer mediaPlayer;
-    private AssetFileDescriptor currentAfd;
     private Ringtone fallbackRingtone;
     private Vibrator vibrator;
     private PowerManager.WakeLock cpuWakeLock;
@@ -114,7 +112,6 @@ public class AlarmSoundPlayer {
                         .setOnAudioFocusChangeListener(focusChange -> {
                             Log.d(TAG, "AudioFocus change: " + focusChange);
                             if (focusChange == AudioManager.AUDIOFOCUS_LOSS || focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
-                                // Immediately reclaim if alarm is still supposed to be sounding!
                                 if (isPlaying && am != null && audioFocusRequest != null) {
                                     try {
                                         am.requestAudioFocus(audioFocusRequest);
@@ -134,22 +131,25 @@ public class AlarmSoundPlayer {
 
             // 4. Initialize and start MediaPlayer
             stopMediaPlayerOnly();
-            mediaPlayer = new MediaPlayer();
-            mediaPlayer.setWakeMode(appContext, PowerManager.PARTIAL_WAKE_LOCK);
-            mediaPlayer.setAudioAttributes(audioAttributes);
 
             File customFile = new File(appContext.getFilesDir(), "custom_alarm_sound.mp3");
             boolean usePhysicalCustomFile = customFile.exists() && customFile.length() > 1024;
-
             boolean sourceSet = false;
 
             if (usePhysicalCustomFile) {
                 try {
                     Log.d(TAG, "Playing user custom MP3 track: " + customFile.getAbsolutePath() + " (" + customFile.length() + " bytes)");
+                    mediaPlayer = new MediaPlayer();
+                    mediaPlayer.setWakeMode(appContext, PowerManager.PARTIAL_WAKE_LOCK);
+                    mediaPlayer.setAudioAttributes(audioAttributes);
                     mediaPlayer.setDataSource(customFile.getAbsolutePath());
+                    mediaPlayer.setLooping(true);
+                    mediaPlayer.prepare();
+                    mediaPlayer.start();
                     sourceSet = true;
                 } catch (Exception customEx) {
                     Log.w(TAG, "Failed loading custom MP3, falling back: " + customEx.getMessage());
+                    stopMediaPlayerOnly();
                 }
             }
 
@@ -158,15 +158,25 @@ public class AlarmSoundPlayer {
                 try {
                     int rawId = appContext.getResources().getIdentifier("alarm_alert", "raw", appContext.getPackageName());
                     if (rawId != 0) {
-                        currentAfd = appContext.getResources().openRawResourceFd(rawId);
-                        if (currentAfd != null) {
-                            mediaPlayer.setDataSource(currentAfd.getFileDescriptor(), currentAfd.getStartOffset(), currentAfd.getLength());
+                        MediaPlayer rawPlayer = null;
+                        if (am != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            rawPlayer = MediaPlayer.create(appContext, rawId, audioAttributes, am.generateAudioSessionId());
+                        }
+                        if (rawPlayer == null) {
+                            rawPlayer = MediaPlayer.create(appContext, rawId);
+                        }
+                        if (rawPlayer != null) {
+                            mediaPlayer = rawPlayer;
+                            mediaPlayer.setWakeMode(appContext, PowerManager.PARTIAL_WAKE_LOCK);
+                            mediaPlayer.setLooping(true);
+                            mediaPlayer.start();
                             sourceSet = true;
-                            Log.d(TAG, "Using guaranteed built-in raw alarm asset (R.raw.alarm_alert)");
+                            Log.d(TAG, "MediaPlayer successfully created & playing from R.raw.alarm_alert");
                         }
                     }
                 } catch (Exception rawEx) {
                     Log.w(TAG, "Raw asset alarm loading failed: " + rawEx.getMessage());
+                    stopMediaPlayerOnly();
                 }
             }
 
@@ -179,40 +189,42 @@ public class AlarmSoundPlayer {
                 if (soundUri == null) {
                     soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
                 }
-                if (soundUri == null) {
-                    soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-                }
                 Log.d(TAG, "Using system alarm tone URI: " + soundUri);
                 try {
+                    mediaPlayer = new MediaPlayer();
+                    mediaPlayer.setWakeMode(appContext, PowerManager.PARTIAL_WAKE_LOCK);
+                    mediaPlayer.setAudioAttributes(audioAttributes);
                     mediaPlayer.setDataSource(appContext, soundUri);
+                    mediaPlayer.setLooping(true);
+                    mediaPlayer.prepare();
+                    mediaPlayer.start();
                     sourceSet = true;
                 } catch (Exception uriEx) {
                     Log.w(TAG, "Direct URI failed: " + uriEx.getMessage());
+                    stopMediaPlayerOnly();
                 }
             }
 
-            mediaPlayer.setLooping(true);
-
-            mediaPlayer.setOnErrorListener((mp, what, extra) -> {
-                Log.e(TAG, "MediaPlayer encountered error (" + what + ", " + extra + ")");
-                stopMediaPlayerOnly();
-                startRingtoneFallback(appContext);
-                return true;
-            });
-
-            mediaPlayer.setOnCompletionListener(mp -> {
-                try {
-                    mp.seekTo(0);
-                    mp.start();
-                } catch (Exception ex) {
-                    Log.w(TAG, "Replay seek failed, restarting: " + ex.getMessage());
+            if (mediaPlayer != null) {
+                mediaPlayer.setOnErrorListener((mp, what, extra) -> {
+                    Log.e(TAG, "MediaPlayer encountered error (" + what + ", " + extra + ")");
                     stopMediaPlayerOnly();
-                    startAlarm(appContext);
-                }
-            });
+                    startRingtoneFallback(appContext);
+                    return true;
+                });
 
-            mediaPlayer.prepare();
-            mediaPlayer.start();
+                mediaPlayer.setOnCompletionListener(mp -> {
+                    try {
+                        mp.seekTo(0);
+                        mp.start();
+                    } catch (Exception ex) {
+                        Log.w(TAG, "Replay seek failed, restarting: " + ex.getMessage());
+                        stopMediaPlayerOnly();
+                        startAlarm(appContext);
+                    }
+                });
+            }
+
             isPlaying = true;
             Log.d(TAG, "MediaPlayer successfully started looping continuously!");
 
@@ -315,6 +327,11 @@ public class AlarmSoundPlayer {
                     Log.d(TAG, "Watchdog detected alarm stopped! Rebuilding alarm session...");
                     startAlarm(appContext);
                 }
+
+                // Verify hardware vibration is active
+                if (vibrator == null && appContext != null) {
+                    startHardwareVibration(appContext);
+                }
             } catch (Exception ex) {
                 Log.w(TAG, "Watchdog loop exception: " + ex.getMessage());
             }
@@ -335,7 +352,7 @@ public class AlarmSoundPlayer {
     }
 
     public synchronized void stopAlarm(Context context) {
-        Log.d(TAG, "Explicit stopAlarm called: terminating audio, watchdog, and vibration");
+        Log.d(TAG, "Explicit stopAlarm called! Stack trace:", new Exception("stopAlarm invocation"));
         isPlaying = false;
         stopWatchdog();
         stopMediaPlayerOnly();
@@ -395,12 +412,6 @@ public class AlarmSoundPlayer {
                 mediaPlayer.release();
             } catch (Exception ignored) {}
             mediaPlayer = null;
-        }
-        if (currentAfd != null) {
-            try {
-                currentAfd.close();
-            } catch (Exception ignored) {}
-            currentAfd = null;
         }
     }
 

@@ -47,7 +47,7 @@ export default function CustomSoundManagerModal({
     if (isOpen) {
       loadSounds();
     } else {
-      alarmAudioService.stopAlarm();
+      alarmAudioService.stopPreview();
       setIsPlayingId(null);
     }
   }, [isOpen]);
@@ -95,7 +95,7 @@ export default function CustomSoundManagerModal({
 
   const handlePlayTone = (tone: AlarmToneType) => {
     if (isPlayingId === tone) {
-      alarmAudioService.stopAlarm();
+      alarmAudioService.stopPreview();
       setIsPlayingId(null);
     } else {
       setIsPlayingId(tone);
@@ -108,7 +108,7 @@ export default function CustomSoundManagerModal({
 
   const handlePlayCustomSound = async (sound: CustomAlarmSound) => {
     if (isPlayingId === sound.id) {
-      alarmAudioService.stopAlarm();
+      alarmAudioService.stopPreview();
       setIsPlayingId(null);
     } else {
       const url = await customAlarmSoundService.getSoundBlobUrl(sound.id);

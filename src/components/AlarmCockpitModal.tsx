@@ -62,7 +62,7 @@ export default function AlarmCockpitModal({ isOpen, onClose }: AlarmCockpitModal
     if (isOpen) {
       loadSounds();
     } else {
-      alarmAudioService.stopAlarm();
+      alarmAudioService.stopPreview();
       setIsPlayingId(null);
       setIsAlarmSounding(false);
     }
@@ -108,7 +108,7 @@ export default function AlarmCockpitModal({ isOpen, onClose }: AlarmCockpitModal
 
   const handlePlayTone = (tone: AlarmToneType) => {
     if (isPlayingId === tone) {
-      alarmAudioService.stopAlarm();
+      alarmAudioService.stopPreview();
       setIsPlayingId(null);
     } else {
       setIsPlayingId(tone);
@@ -121,7 +121,7 @@ export default function AlarmCockpitModal({ isOpen, onClose }: AlarmCockpitModal
 
   const handlePlayCustomSound = async (sound: CustomAlarmSound) => {
     if (isPlayingId === sound.id) {
-      alarmAudioService.stopAlarm();
+      alarmAudioService.stopPreview();
       setIsPlayingId(null);
     } else {
       const url = await customAlarmSoundService.getSoundBlobUrl(sound.id);
