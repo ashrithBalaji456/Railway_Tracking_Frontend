@@ -299,7 +299,8 @@ public class NativeAlarmPlugin extends Plugin {
         String trainName = prefs.getString("trainName", "");
         String stationName = prefs.getString("ringing_station_name", prefs.getString("stationName", ""));
         String stationCode = prefs.getString("ringing_station_code", prefs.getString("stationCode", ""));
-        String platform = prefs.getString("ringing_platform", prefs.getString("platform", ""));
+        String rawPlatform = prefs.getString("ringing_platform", prefs.getString("platform", ""));
+        String platform = (rawPlatform != null && !rawPlatform.equalsIgnoreCase("null") && !rawPlatform.equalsIgnoreCase("undefined")) ? rawPlatform : "";
         int triggerMinutes = prefs.getInt("ringing_trigger_minutes", prefs.getInt("triggerMinutes", 30));
 
         JSObject ret = new JSObject();

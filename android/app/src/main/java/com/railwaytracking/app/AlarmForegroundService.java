@@ -36,6 +36,7 @@ public class AlarmForegroundService extends Service {
     private static final String TAG = "AlarmForegroundService";
 
     private PowerManager.WakeLock wakeLock;
+    private android.media.session.MediaSession mediaSession;
 
     @Override
     public void onCreate() {
@@ -46,7 +47,20 @@ public class AlarmForegroundService extends Service {
                 PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
                 "railtrack:alarm_foreground_service_wakelock"
             );
-            wakeLock.acquire(10 * 60 * 1000L); // Max 10 mins safety timeout
+            wakeLock.acquire(15 * 60 * 1000L); // 15 mins safety timeout
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try {
+                mediaSession = new android.media.session.MediaSession(this, "RailTrackAlarmSession");
+                android.media.session.PlaybackState.Builder pb = new android.media.session.PlaybackState.Builder()
+                    .setState(android.media.session.PlaybackState.STATE_PLAYING, android.media.session.PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1.0f)
+                    .setActions(android.media.session.PlaybackState.ACTION_PLAY | android.media.session.PlaybackState.ACTION_PAUSE | android.media.session.PlaybackState.ACTION_STOP);
+                mediaSession.setPlaybackState(pb.build());
+                mediaSession.setActive(true);
+            } catch (Exception ex) {
+                Log.w(TAG, "MediaSession setup: " + ex.getMessage());
+            }
         }
     }
 
@@ -182,6 +196,14 @@ public class AlarmForegroundService extends Service {
     public void stopAlarm() {
         AlarmSoundPlayer.getInstance().stopAlarm(this);
         stopForeground(true);
+
+        if (mediaSession != null) {
+            try {
+                mediaSession.setActive(false);
+                mediaSession.release();
+            } catch (Exception ignored) {}
+            mediaSession = null;
+        }
 
         SharedPreferences prefs = getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE);
         prefs.edit()

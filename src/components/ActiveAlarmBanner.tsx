@@ -41,7 +41,7 @@ export default function ActiveAlarmBanner() {
             trainNumber: res.trainNumber || config?.trainNumber || '',
             stationCode: res.stationCode || config?.stationCode || '',
             stationName: res.stationName || config?.stationName || 'Your Destination',
-            platform: res.platform || config?.platform || '',
+            platform: (res.platform && res.platform !== 'null') ? res.platform : ((config?.platform && config?.platform !== 'null') ? config.platform : ''),
             toneType: config?.toneType === 'custom' ? undefined : (config?.toneType || 'digital_clock'),
             customSoundName: config?.customSoundName,
             etaMinutes: res.triggerMinutes || config?.triggerMinutes || 5

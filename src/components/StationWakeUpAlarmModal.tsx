@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { alarmAudioService, type AlarmToneType } from '../utils/alarmAudioService';
 import customAlarmSoundService, { type CustomAlarmSound } from '../utils/customAlarmSoundService';
+import { syncCustomAudioToNative } from '../utils/nativeAlarmBridge';
 
 export interface WakeUpAlarmConfig {
   id?: string;
@@ -125,6 +126,9 @@ export default function StationWakeUpAlarmModal({
     alarmAudioService.acquireWakeLock();
 
     const isCustom = selectedSoundMode === 'custom' && !!customSound;
+    if (isCustom && customSound?.blob) {
+      syncCustomAudioToNative(customSound.blob).catch(() => {});
+    }
     onArmAlarm({
       trainNumber,
       trainName,

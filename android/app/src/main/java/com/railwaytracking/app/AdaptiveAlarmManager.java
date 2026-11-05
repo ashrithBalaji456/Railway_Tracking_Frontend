@@ -102,7 +102,8 @@ public class AdaptiveAlarmManager {
             alarmObj.put("trainName", trainName != null ? trainName : "Train " + trainNumber);
             alarmObj.put("stationCode", stationCode.toUpperCase());
             alarmObj.put("stationName", stationName);
-            alarmObj.put("platform", platform != null ? platform : "");
+            String cleanPlatform = (platform != null && !platform.equalsIgnoreCase("null") && !platform.equalsIgnoreCase("undefined")) ? platform : "";
+            alarmObj.put("platform", cleanPlatform);
             alarmObj.put("triggerMinutes", triggerMinutes);
             alarmObj.put("expectedArrival", expectedArrival != null ? expectedArrival : "");
             alarmObj.put("journeyDate", journeyDate != null ? journeyDate : "");
@@ -120,7 +121,7 @@ public class AdaptiveAlarmManager {
                     .putString("trainName", trainName != null ? trainName : "Train " + trainNumber)
                     .putString("stationCode", stationCode.toUpperCase())
                     .putString("stationName", stationName)
-                    .putString("platform", platform != null ? platform : "")
+                    .putString("platform", cleanPlatform)
                     .putInt("triggerMinutes", triggerMinutes)
                     .putString("expectedArrival", expectedArrival != null ? expectedArrival : "")
                     .putString("journeyDate", journeyDate != null ? journeyDate : "")
@@ -262,7 +263,7 @@ public class AdaptiveAlarmManager {
 
         long triggerAt = System.currentTimeMillis() + delayMillis;
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && delayMillis <= (8 * 60 * 1000L)) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 Intent showIntent = new Intent(context, MainActivity.class);
                 PendingIntent showPI = PendingIntent.getActivity(context, syncReqCode, showIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
                 AlarmManager.AlarmClockInfo clockInfo = new AlarmManager.AlarmClockInfo(triggerAt, showPI);
@@ -272,7 +273,7 @@ public class AdaptiveAlarmManager {
             } else {
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, syncPendingIntent);
             }
-            Log.d(TAG, "Next adaptive sync for [" + alarmId + "] scheduled in " + (delayMillis / 60000) + " minutes (" + new Date(triggerAt) + ")");
+            Log.d(TAG, "Next adaptive sync for [" + alarmId + "] scheduled via AlarmClock in " + (delayMillis / 60000) + " minutes (" + new Date(triggerAt) + ")");
         } catch (Exception e) {
             Log.e(TAG, "Error scheduling adaptive sync: " + e.getMessage());
         }
@@ -456,6 +457,21 @@ public class AdaptiveAlarmManager {
         return list;
     }
 
+    public static String formatDelayHoursAndMinutes(int delayMinutes) {
+        if (delayMinutes <= 0) {
+            return "On Time";
+        }
+        if (delayMinutes < 60) {
+            return delayMinutes + " mins late";
+        }
+        int hrs = delayMinutes / 60;
+        int mins = delayMinutes % 60;
+        if (mins == 0) {
+            return hrs + (hrs > 1 ? " hrs late" : " hr late");
+        }
+        return hrs + (hrs > 1 ? " hrs " : " hr ") + mins + " mins late";
+    }
+
     public void postScheduleShiftNotification(
             Context context,
             String trainNumber,
@@ -470,18 +486,62 @@ public class AdaptiveAlarmManager {
 
         SimpleDateFormat sdf = new SimpleDateFormat("hh:mm a", Locale.getDefault());
         String formattedTime = sdf.format(new Date(newTriggerMillis));
+        String delayText = formatDelayHoursAndMinutes(delayMinutes);
 
-        String body = "Train " + trainNumber + " delayed (+" + delayMinutes + "m). Wake-up alarm automatically shifted to " + formattedTime + ".";
+        String title = "🚆 Train " + trainNumber + " Schedule Update";
+        String body = "Train is " + delayText + ". Wake-up alarm automatically shifted to " + formattedTime + " for " + stationName + ".";
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, SYNC_CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setContentTitle("🚆 Train Schedule Updated: Alarm Shifted")
+                .setContentTitle(title)
                 .setContentText(body)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true);
 
         nm.notify(SYNC_CHANNEL_ID.hashCode(), builder.build());
+    }
+
+    public void postTelemetryStatusNotification(
+            Context context,
+            String trainNumber,
+            String stationName,
+            String stationCode,
+            int delayMinutes,
+            String expectedArrival,
+            long targetTriggerMillis,
+            long nextSyncMillis
+    ) {
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) return;
+
+        createSyncChannel(nm);
+
+        SimpleDateFormat timeFmt = new SimpleDateFormat("hh:mm a", Locale.getDefault());
+        String alarmTimeStr = timeFmt.format(new Date(targetTriggerMillis));
+        String nextSyncStr = timeFmt.format(new Date(nextSyncMillis));
+        String checkedNowStr = timeFmt.format(new Date());
+
+        String delayText = formatDelayHoursAndMinutes(delayMinutes);
+        String title = "🚆 Train " + trainNumber + " • " + stationCode + " (" + delayText + ")";
+        String summary = "Arrival: " + (expectedArrival != null && !expectedArrival.isEmpty() ? expectedArrival : "Scheduled")
+                + " • Alarm: " + alarmTimeStr;
+        String fullBody = summary + "\n"
+                + "Status: " + delayText + " • Checked: " + checkedNowStr + " • Next live check: " + nextSyncStr;
+
+        Intent showIntent = new Intent(context, MainActivity.class);
+        PendingIntent pi = PendingIntent.getActivity(context, 9091, showIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, SYNC_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_popup_sync)
+                .setContentTitle(title)
+                .setContentText(summary)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(fullBody))
+                .setContentIntent(pi)
+                .setOngoing(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+
+        nm.notify(getNotificationId(trainNumber, stationCode), builder.build());
     }
 
     private void createSyncChannel(NotificationManager nm) {

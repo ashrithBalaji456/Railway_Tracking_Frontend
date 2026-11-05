@@ -75,7 +75,9 @@ export default function RingingAlarmOverlay({
           <div className="text-center col-span-2 sm:col-span-1">
             <span className="block text-[11px] text-slate-300 uppercase font-bold">Expected Platform</span>
             <span className="text-2xl sm:text-3xl font-black text-sky-300">
-              {platform ? `#${platform}` : 'Check Boards'}
+              {platform && platform !== 'null' && platform !== 'undefined' && platform.trim() !== ''
+                ? (platform.startsWith('#') ? platform : `#${platform}`)
+                : 'Check Boards'}
             </span>
           </div>
         </div>

@@ -171,9 +171,11 @@ export default function PnrStatus() {
 
   useEffect(() => {
     return () => {
-      alarmAudioService.stopAlarm();
+      if (isAlarmSounding) {
+        alarmAudioService.stopAlarm();
+      }
     };
-  }, []);
+  }, [isAlarmSounding]);
 
   const handleToggleAlarmTest = async () => {
     if (isAlarmSounding) {

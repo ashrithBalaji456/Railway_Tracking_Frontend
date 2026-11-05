@@ -280,13 +280,15 @@ public class AdaptiveTrackingService extends Service {
     }
 
     private void triggerAlarmNow(String stationName, String trainNumber, String stationCode, String platform, int triggerMinutes) {
+        String cleanPlatform = (platform != null && !platform.equalsIgnoreCase("null") && !platform.equalsIgnoreCase("undefined")) ? platform : "";
+
         Intent serviceIntent = new Intent(this, AlarmForegroundService.class);
         serviceIntent.putExtra("title", "🔔 " + stationName + " Approaching (" + triggerMinutes + "m Warning)");
         serviceIntent.putExtra("body", "Train " + trainNumber + " is nearing " + stationName + "! Tap to open or silence.");
         serviceIntent.putExtra("trainNumber", trainNumber);
         serviceIntent.putExtra("stationCode", stationCode);
         serviceIntent.putExtra("stationName", stationName);
-        serviceIntent.putExtra("platform", platform);
+        serviceIntent.putExtra("platform", cleanPlatform);
         serviceIntent.putExtra("triggerMinutes", triggerMinutes);
         serviceIntent.putExtra("alarmId", AdaptiveAlarmManager.buildAlarmId(trainNumber, stationCode));
 
