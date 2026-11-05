@@ -3339,3 +3339,43 @@ flowchart TD
      - Base fare increases by 10% after every 10% of seats booked, capped at a maximum of $1.5\times$ the initial base fare.
   7. **Catering & Meal Packages:**
      - Mandatory meal packages for Rajdhani, Shatabdi, and Vande Bharat: range between $\text{₹}200 - \text{₹}400$ depending on journey hours and service level.
+
+---
+
+#### Q23: How is the Multi-City Trip Planner and Connecting Route Guide (`JourneyPlanner.tsx`) architected, and how do 1-Click presets and connecting info cards operate?
+* **Architecture Overview:**
+  1. **Quick Overview Hero Banner ("Plan a Multi-City Rail Trip"):**
+     - Features an interactive mascot illustration of Bholu the Railway Elephant (conductor cap, lantern, and greeting wave).
+     - Outlines the 4 core value propositions:
+       - Multi-city trips across 2 to 6 stations in one search.
+       - Stay days at each stop automatically shifting subsequent travel dates.
+       - Connecting routes when no direct train exists, detailing switch times and connection risk.
+       - Isolated leg calculation so a single unavailable segment never breaks the whole plan.
+  2. **Multi-City Query Form & Direct/Connecting Filter Toggle:**
+     - Top search block allows users to specify Origin, Final Destination, and intermediate Via cities (`+ Add Another City`).
+     - **Transfers Toggle:**
+       - `All Connections`: Returns both point-to-point direct trains and 1-transfer connections.
+       - `Direct Only`: Dynamically filters out connecting trains and presents exclusively direct services upon search.
+  3. **Connecting Train Info Cards (1 Change):**
+     - Blue top header banner displaying: `[ Total Duration ] [ 1 Change ] [ Total Distance km ]`.
+     - Two distinct leg blocks (Leg 1 and Leg 2) with 12-hour AM/PM times, duration, and distance.
+     - **Interchange Advice Banner:**
+       - Computes switch buffer:
+         $$\text{Available Buffer} = \text{Scheduled Layover} - \text{Incoming Train Typical Delay}$$
+       - Explains exact platform transit advice: e.g. *"Change at Chintalpalli (CLE). Train 17034 usually runs 1h 2m late, leaving you 14h 36m to switch. If missed, the next train is 67766 at 11:08 PM."*
+  4. **Direct Train Cards (0 Changes):**
+     - Blue top header banner displaying: `[ Duration ] [ 0 Changes ] [ Distance km ]`.
+     - Displays realistic punctuality note on bottom: e.g. *"Train 12708 usually runs 17m late into Kazipet Jn (KZJ)."*
+  5. **1-Click Verified Circuit Presets:**
+     - Provides instant 1-click loading for 6 classic circuits:
+       1. *Golden Triangle Express* (NDLS $\rightarrow$ AGC $\rightarrow$ JP $\rightarrow$ NDLS)
+       2. *Spiritual Ganga Corridor* (NDLS $\rightarrow$ AYC $\rightarrow$ BSB $\rightarrow$ PRYJ)
+       3. *Konkan Coastal Explorer* (CSMT $\rightarrow$ MAO $\rightarrow$ MAQ $\rightarrow$ ERS)
+       4. *South India Temple & Heritage* (MAS $\rightarrow$ TPTY $\rightarrow$ SBC $\rightarrow$ MYS)
+       5. *Royal Rajasthan Desert Trail* (JP $\rightarrow$ JU $\rightarrow$ JSM $\rightarrow$ BKN)
+       6. *Himalayan Foothills & Punjab* (NDLS $\rightarrow$ HW $\rightarrow$ DDN $\rightarrow$ ASR)
+     - Clicking "Load Route" populates origin, destination, and intermediate via stops, smoothly scrolling up to execute the journey solver.
+  6. **IRCTC Multi-Stop Handbook & Statutory Regulations:**
+     - **IRCA Rule 213 Break Journey:** Minimum 500 km distance requirement, allowable break count, 2-day duration limit, and station master endorsement.
+     - **Telescopic Circular Journey Tickets:** Base fare savings through non-linear distance scaling.
+     - **Connection Sweet Spot & PNR Linking:** Explaining the 2h–4h layover sweet spot and official IRCTC Connecting Journey Booking 100% refund protection.

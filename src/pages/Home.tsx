@@ -471,7 +471,13 @@ export default function Home() {
             </div>
             <button
               type="button"
-              onClick={() => navigate('/journey')}
+              onClick={() => {
+                const params = new URLSearchParams();
+                if (selectedBetweenSource?.stationCode) params.set('source', selectedBetweenSource.stationCode);
+                if (selectedBetweenDest?.stationCode) params.set('destination', selectedBetweenDest.stationCode);
+                const queryStr = params.toString() ? `?${params.toString()}` : '';
+                navigate(`/journey${queryStr}`);
+              }}
               className="text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1 transition-colors cursor-pointer group"
             >
               <span>Plan trip</span>

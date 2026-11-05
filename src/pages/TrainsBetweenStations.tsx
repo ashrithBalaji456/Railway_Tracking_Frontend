@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, ArrowUpDown, Calendar, ChevronDown, Clock, Navigation, RefreshCw, X, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowUpDown, Calendar, ChevronDown, Clock, Navigation, RefreshCw, X, ArrowRight, GitFork } from 'lucide-react';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
@@ -696,6 +696,29 @@ export default function TrainsBetweenStations() {
               ) : (
                 <span>View Trains →</span>
               )}
+            </button>
+          </div>
+
+          {/* Going to more cities? Plan trip -> (Matching user screenshot) */}
+          <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+            <div className="flex items-center gap-2">
+              <GitFork className="w-3.5 h-3.5 text-slate-500" />
+              <span>Going to more cities?</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const params = new URLSearchParams();
+                if (selectedSource?.stationCode) params.set('source', selectedSource.stationCode);
+                if (selectedDest?.stationCode) params.set('destination', selectedDest.stationCode);
+                if (travelDate) params.set('date', travelDate);
+                const queryStr = params.toString() ? `?${params.toString()}` : '';
+                navigate(`/journey${queryStr}`);
+              }}
+              className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 transition-colors cursor-pointer group"
+            >
+              <span>Plan trip</span>
+              <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
             </button>
           </div>
         </div>
