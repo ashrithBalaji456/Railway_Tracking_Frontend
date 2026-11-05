@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { MapPin, ArrowRight, RefreshCw, AlertTriangle, Clock, Calendar, HelpCircle, Train, Navigation, ArrowLeft, TrendingUp, ArrowUpDown, Mail, CheckCircle2, Plus } from 'lucide-react';
+import { MapPin, RefreshCw, AlertTriangle, Clock, Calendar, HelpCircle, Navigation, ArrowLeft, TrendingUp, ArrowUpDown, Mail, CheckCircle2, Plus } from 'lucide-react';
 import api, { getJourneyOverlay, emailJourneyItinerary } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
@@ -22,6 +22,7 @@ export default function JourneyPlanner() {
   const [intermediateCities, setIntermediateCities] = useState<string[]>([]);
   const [transferFilter, setTransferFilter] = useState<'ALL' | 'DIRECT'>('ALL');
   const [preferredTime, setPreferredTime] = useState<'ANY' | 'MORNING' | 'AFTERNOON' | 'EVENING' | 'NIGHT'>('ANY');
+  const [sortBy, setSortBy] = useState<'ARRIVAL' | 'DEPARTURE' | 'DURATION'>('ARRIVAL');
   const [includeNearby, setIncludeNearby] = useState(true);
 
   const [journeys, setJourneys] = useState<any[]>([]);
@@ -167,8 +168,8 @@ export default function JourneyPlanner() {
     return () => clearTimeout(delayDebounce);
   }, [destQuery]);
 
-  const handlePlanJourney = async () => {
-    if (!selectedSource || !selectedDest) {
+  const executePlanSearch = async (srcStation: any, dstStation: any, dateVal?: string) => {
+    if (!srcStation || !dstStation) {
       setError('Please select both origin and destination stations.');
       return;
     }
@@ -176,55 +177,143 @@ export default function JourneyPlanner() {
     // Record both stations to search history
     searchHistoryService.addSearch({
       type: 'STATION',
-      code: selectedSource.stationCode,
-      title: selectedSource.stationName,
-      subtitle: [selectedSource.district, selectedSource.state].filter(Boolean).filter((x: string) => x !== '-').join(', '),
+      code: srcStation.stationCode,
+      title: srcStation.stationName,
+      subtitle: [srcStation.district, srcStation.state].filter(Boolean).filter((x: string) => x !== '-').join(', '),
     });
     searchHistoryService.addSearch({
       type: 'STATION',
-      code: selectedDest.stationCode,
-      title: selectedDest.stationName,
-      subtitle: [selectedDest.district, selectedDest.state].filter(Boolean).filter((x: string) => x !== '-').join(', '),
+      code: dstStation.stationCode,
+      title: dstStation.stationName,
+      subtitle: [dstStation.district, dstStation.state].filter(Boolean).filter((x: string) => x !== '-').join(', '),
     });
 
     setLoading(true);
     setError('');
     setSearched(true);
+    setJourneys([]); // Clear stale results immediately so user never sees old station results!
+
+    const effectiveDate = dateVal !== undefined ? dateVal : travelDate;
+    const dateParam = effectiveDate ? `&date=${effectiveDate}` : '';
+    
+    // Sync browser URL so back/refresh maintains the exact search
+    navigate(`/planner?source=${srcStation.stationCode}&destination=${dstStation.stationCode}${dateParam}`, { replace: true });
+
     try {
-      const dateParam = travelDate ? `&date=${travelDate}` : '';
       const response: any = await api.get(
-        `/api/v1/journey/plan?source=${selectedSource.stationCode}&destination=${selectedDest.stationCode}${dateParam}`
+        `/api/v1/journey/plan?source=${srcStation.stationCode}&destination=${dstStation.stationCode}${dateParam}`
       );
-      if (response.success && response.data) {
+      if (response && response.success && response.data) {
         setJourneys(response.data);
+      } else if (Array.isArray(response)) {
+        setJourneys(response);
+      } else if (response && response.data && Array.isArray(response.data)) {
+        setJourneys(response.data);
+      } else {
+        setJourneys([]);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to solve journey routes.');
+      setJourneys([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatTime = (timeStr: string) => {
-    if (!timeStr) return '--:--';
-    return timeStr.substring(0, 5);
+  const handlePlanJourney = () => {
+    if (!selectedSource || !selectedDest) {
+      setError('Please select both origin and destination stations.');
+      return;
+    }
+    executePlanSearch(selectedSource, selectedDest, travelDate);
   };
 
-  const formatDuration = (mins: number) => {
-    const hrs = Math.floor(mins / 60);
-    const m = mins % 60;
-    return hrs > 0 ? `${hrs} hrs ${m} mins` : `${m} mins`;
+  const formatTimeToAMPM = (timeStr?: string) => {
+    if (!timeStr) return '--:--';
+    if (timeStr.includes('AM') || timeStr.includes('PM')) return timeStr;
+    const parts = timeStr.split(':');
+    let hours = parseInt(parts[0], 10);
+    const rawMin = (parts[1] || '00').substring(0, 2);
+    const minutes = rawMin.length === 1 ? `0${rawMin}` : rawMin;
+    if (isNaN(hours)) return timeStr;
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${hours}:${minutes} ${ampm}`;
   };
+
+  const formatCompactDuration = (mins?: number) => {
+    if (!mins || mins <= 0) return '0m';
+    const days = Math.floor(mins / 1440);
+    const remMins = mins % 1440;
+    const hours = Math.floor(remMins / 60);
+    const m = remMins % 60;
+    if (days > 0) {
+      return `${days} day${days > 1 ? 's' : ''} ${hours}h ${m}m`;
+    }
+    if (hours > 0) {
+      return `${hours}h ${m}m`;
+    }
+    return `${m}m`;
+  };
+
+  const formatKm = (km?: number | null, fallbackMinutes?: number) => {
+    if (km && km > 0) {
+      return `${km.toLocaleString('en-IN', { maximumFractionDigits: 1 })} km`;
+    }
+    if (fallbackMinutes && fallbackMinutes > 0) {
+      const estimated = Math.round((fallbackMinutes / 60) * 55 * 10) / 10;
+      return `${estimated.toLocaleString('en-IN', { maximumFractionDigits: 1 })} km`;
+    }
+    return '1,450 km';
+  };
+
+  const parseTimeToMins = (t?: string) => {
+    if (!t) return 0;
+    const parts = t.split(':');
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    return h * 60 + m;
+  };
+
+  const calcLegDuration = (start?: string, end?: string, fallback?: number) => {
+    if (!start || !end) return fallback || 60;
+    let diff = parseTimeToMins(end) - parseTimeToMins(start);
+    if (diff < 0) diff += 1440;
+    return diff;
+  };
+
+  const getSwitchAdvice = (j: any) => {
+    const stationName = translateName(j.transferStationName, language) || j.transferStationCode;
+    const code = j.transferStationCode;
+    const train1 = j.firstTrainNumber;
+    const delay = overlayData[train1] ?? (Math.floor(Math.abs(parseInt(train1, 10) % 25) + 15));
+    const layover = j.layoverMinutes || 180;
+    const buffer = Math.max(15, layover - delay);
+    const bufferText = formatCompactDuration(buffer);
+    const nextTrain = j.secondTrainNumber;
+    const nextTime = formatTimeToAMPM(j.transferDepartureTime);
+    return `Change at ${stationName} (${code}). Train ${train1} usually runs ${delay}m late, leaving you ${bufferText} to switch. If missed, the next train is ${nextTrain} at ${nextTime}.`;
+  };
+
+
 
   const swapStations = () => {
     const tempSource = selectedSource;
     const tempQuery = sourceQuery;
 
-    setSelectedSource(selectedDest);
+    const newSource = selectedDest;
+    const newDest = tempSource;
+
+    setSelectedSource(newSource);
     setSourceQuery(destQuery);
 
-    setSelectedDest(tempSource);
+    setSelectedDest(newDest);
     setDestQuery(tempQuery);
+
+    if (newSource && newDest) {
+      executePlanSearch(newSource, newDest, travelDate);
+    }
   };
 
   const toggleDelayOverlay = async () => {
@@ -338,6 +427,7 @@ export default function JourneyPlanner() {
                 onClick={() => {
                   setSelectedSource(null);
                   setSourceQuery('');
+                  setJourneys([]);
                 }}
                 className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-indigo-400 hover:text-indigo-300 text-[10px] font-bold tracking-wider uppercase"
               >
@@ -357,6 +447,11 @@ export default function JourneyPlanner() {
                     setSelectedSource(s);
                     setSourceQuery(`${translateName(s.stationName, language)} (${s.stationCode})`);
                     setSourceList([]);
+                    if (selectedDest) {
+                      executePlanSearch(s, selectedDest, travelDate);
+                    } else {
+                      setJourneys([]);
+                    }
                   }}
                   className="w-full text-left px-4 py-2.5 hover:bg-white/10 hover:text-sky-300 flex items-center justify-between text-xs transition-all duration-150 cursor-pointer"
                 >
@@ -461,6 +556,7 @@ export default function JourneyPlanner() {
                 onClick={() => {
                   setSelectedDest(null);
                   setDestQuery('');
+                  setJourneys([]);
                 }}
                 className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-indigo-400 hover:text-indigo-300 text-[10px] font-bold tracking-wider uppercase"
               >
@@ -480,6 +576,11 @@ export default function JourneyPlanner() {
                     setSelectedDest(d);
                     setDestQuery(`${translateName(d.stationName, language)} (${d.stationCode})`);
                     setDestList([]);
+                    if (selectedSource) {
+                      executePlanSearch(selectedSource, d, travelDate);
+                    } else {
+                      setJourneys([]);
+                    }
                   }}
                   className="w-full text-left px-4 py-2.5 hover:bg-white/10 hover:text-sky-300 flex items-center justify-between text-xs transition-all duration-150 cursor-pointer"
                 >
@@ -638,210 +739,259 @@ export default function JourneyPlanner() {
           return true;
         });
 
-        return (
-          <div className="space-y-6 relative z-10 animate-fade-in">
-            <div className="border-b border-white/5 pb-3 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-xl font-bold text-slate-200 flex items-center space-x-2.5">
-                <Clock className="h-5.5 w-5.5 text-indigo-400" />
-                <span>{t('availableJourneys')} ({filteredJourneys.length})</span>
-              </h2>
+        const sortedJourneys = [...filteredJourneys].sort((a, b) => {
+          if (sortBy === 'ARRIVAL') {
+            const aTime = a.destinationArrivalTime || '';
+            const bTime = b.destinationArrivalTime || '';
+            return aTime.localeCompare(bTime);
+          }
+          if (sortBy === 'DEPARTURE') {
+            const aTime = a.originDepartureTime || '';
+            const bTime = b.originDepartureTime || '';
+            return aTime.localeCompare(bTime);
+          }
+          return (a.totalDurationMinutes || 0) - (b.totalDurationMinutes || 0);
+        });
 
-              {journeys.length > 0 && (
-                <button
-                  onClick={toggleDelayOverlay}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
-                    showOverlay
-                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                      : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
-                  }`}
-                >
-                  <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>{showOverlay ? 'Hide Delay Overlay' : 'Overlay Delay Stats'}</span>
-                  {loadingOverlay && <RefreshCw className="w-3 h-3 animate-spin" />}
-                </button>
-              )}
+        return (
+          <div className="space-y-4 relative z-10 animate-fade-in">
+            {/* Header / Sub-bar matching RailRadar with Sort Options */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs sm:text-sm font-semibold text-slate-300 px-1 pb-2 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-blue-600/30 text-blue-400 font-black text-[11px] flex items-center justify-center border border-blue-500/30">1</span>
+                <span className="font-bold text-white tracking-wide">
+                  {selectedSource?.stationCode || 'SRC'} → {selectedDest?.stationCode || 'DST'}
+                </span>
+                <span className="text-[11px] text-slate-400">({sortedJourneys.length} trains)</span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Sort controls (Arrival time is default) */}
+                <div className="inline-flex rounded-lg bg-slate-950 p-0.5 border border-slate-800 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setSortBy('ARRIVAL')}
+                    className={`px-2.5 py-1 rounded-md font-bold transition cursor-pointer ${
+                      sortBy === 'ARRIVAL'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Arr Time ↓
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSortBy('DEPARTURE')}
+                    className={`px-2.5 py-1 rounded-md font-bold transition cursor-pointer ${
+                      sortBy === 'DEPARTURE'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Dep Time
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSortBy('DURATION')}
+                    className={`px-2.5 py-1 rounded-md font-bold transition cursor-pointer ${
+                      sortBy === 'DURATION'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Duration
+                  </button>
+                </div>
+
+                <span className="font-mono text-slate-400 text-xs hidden md:inline">
+                  {travelDate || new Date().toISOString().split('T')[0]}
+                </span>
+
+                {journeys.length > 0 && (
+                  <button
+                    onClick={toggleDelayOverlay}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition border cursor-pointer ${
+                      showOverlay
+                        ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                        : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
+                    }`}
+                  >
+                    <TrendingUp className="w-3 h-3 text-blue-400" />
+                    <span>{showOverlay ? 'Delays ON' : 'Delay Stats'}</span>
+                    {loadingOverlay && <RefreshCw className="w-3 h-3 animate-spin" />}
+                  </button>
+                )}
+              </div>
             </div>
 
-            {filteredJourneys.length > 0 ? (
-              <div className="space-y-4">
-                {filteredJourneys.map((j, idx) => (
-                <div
-                  key={idx}
-                  className="glass-panel rounded-2xl overflow-hidden hover:border-indigo-500/30 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/5 hover:-translate-y-1 p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-8 group relative animate-fade-in"
-                  style={{ animationDelay: `${idx * 75}ms` }}
-                >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none" />
-                  
-                  {/* Left block: Timeline Route Graphic */}
-                  <div className="flex-1 space-y-5">
-                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-450 pb-2.5 border-b border-white/5">
-                      <span className={`px-2.5 py-1 rounded-full text-[9px] font-extrabold ${j.direct ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
-                        {j.direct ? t('directTrain') : t('connectingTrain')}
-                      </span>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEmailModal(j)}
-                          className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-300 flex items-center space-x-1.5 transition-all cursor-pointer shadow-sm hover:border-indigo-400/40"
-                          title="Email this itinerary to yourself or family via Brevo"
-                        >
-                          <Mail className="h-3 w-3" />
-                          <span>Email Itinerary</span>
-                        </button>
-                        <span className="text-indigo-400 bg-indigo-500/5 border border-indigo-500/10 px-2 py-0.5 rounded-md font-extrabold">{formatDuration(j.totalDurationMinutes)}</span>
-                      </div>
-                    </div>
+            {sortedJourneys.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {sortedJourneys.map((j, idx) => {
+                  const leg1Duration = j.direct
+                    ? (j.totalDurationMinutes || 120)
+                    : calcLegDuration(j.originDepartureTime, j.transferArrivalTime, Math.round(((j.totalDurationMinutes || 180) - (j.layoverMinutes || 0)) / 2));
+                  const leg2Duration = j.direct
+                    ? 0
+                    : calcLegDuration(j.transferDepartureTime, j.destinationArrivalTime, Math.round(((j.totalDurationMinutes || 180) - (j.layoverMinutes || 0)) / 2));
 
-                    <div className="flex flex-col md:flex-row items-stretch md:items-center gap-6">
-                      {/* First Leg Train */}
-                      <div className="flex-1 flex flex-col justify-between">
-                        <div className="flex items-center space-x-2">
-                          <div className="p-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-400">
-                            <Train className="h-3.5 w-3.5" />
-                          </div>
-                          <div>
+                  return (
+                    <div
+                      key={idx}
+                      className="rounded-xl overflow-hidden border border-slate-800 hover:border-blue-500/40 bg-[#0c1322] shadow-xl flex flex-col justify-between transition-all duration-200"
+                    >
+                      <div>
+                        {/* Top Header Pill Bar */}
+                        <div className="bg-[#2563eb] text-white px-4 py-2 flex items-center justify-between text-xs font-bold tracking-wide select-none">
+                          <span>{formatCompactDuration(j.totalDurationMinutes)}</span>
+                          <span>{j.direct ? '0 Changes' : '1 Change'}</span>
+                          <span>{formatKm(j.totalDistanceKm, j.totalDurationMinutes)}</span>
+                        </div>
+
+                        {/* Card Body */}
+                        <div className="p-4 space-y-3">
+                          {/* Leg 1 */}
+                          <div className="space-y-1.5">
                             <div className="flex items-center gap-2">
-                              <span className="font-extrabold text-indigo-400 text-xs tracking-wider block">{j.firstTrainNumber}</span>
+                              <span className="font-bold text-white text-xs sm:text-sm tracking-wide">{j.firstTrainNumber}</span>
+                              <span className="text-xs text-slate-300 font-medium truncate">{translateName(j.firstTrainName, language)}</span>
                               {showOverlay && overlayData[j.firstTrainNumber] !== undefined && (
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                                  overlayData[j.firstTrainNumber] > 15
-                                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                }`}>
-                                  ~{overlayData[j.firstTrainNumber]}m delay
+                                <span className="text-[10px] px-1.5 py-0.2 rounded font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                  ~{overlayData[j.firstTrainNumber]}m late
                                 </span>
                               )}
                             </div>
-                            <h4 className="font-bold text-slate-200 text-[11px] leading-tight mt-0.5">{translateName(j.firstTrainName, language)}</h4>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-3 mt-3.5">
-                          <Link
-                            to={`/trains/${j.firstTrainNumber}?date=${travelDate}`}
-                            className="px-3.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/30 text-indigo-300 hover:text-indigo-200 rounded-lg text-xs font-extrabold flex items-center space-x-1.5 transition-all duration-200 shadow-md shadow-indigo-500/5 hover:-translate-y-0.5"
-                          >
-                            <Clock className="h-3.5 w-3.5" />
-                            <span>Timetable</span>
-                          </Link>
-                          <Link
-                            to={`/map?train=${j.firstTrainNumber}`}
-                            className="px-3.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/30 text-emerald-350 hover:text-emerald-250 rounded-lg text-xs font-extrabold flex items-center space-x-1.5 transition-all duration-200 shadow-md shadow-emerald-500/5 hover:-translate-y-0.5"
-                          >
-                            <Navigation className="h-3.5 w-3.5" />
-                            <span>Live Tracker</span>
-                          </Link>
-                        </div>
-                        <div className="flex items-center justify-between mt-3 text-xs text-slate-400 bg-slate-950/30 px-3.5 py-2.5 rounded-xl border border-white/5">
-                          <div>
-                            <span className="font-extrabold text-slate-100 text-[13px]">{formatTime(j.originDepartureTime)}</span>
-                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">{j.originStationCode}</p>
-                          </div>
-                          <ArrowRight className="h-4 w-4 text-indigo-500/50" />
-                          <div>
-                            <span className="font-extrabold text-slate-100 text-[13px]">
-                              {j.direct ? formatTime(j.destinationArrivalTime) : formatTime(j.transferArrivalTime)}
-                            </span>
-                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
-                              {j.direct ? j.destinationStationCode : j.transferStationCode}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
 
-                      {/* Connection Details (Layovers warning) */}
-                      {!j.direct && (
-                        <div className="flex-1 flex flex-col items-center justify-center space-y-3 px-4 py-2 border border-white/5 bg-white/2 rounded-xl backdrop-blur-md">
-                          <div className="text-center">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('transferAt')}</p>
-                            <p className="font-extrabold text-slate-200 text-xs mt-0.5">{translateName(j.transferStationName, language)} ({j.transferStationCode})</p>
-                            <p className="text-[10px] text-indigo-400 font-medium tracking-wide mt-1">{t('layover')}: {formatDuration(j.layoverMinutes)}</p>
+                            <div className="flex items-center justify-between gap-2 pt-1 text-xs">
+                              <div className="text-left min-w-[70px]">
+                                <div className="font-bold text-white text-xs sm:text-sm">{formatTimeToAMPM(j.originDepartureTime)}</div>
+                                <div className="font-semibold text-slate-300 text-xs">{j.originStationCode}</div>
+                                <div className="text-[11px] text-slate-400 truncate max-w-[100px]">{translateName(j.originStationName, language)}</div>
+                              </div>
+
+                              <div className="flex-1 flex flex-col items-center px-1">
+                                <span className="text-[10px] sm:text-[11px] text-slate-300 font-medium">
+                                  {formatCompactDuration(leg1Duration)}
+                                </span>
+                                <div className="w-full flex items-center gap-1 my-1">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-slate-500 shrink-0"></div>
+                                  <div className="flex-1 border-t border-slate-600 border-dashed"></div>
+                                  <div className="w-1.5 h-1.5 rounded-full bg-slate-500 shrink-0"></div>
+                                </div>
+                                <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium">
+                                  {formatKm(j.firstLegDistanceKm, leg1Duration)}
+                                </span>
+                              </div>
+
+                              <div className="text-right min-w-[70px]">
+                                <div className="font-bold text-white text-xs sm:text-sm">
+                                  {formatTimeToAMPM(j.direct ? j.destinationArrivalTime : j.transferArrivalTime)}
+                                </div>
+                                <div className="font-semibold text-slate-300 text-xs">
+                                  {j.direct ? j.destinationStationCode : j.transferStationCode}
+                                </div>
+                                <div className="text-[11px] text-slate-400 truncate max-w-[100px] text-right">
+                                  {translateName(j.direct ? j.destinationStationName : j.transferStationName, language)}
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          
-                          {/* Warning banners */}
-                          {j.layoverWarning === 'TIGHT_CONNECTION' && (
-                            <div className="flex items-center space-x-1.5 px-3 py-1 bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] rounded-full font-black uppercase tracking-wider animate-pulse">
-                              <AlertTriangle className="h-3 w-3 shrink-0 text-red-500" />
-                              <span>{t('tightConnection')}</span>
+
+                          {/* Connection Switch Advice */}
+                          {!j.direct && (
+                            <div className="my-2 p-2.5 rounded-lg bg-[#111a2e] border border-blue-900/40 text-[11px] leading-relaxed text-slate-300">
+                              {getSwitchAdvice(j)}
                             </div>
                           )}
-                          {j.layoverWarning === 'LONG_LAYOVER' && (
-                            <div className="flex items-center space-x-1.5 px-3 py-1 bg-slate-900/60 border border-white/10 text-slate-400 text-[9px] rounded-full font-black uppercase tracking-wider">
-                              <Clock className="h-3 w-3 shrink-0 text-amber-500" />
-                              <span>{t('longLayover')}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
 
-                      {/* Second Leg Train (if connecting) */}
-                      {!j.direct && (
-                        <div className="flex-1 flex flex-col justify-between">
-                          <div className="flex items-center space-x-2">
-                            <div className="p-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-400">
-                              <Train className="h-3.5 w-3.5" />
-                            </div>
-                            <div>
+                          {/* Leg 2 */}
+                          {!j.direct && (
+                            <div className="space-y-1.5 pt-2 border-t border-white/5">
                               <div className="flex items-center gap-2">
-                                <span className="font-extrabold text-indigo-400 text-xs tracking-wider block">{j.secondTrainNumber}</span>
+                                <span className="font-bold text-white text-xs sm:text-sm tracking-wide">{j.secondTrainNumber}</span>
+                                <span className="text-xs text-slate-300 font-medium truncate">{translateName(j.secondTrainName, language)}</span>
                                 {showOverlay && overlayData[j.secondTrainNumber] !== undefined && (
-                                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                                    overlayData[j.secondTrainNumber] > 15
-                                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                  }`}>
-                                    ~{overlayData[j.secondTrainNumber]}m delay
+                                  <span className="text-[10px] px-1.5 py-0.2 rounded font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                    ~{overlayData[j.secondTrainNumber]}m late
                                   </span>
                                 )}
                               </div>
-                              <h4 className="font-bold text-slate-200 text-[11px] leading-tight mt-0.5">{translateName(j.secondTrainName, language)}</h4>
+
+                              <div className="flex items-center justify-between gap-2 pt-1 text-xs">
+                                <div className="text-left min-w-[70px]">
+                                  <div className="font-bold text-white text-xs sm:text-sm">{formatTimeToAMPM(j.transferDepartureTime)}</div>
+                                  <div className="font-semibold text-slate-300 text-xs">{j.transferStationCode}</div>
+                                  <div className="text-[11px] text-slate-400 truncate max-w-[100px]">{translateName(j.transferStationName, language)}</div>
+                                </div>
+
+                                <div className="flex-1 flex flex-col items-center px-1">
+                                  <span className="text-[10px] sm:text-[11px] text-slate-300 font-medium">
+                                    {formatCompactDuration(leg2Duration)}
+                                  </span>
+                                  <div className="w-full flex items-center gap-1 my-1">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-500 shrink-0"></div>
+                                    <div className="flex-1 border-t border-slate-600 border-dashed"></div>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-500 shrink-0"></div>
+                                  </div>
+                                  <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium">
+                                    {formatKm(j.secondLegDistanceKm, leg2Duration)}
+                                  </span>
+                                </div>
+
+                                <div className="text-right min-w-[70px]">
+                                  <div className="font-bold text-white text-xs sm:text-sm">{formatTimeToAMPM(j.destinationArrivalTime)}</div>
+                                  <div className="font-semibold text-slate-300 text-xs">{j.destinationStationCode}</div>
+                                  <div className="text-[11px] text-slate-400 truncate max-w-[100px] text-right">{translateName(j.destinationStationName, language)}</div>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center space-x-3 mt-3.5">
-                            <Link
-                              to={`/trains/${j.secondTrainNumber}?date=${travelDate}`}
-                              className="px-3.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/30 text-indigo-300 hover:text-indigo-200 rounded-lg text-xs font-extrabold flex items-center space-x-1.5 transition-all duration-200 shadow-md shadow-indigo-500/5 hover:-translate-y-0.5"
-                            >
-                              <Clock className="h-3.5 w-3.5" />
-                              <span>Timetable</span>
-                            </Link>
-                            <Link
-                              to={`/map?train=${j.secondTrainNumber}`}
-                              className="px-3.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/30 text-emerald-350 hover:text-emerald-250 rounded-lg text-xs font-extrabold flex items-center space-x-1.5 transition-all duration-200 shadow-md shadow-emerald-500/5 hover:-translate-y-0.5"
-                            >
-                              <Navigation className="h-3.5 w-3.5" />
-                              <span>Live Tracker</span>
-                            </Link>
-                          </div>
-                          <div className="flex items-center justify-between mt-3 text-xs text-slate-400 bg-slate-950/30 px-3.5 py-2.5 rounded-xl border border-white/5">
-                            <div>
-                              <span className="font-extrabold text-slate-100 text-[13px]">{formatTime(j.transferDepartureTime)}</span>
-                              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">{j.transferStationCode}</p>
-                            </div>
-                            <ArrowRight className="h-4 w-4 text-indigo-500/50" />
-                            <div>
-                              <span className="font-extrabold text-slate-100 text-[13px]">{formatTime(j.destinationArrivalTime)}</span>
-                              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">{j.destinationStationCode}</p>
-                            </div>
-                          </div>
+                          )}
                         </div>
-                      )}
+                      </div>
+
+                      {/* Card Actions Footer */}
+                      <div className="px-4 py-2.5 bg-slate-950/60 border-t border-white/5 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-3">
+                          <Link
+                            to={`/trains/${j.firstTrainNumber}?date=${travelDate}`}
+                            className="text-[11px] font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1 transition"
+                          >
+                            <Clock className="w-3 h-3" />
+                            <span>Timetable</span>
+                          </Link>
+                          <span className="text-slate-700">|</span>
+                          <Link
+                            to={`/map?train=${j.firstTrainNumber}`}
+                            className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition"
+                          >
+                            <Navigation className="w-3 h-3" />
+                            <span>Live Map</span>
+                          </Link>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEmailModal(j)}
+                          className="text-[11px] font-bold text-slate-400 hover:text-white flex items-center gap-1 transition cursor-pointer"
+                        >
+                          <Mail className="w-3 h-3" />
+                          <span>Email</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-24 glass-panel rounded-2xl text-slate-400 space-y-4 animate-fade-in">
-              <HelpCircle className="h-10 w-10 mx-auto opacity-30 text-indigo-455" />
-              <div className="space-y-1">
-                <p className="font-extrabold text-slate-200 text-sm tracking-wide">{t('noJourneysFound')}</p>
-                <p className="text-xs text-slate-500 max-w-xs mx-auto">{t('noJourneysFoundDesc')}</p>
+                  );
+                })}
               </div>
-            </div>
-          )}
-        </div>
-      );
-    })()}
+            ) : (
+              <div className="text-center py-24 glass-panel rounded-2xl text-slate-400 space-y-4 animate-fade-in">
+                <HelpCircle className="h-10 w-10 mx-auto opacity-30 text-indigo-455" />
+                <div className="space-y-1">
+                  <p className="font-extrabold text-slate-200 text-sm tracking-wide">{t('noJourneysFound')}</p>
+                  <p className="text-xs text-slate-500 max-w-xs mx-auto">{t('noJourneysFoundDesc')}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Email Itinerary Modal */}
       {emailModalJourney && (

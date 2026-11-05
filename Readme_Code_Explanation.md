@@ -3253,3 +3253,89 @@ flowchart TD
 
 
 
+
+---
+
+#### Q20: How does the Adaptive Alarm System handle situations where a passenger sets an alarm for an early station (1-2 stations / ~20 km away from source, nominal 20 mins run time), but the train has not yet departed from the origin and is delayed?
+* **The Real-World Scenario:**
+  - Suppose a passenger boards or alights at a station just 20 km away from the train's starting point (nominal travel time is 20-25 minutes).
+  - The train is scheduled to leave its origin station at 06:00 AM, but due to platform congestion or late inbound rake arrival, the train is still stationary at the origin yard at 06:45 AM (+45 mins delay).
+  - If a static alarm were set, it would ring at 06:00 AM while the train hasn't even moved an inch!
+* **Our Robust Resolution:**
+  1. **Source Departure Verification (`trainDepartedOrigin` Check):**
+     - When `AdaptiveSyncReceiver.java` polls the backend live telemetry, it checks whether the train has officially departed from its source origin station.
+     - If the origin status indicates the train has **not yet departed**, the system extracts the **Live Expected Departure** from origin rather than relying on stale timetable estimates.
+  2. **Dynamic Delay Propagation:**
+     - The origin delay is automatically added to downstream stations:
+       $$\text{Dynamic ETA at Stop } N = \text{Scheduled Arrival} + \text{Origin Departure Delay}$$
+     - If the train is held up by 50 minutes at the source, the expected arrival at the user's stop (20 km away) shifts from 06:20 AM to 07:10 AM.
+  3. **Hardware Alarm Rescheduling (`shiftDifference >= 3 min`):**
+     - The background sync calculates the new trigger time ($07:10 \text{ AM} - \text{Trigger Advance}$).
+     - It cancels the old RTC wake timer and registers the new hardware `AlarmClock` trigger via `AlarmManager.setAlarmClock()`.
+     - An informational notification is posted to the passenger:
+       `"Train Schedule Updated: Alarm shifted to 06:50 AM due to +50m delay at source."`, ensuring the user gets undisturbed rest.
+  4. **Continuous Sound & Vibration Loop (`AlarmSoundPlayer.java`):**
+     - When the adjusted dynamic trigger point arrives, `AlarmForegroundService` starts `AlarmSoundPlayer` on `AudioManager.STREAM_ALARM`, looping the chosen audio track or custom MP3 continuously along with a heavy vibration pattern until acknowledged.
+  5. **Full-Screen Interactive Wakeup (`RingingAlarmOverlay.tsx`):**
+     - Launches with `FLAG_KEEP_SCREEN_ON` and `FLAG_TURN_SCREEN_ON`, displaying large Dismiss ("Turn Off Alarm") and Snooze (+10m) buttons.
+
+---
+
+#### Q21: How is the dedicated "Trains Between Stations" feature (`TrainsBetweenStations.tsx`) architected, and how are 12-hour AM/PM formatting and instant stale clearing handled?
+* **Background & Requirement:**
+  - Users wanted a dedicated search page for trains between two stations (e.g. `Mancherial (MCI)` to `Kazipet Jn (KZJ)`), matching the RailRadar UI:
+    - Top "Find Trains" card with station badges, autocomplete, swap button, and nearby stations toggle.
+    - Clean header displaying source $\rightarrow$ destination with Date Selector and Departure/Arrival Sort dropdowns.
+    - Category filter pills with dynamic counts: `All Trains (16)`, `Superfast Express (7)`, `Train on Demand (4)`, `Mail/Express (4)`, `Vande Bharat Express (1)`.
+    - Modern 2-column train cards with bold train number, category badge, 12-hour AM/PM times, duration, distance, and active running day pills (`[Thu]`).
+* **Implementation Details:**
+  1. **Route Integration (`/trains-between`):**
+     - Registered in `src/App.tsx` and linked from the Home page search widget.
+  2. **12-Hour AM/PM Time Conversion:**
+     - Time strings (e.g. `"17:02"`, `"01:22"`) are parsed via `format12Hour()`:
+       - Displays `1:22 AM`, `3:30 AM`, `5:02 PM`, `7:20 PM` with explicit AM/PM indicators.
+  3. **Multi-Criteria Sorting Dropdown:**
+     - `Departure Time`: When trains leave from origin station.
+     - `Arrival Time`: When trains reach destination station (default sort for convenient planning).
+     - `Journey Duration`: Fastest trains first based on total travel minutes.
+  4. **Date Selection & "All Dates" Support:**
+     - Users can choose a specific date (e.g. Today, Tomorrow) to highlight running days, or select **"All Dates (Irrespective of Date)"** to view every train operating on that route regardless of day.
+  5. **Instant Stale Result Clearing & Auto-Search:**
+     - When a user changes the destination (e.g. from `KZJ` to `KTYM` Kottayam), previous results are immediately cleared (`setJourneys([])`), and new train data is fetched automatically.
+
+---
+
+#### Q22: How does the Indian Railways Fare Structure and Pricing Calculator calculate ticket prices across carriage classes?
+* **Comprehensive Breakdown of Charges:**
+  1. **Carriage Tier Base Fare (Distance-Based):**
+     - **1A (First AC):** $\sim\text{₹}3.0$ / km (Lockable 2/4-berth cabins with attendant service).
+     - **2A (AC 2-Tier):** $\sim\text{₹}1.8$ / km (Privacy curtains, individual reading lamps, charging sockets).
+     - **3A (AC 3-Tier):** $\sim\text{₹}1.3$ / km (Most popular AC option on long-distance routes).
+     - **3E (AC 3-Economy):** $\sim\text{₹}1.2$ / km (Side-middle berth layout; discounted slightly below 3A).
+     - **CC (AC Chair Car):** $\sim\text{₹}1.0$ / km (Reclining daytime seats on Shatabdi and intercity trains).
+     - **SL (Sleeper Class):** $\sim\text{₹}0.6$ / km (Non-AC three-tier reserved berths; budget high volume).
+     - **2S (Second Sitting):** $\sim\text{₹}0.4$ / km (Non-AC reserved seating for short-distance intercity day travel).
+  2. **Reservation Fee (Fixed PRS Fee):**
+     - Applied per passenger regardless of distance: $\text{₹}40$ (SL / 2S) to $\text{₹}60$ (AC classes).
+  3. **Superfast Surcharge:**
+     - Levied on trains with average speed $\ge 55\text{ km/h}$:
+       - **2S:** $\text{₹}15$
+       - **SL:** $\text{₹}30$
+       - **CC / 3A / 3E / 2A:** $\text{₹}45$
+       - **1A / EC:** $\text{₹}75$
+  4. **GST (5% applied strictly to AC classes):**
+     - Formulated as:
+       $$\text{GST} = 0.05 \times (\text{Base Fare} + \text{Reservation Fee} + \text{Superfast Surcharge})$$
+     - **Sleeper (SL) and Second Sitting (2S) are 100% exempt from GST.**
+  5. **Tatkal Distance Surcharge:**
+     - Flat premium based on carriage class:
+       - **2S:** $\text{₹}100$
+       - **SL:** $\text{₹}100 - 200$ (typically $\text{₹}150$)
+       - **CC / 3E:** $\text{₹}125 - 300$ (typically $\text{₹}300$)
+       - **3A:** $\text{₹}300 - 400$ (typically $\text{₹}350$)
+       - **2A / 1A:** $\text{₹}300 - 500$ (typically $\text{₹}400 - 500$)
+  6. **Dynamic Pricing (Flexi Fare):**
+     - Applies to Rajdhani, Duronto, Shatabdi, and Vande Bharat trains.
+     - Base fare increases by 10% after every 10% of seats booked, capped at a maximum of $1.5\times$ the initial base fare.
+  7. **Catering & Meal Packages:**
+     - Mandatory meal packages for Rajdhani, Shatabdi, and Vande Bharat: range between $\text{₹}200 - \text{₹}400$ depending on journey hours and service level.

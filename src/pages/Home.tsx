@@ -191,10 +191,10 @@ export default function Home() {
     const src = selectedBetweenSource?.stationCode || betweenSourceQuery.trim().toUpperCase();
     const dst = selectedBetweenDest?.stationCode || betweenDestQuery.trim().toUpperCase();
     if (!src || !dst) {
-      navigate('/journey');
+      navigate('/trains-between');
       return;
     }
-    navigate(`/journey?source=${src}&destination=${dst}&nearby=${searchNearbyStations}`);
+    navigate(`/trains-between?source=${src}&destination=${dst}&nearby=${searchNearbyStations}`);
   };
 
   const handleTrainSelect = (trainNumber: string, itemData?: any) => {
