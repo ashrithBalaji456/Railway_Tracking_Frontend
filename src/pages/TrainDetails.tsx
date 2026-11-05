@@ -389,6 +389,24 @@ export default function TrainDetails() {
 
       if (!liveStop && !routeStop) continue;
 
+      // Origin Departure Guard: If user station is 1 or 2 stations downline from source,
+      // but the train has NOT yet departed from the origin station (e.g. delayed at source platform),
+      // DO NOT trigger alarms for downline stations until the train departs origin!
+      const originStation = liveStatus?.stations?.[0] || route?.stations?.[0];
+      const targetStationSeq = (routeStop || liveStop)?.sequenceNumber;
+      const isOriginStation = originStation && targetStationSeq === originStation.sequenceNumber;
+      const originDeparted = originStation?.status?.toLowerCase() === 'departed' ||
+                             originStation?.status?.toLowerCase() === 'passed' ||
+                             Boolean(originStation?.actualDeparture) ||
+                             (liveStatus?.speed != null && liveStatus.speed > 5);
+      const currentRunStatus = (liveStatus?.runStatus || liveStatus?.status)?.toLowerCase();
+      const isTrainUnstarted = !originDeparted && (currentRunStatus === 'not-started' || currentRunStatus === 'scheduled' || currentRunStatus === 'yet_to_start');
+
+      if (isTrainUnstarted && !isOriginStation) {
+        // Train is still at origin platform; wait for physical departure before firing downline alarm
+        continue;
+      }
+
       let shouldTrigger = false;
       let computedEta = alarmCfg.triggerMinutes;
 

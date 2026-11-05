@@ -100,18 +100,9 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
         final String rawPlatform = targetAlarm.optString("platform", "");
         final String platform = (rawPlatform != null && !rawPlatform.equalsIgnoreCase("null") && !rawPlatform.equalsIgnoreCase("undefined")) ? rawPlatform : "";
         final long currentTargetMillis = targetAlarm.optLong("targetTriggerMillis", 0L);
-
         long now = System.currentTimeMillis();
 
-        // 1. If target alarm time has already arrived, ring alarm immediately!
-        if (currentTargetMillis > 0 && now >= currentTargetMillis) {
-            Log.d(TAG, "Target trigger time reached for [" + finalAlarmId + "]! Firing alarm.");
-            triggerAlarmNow(context, stationName, trainNumber, stationCode, platform, triggerMinutes);
-            releaseLocks(wakeLock, screenLock);
-            return;
-        }
-
-        // 2. Query backend live API with Android goAsync() to prevent OS killing the process
+        // Query backend live API with Android goAsync() to query latest train progress, source departure, and schedule shifts
         final PendingResult pendingResult = goAsync();
         final PowerManager.WakeLock asyncWakeLock = wakeLock;
         final PowerManager.WakeLock asyncScreenLock = screenLock;
@@ -196,6 +187,26 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                     return;
                 }
 
+                // Origin Departure Guard: Check if train has actually departed from the origin station
+                boolean isOriginStation = false;
+                boolean hasDepartedOrigin = true;
+                if (stations != null && stations.length() > 0) {
+                    JSONObject firstStation = stations.getJSONObject(0);
+                    String firstCode = firstStation.optString("stationCode", "");
+                    if (firstCode.equalsIgnoreCase(stationCode)) {
+                        isOriginStation = true;
+                    }
+                    String firstStatus = firstStation.optString("status", "").toLowerCase();
+                    String firstActualDep = firstStation.optString("actualDeparture", "");
+                    String runStatus = data.optString("runStatus", data.optString("status", "")).toLowerCase();
+
+                    boolean originDeparted = firstStatus.equals("departed") || firstStatus.equals("passed") || (!firstActualDep.isEmpty() && !firstActualDep.equalsIgnoreCase("null"));
+                    boolean unstarted = runStatus.equals("not-started") || runStatus.equals("scheduled") || runStatus.equals("yet_to_start");
+                    if (unstarted && !originDeparted) {
+                        hasDepartedOrigin = false;
+                    }
+                }
+
                 long effectiveTargetMillis = currentTargetMillis;
                 if (stationFound && liveArrival != null && !liveArrival.trim().isEmpty()) {
                     long newTargetMillis = AdaptiveAlarmManager.calculateTriggerMillis(liveArrival, triggerMinutes);
@@ -249,6 +260,11 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                 long nextDelay;
                 if (remainingToTarget <= (3 * 60 * 1000L)) {
                     if (remainingToTarget <= 0) {
+                        if (!isOriginStation && !hasDepartedOrigin) {
+                            Log.d(TAG, "Train " + trainNumber + " has not yet departed origin station! Delaying downline alarm.");
+                            AdaptiveAlarmManager.getInstance().scheduleNextSync(context, trainNumber, stationCode, 3 * 60 * 1000L);
+                            return;
+                        }
                         // Train running ahead of schedule or target reached: trigger alarm now!
                         Log.d(TAG, "Pre-flight check: target reached or train running early for [" + finalAlarmId + "]! Triggering alarm now.");
                         triggerAlarmNow(context, stationName, trainNumber, stationCode, livePlatform, triggerMinutes);
