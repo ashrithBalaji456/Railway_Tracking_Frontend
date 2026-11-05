@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { 
   RefreshCw, AlertTriangle, HelpCircle, Navigation, 
   ArrowLeft, TrendingUp, ArrowUpDown, Mail, CheckCircle2, Plus, 
@@ -1060,9 +1060,19 @@ export default function JourneyPlanner() {
                       <div className="p-4 space-y-3">
                         {/* Leg 1 */}
                         <div className="space-y-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-white text-xs sm:text-sm tracking-wide">{j.firstTrainNumber}</span>
-                            <span className="text-xs text-slate-300 font-medium truncate">{translateName(j.firstTrainName, language)}</span>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-bold text-white text-xs sm:text-sm tracking-wide">{j.firstTrainNumber}</span>
+                              <span className="text-xs text-slate-300 font-medium truncate">{translateName(j.firstTrainName, language)}</span>
+                            </div>
+                            <Link
+                              to={`/trains/${j.firstTrainNumber}?date=${travelDate || ''}`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 hover:text-blue-300 border border-blue-500/30 text-[11px] font-bold transition shrink-0 cursor-pointer active:scale-95"
+                              title={`View Timetable & Live Tracking for Train ${j.firstTrainNumber}`}
+                            >
+                              <Clock className="w-3 h-3" />
+                              <span>Timetable</span>
+                            </Link>
                           </div>
 
                           <div className="flex items-center justify-between gap-2 pt-1 text-xs">
@@ -1117,9 +1127,19 @@ export default function JourneyPlanner() {
                         {/* Leg 2 (for Connecting Trains) */}
                         {!j.direct && (
                           <div className="space-y-1.5 pt-2 border-t border-white/5">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-white text-xs sm:text-sm tracking-wide">{j.secondTrainNumber}</span>
-                              <span className="text-xs text-slate-300 font-medium truncate">{translateName(j.secondTrainName, language)}</span>
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="font-bold text-white text-xs sm:text-sm tracking-wide">{j.secondTrainNumber}</span>
+                                <span className="text-xs text-slate-300 font-medium truncate">{translateName(j.secondTrainName, language)}</span>
+                              </div>
+                              <Link
+                                to={`/trains/${j.secondTrainNumber}?date=${travelDate || ''}`}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 hover:text-blue-300 border border-blue-500/30 text-[11px] font-bold transition shrink-0 cursor-pointer active:scale-95"
+                                title={`View Timetable & Live Tracking for Train ${j.secondTrainNumber}`}
+                              >
+                                <Clock className="w-3 h-3" />
+                                <span>Timetable</span>
+                              </Link>
                             </div>
 
                             <div className="flex items-center justify-between gap-2 pt-1 text-xs">
@@ -1154,8 +1174,29 @@ export default function JourneyPlanner() {
                       </div>
                     </div>
 
-                    {/* Email Itinerary Action */}
-                    <div className="px-4 py-2 border-t border-white/5 flex items-center justify-end">
+                    {/* Quick Actions Footer (Timetable links & Email Itinerary) */}
+                    <div className="px-4 py-2 border-t border-white/5 flex items-center justify-between text-[11px]">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/trains/${j.firstTrainNumber}?date=${travelDate || ''}`}
+                          className="text-blue-400 hover:text-blue-300 flex items-center gap-1 transition font-semibold"
+                        >
+                          <Clock className="w-3 h-3" />
+                          <span>{j.firstTrainNumber} Timetable</span>
+                        </Link>
+                        {!j.direct && j.secondTrainNumber && (
+                          <>
+                            <span className="text-slate-700">|</span>
+                            <Link
+                              to={`/trains/${j.secondTrainNumber}?date=${travelDate || ''}`}
+                              className="text-blue-400 hover:text-blue-300 flex items-center gap-1 transition font-semibold"
+                            >
+                              <Clock className="w-3 h-3" />
+                              <span>{j.secondTrainNumber} Timetable</span>
+                            </Link>
+                          </>
+                        )}
+                      </div>
                       <button
                         type="button"
                         onClick={() => handleOpenEmailModal(j)}
