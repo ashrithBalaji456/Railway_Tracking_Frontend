@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { MapPin, ArrowRight, RefreshCw, AlertTriangle, Clock, Calendar, HelpCircle, Train, Navigation, ArrowLeft, TrendingUp, ArrowUpDown, Mail, CheckCircle2 } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { MapPin, ArrowRight, RefreshCw, AlertTriangle, Clock, Calendar, HelpCircle, Train, Navigation, ArrowLeft, TrendingUp, ArrowUpDown, Mail, CheckCircle2, Plus } from 'lucide-react';
 import api, { getJourneyOverlay, emailJourneyItinerary } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
 import { searchHistoryService } from '../services/searchHistoryService';
-import RecentSearchesBar from '../components/RecentSearchesBar';
 
 export default function JourneyPlanner() {
   const { language, t } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [sourceQuery, setSourceQuery] = useState('');
   const [sourceList, setSourceList] = useState<any[]>([]);
@@ -18,6 +18,11 @@ export default function JourneyPlanner() {
   const [destQuery, setDestQuery] = useState('');
   const [destList, setDestList] = useState<any[]>([]);
   const [selectedDest, setSelectedDest] = useState<any>(null);
+
+  const [intermediateCities, setIntermediateCities] = useState<string[]>([]);
+  const [transferFilter, setTransferFilter] = useState<'ALL' | 'DIRECT'>('ALL');
+  const [preferredTime, setPreferredTime] = useState<'ANY' | 'MORNING' | 'AFTERNOON' | 'EVENING' | 'NIGHT'>('ANY');
+  const [includeNearby, setIncludeNearby] = useState(true);
 
   const [journeys, setJourneys] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -80,6 +85,49 @@ export default function JourneyPlanner() {
       setIsSendingEmail(false);
     }
   };
+
+  // Auto-load journey search when coming from Home page "Trains Between Stations" card
+  useEffect(() => {
+    const src = searchParams.get('source');
+    const dst = searchParams.get('destination');
+    const dt = searchParams.get('date');
+    const nb = searchParams.get('nearby');
+
+    if (nb !== null) setIncludeNearby(nb === 'true');
+    if (dt) setTravelDate(dt);
+
+    if (src && dst) {
+      (async () => {
+        setLoading(true);
+        setError('');
+        try {
+          const [sRes, dRes]: any = await Promise.all([
+            api.get(`/api/v1/stations?query=${src}`),
+            api.get(`/api/v1/stations?query=${dst}`)
+          ]);
+
+          const sMatch = sRes?.data?.find((s: any) => s.stationCode.toUpperCase() === src.toUpperCase()) || sRes?.data?.[0] || { stationCode: src.toUpperCase(), stationName: src.toUpperCase() };
+          const dMatch = dRes?.data?.find((s: any) => s.stationCode.toUpperCase() === dst.toUpperCase()) || dRes?.data?.[0] || { stationCode: dst.toUpperCase(), stationName: dst.toUpperCase() };
+
+          setSelectedSource(sMatch);
+          setSourceQuery(`${sMatch.stationName} (${sMatch.stationCode})`);
+          setSelectedDest(dMatch);
+          setDestQuery(`${dMatch.stationName} (${dMatch.stationCode})`);
+
+          const dateParam = dt ? `&date=${dt}` : '';
+          const planRes: any = await api.get(`/api/v1/journey/plan?source=${src}&destination=${dst}${dateParam}`);
+          if (planRes.success && planRes.data) {
+            setJourneys(planRes.data);
+            setSearched(true);
+          }
+        } catch (err: any) {
+          setError(err.message || 'Failed to search trains between stations.');
+        } finally {
+          setLoading(false);
+        }
+      })();
+    }
+  }, [searchParams]);
 
   // Debounced Autocomplete for Source Station
   useEffect(() => {
@@ -179,32 +227,6 @@ export default function JourneyPlanner() {
     setDestQuery(tempQuery);
   };
 
-  const setQuickDate = (daysAhead: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() + daysAhead);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    setTravelDate(`${yyyy}-${mm}-${dd}`);
-  };
-
-  const getTodayDateString = () => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  };
-
-  const getTomorrowDateString = () => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  };
-
   const toggleDelayOverlay = async () => {
     if (showOverlay) {
       setShowOverlay(false);
@@ -251,7 +273,7 @@ export default function JourneyPlanner() {
           className="flex items-center space-x-2 text-slate-400 hover:text-slate-200 transition-colors text-xs sm:text-sm font-semibold cursor-pointer bg-slate-900/40 border border-slate-800/80 px-3 py-1.5 rounded-lg hover:bg-slate-900"
         >
           <ArrowLeft className="h-4 w-4 text-indigo-400" />
-          <span>Back to Previous Page</span>
+          <span>Multi-City Trip Planner</span>
         </button>
       </div>
 
@@ -261,21 +283,27 @@ export default function JourneyPlanner() {
           <Calendar className="h-5 w-5 sm:h-7 sm:w-7" />
         </div>
         <div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-100 via-slate-100 to-indigo-300 tracking-tight leading-none">{t('journeyPlannerTitle')}</h1>
-          <p className="text-xs text-slate-400 mt-1 sm:mt-2 font-medium tracking-wide">{t('journeyPlannerDesc')}</p>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-100 via-slate-100 to-indigo-300 tracking-tight leading-none">
+            Multi-City Journey Planner
+          </h1>
+          <p className="text-xs text-slate-400 mt-1 sm:mt-2 font-medium tracking-wide">
+            Plan seamless direct and alternative connecting train routes across Indian Railways stations.
+          </p>
         </div>
       </div>
 
-      {/* Query Form Box - Clean Stacked "Down by Down" Mobile-First Layout */}
-      <div className="glass-panel shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-2xl sm:rounded-3xl p-4 sm:p-7 space-y-5 sm:space-y-6 relative overflow-hidden transition-all duration-300 hover:border-white/10 group max-w-2xl mx-auto">
-        <div className="absolute -top-24 -left-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Query Form Box - Styled matching RailRadar Multi-City Planner */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-7 space-y-5 sm:space-y-6 relative overflow-hidden transition-all duration-300 shadow-2xl max-w-2xl mx-auto backdrop-blur-xl">
+        <div className="text-base sm:text-lg font-bold text-slate-200 pb-2 border-b border-slate-800">
+          Multi-City Journey Planner
+        </div>
 
         {/* 1. Origin Station Block (Top) */}
         <div className="space-y-2 relative z-10">
           <div className="flex items-center justify-between">
-            <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50 inline-block"></span>
-              <span>{t('originStationLabel')}</span>
+            <label className="text-xs font-bold text-slate-300 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[11px] font-black flex items-center justify-center">1</span>
+              <span>Starting Station (Origin)</span>
             </label>
             {selectedSource && (
               <span className="text-[10px] font-bold text-emerald-400 font-mono bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded">
@@ -301,8 +329,8 @@ export default function JourneyPlanner() {
                   setSelectedSource(null);
                 }
               }}
-              className="glass-input rounded-xl w-full pl-10 pr-14 py-3 sm:py-3.5 text-slate-200 outline-none text-xs sm:text-sm font-semibold placeholder-slate-500 focus:border-indigo-500 transition shadow-inner"
-              placeholder={t('originPlaceholder')}
+              className="bg-slate-950 border border-slate-800 rounded-xl w-full pl-10 pr-14 py-3 sm:py-3.5 text-slate-200 outline-none text-xs sm:text-sm font-semibold placeholder-slate-500 focus:border-indigo-500 transition shadow-inner"
+              placeholder="Search origin (e.g. CSMT, UJN)..."
             />
             {selectedSource && (
               <button
@@ -341,49 +369,64 @@ export default function JourneyPlanner() {
                       </span>
                     </div>
                   </div>
-                  {s.newCategory && s.newCategory !== '-' && (
-                    <span className="text-[10px] text-slate-400 bg-slate-900 border border-slate-700/60 px-2 py-0.5 rounded shrink-0">
-                      {s.newCategory}
-                    </span>
-                  )}
                 </button>
               ))}
             </div>
           )}
 
-          {/* Recent Stations for Origin */}
-          <RecentSearchesBar
-            type="STATION"
-            limit={4}
-            onSelect={(code, item) => {
-              setSelectedSource({ stationCode: code, stationName: item.title, district: item.subtitle });
-              setSourceQuery(`${item.title} (${code})`);
-              setSourceList([]);
-            }}
-          />
+          {/* Departure Date & Preferred Time Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                Departure Date
+              </label>
+              <input
+                type="date"
+                value={travelDate}
+                onChange={(e) => setTravelDate(e.target.value)}
+                className="bg-slate-950 border border-slate-800 rounded-xl w-full px-3 py-2.5 text-slate-200 outline-none text-xs font-semibold cursor-pointer [color-scheme:dark]"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                Preferred Time
+              </label>
+              <select
+                value={preferredTime}
+                onChange={(e) => setPreferredTime(e.target.value as any)}
+                className="bg-slate-950 border border-slate-800 rounded-xl w-full px-3 py-2.5 text-slate-200 outline-none text-xs font-semibold cursor-pointer"
+              >
+                <option value="ANY">Any time</option>
+                <option value="MORNING">Morning (06:00 - 12:00)</option>
+                <option value="AFTERNOON">Afternoon (12:00 - 18:00)</option>
+                <option value="EVENING">Evening (18:00 - 24:00)</option>
+                <option value="NIGHT">Night (00:00 - 06:00)</option>
+              </select>
+            </div>
+          </div>
         </div>
 
-        {/* 2. Swap Stations Divider & Button */}
-        <div className="relative flex items-center justify-center my-0.5 z-10">
+        {/* Swap Stations Button */}
+        <div className="relative flex items-center justify-center my-1 z-10">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-slate-800"></div>
           </div>
           <button
             type="button"
             onClick={swapStations}
-            className="relative z-10 px-4 py-1.5 bg-slate-900 hover:bg-indigo-950/80 border border-slate-700 hover:border-indigo-500/50 rounded-full text-indigo-400 hover:text-indigo-300 text-xs font-bold flex items-center gap-2 shadow-lg transition-all duration-200 active:scale-95 group cursor-pointer"
+            className="relative z-10 px-4 py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-700 hover:border-indigo-500/50 rounded-full text-indigo-400 hover:text-indigo-300 text-xs font-bold flex items-center gap-2 shadow-lg transition-all duration-200 active:scale-95 group cursor-pointer"
           >
             <ArrowUpDown className="w-3.5 h-3.5 group-hover:rotate-180 transition-transform duration-300" />
             <span>Swap Stations</span>
           </button>
         </div>
 
-        {/* 3. Destination Station Block (Middle) */}
+        {/* 2. Destination Station Block */}
         <div className="space-y-2 relative z-10">
           <div className="flex items-center justify-between">
-            <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shadow-sm shadow-rose-400/50 inline-block"></span>
-              <span>{t('destinationStationLabel')}</span>
+            <label className="text-xs font-bold text-slate-300 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[11px] font-black flex items-center justify-center">2</span>
+              <span>Final Destination</span>
             </label>
             {selectedDest && (
               <span className="text-[10px] font-bold text-rose-400 font-mono bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded">
@@ -409,8 +452,8 @@ export default function JourneyPlanner() {
                   setSelectedDest(null);
                 }
               }}
-              className="glass-input rounded-xl w-full pl-10 pr-14 py-3 sm:py-3.5 text-slate-200 outline-none text-xs sm:text-sm font-semibold placeholder-slate-500 focus:border-indigo-500 transition shadow-inner"
-              placeholder={t('destinationPlaceholder')}
+              className="bg-slate-950 border border-slate-800 rounded-xl w-full pl-10 pr-14 py-3 sm:py-3.5 text-slate-200 outline-none text-xs sm:text-sm font-semibold placeholder-slate-500 focus:border-indigo-500 transition shadow-inner"
+              placeholder="Search destination (e.g. GHY, NDLS)..."
             />
             {selectedDest && (
               <button
@@ -449,103 +492,110 @@ export default function JourneyPlanner() {
                       </span>
                     </div>
                   </div>
-                  {d.newCategory && d.newCategory !== '-' && (
-                    <span className="text-[10px] text-slate-400 bg-slate-900 border border-slate-700/60 px-2 py-0.5 rounded shrink-0">
-                      {d.newCategory}
-                    </span>
-                  )}
                 </button>
               ))}
             </div>
           )}
-
-          {/* Recent Stations for Destination */}
-          <RecentSearchesBar
-            type="STATION"
-            limit={4}
-            onSelect={(code, item) => {
-              setSelectedDest({ stationCode: code, stationName: item.title, district: item.subtitle });
-              setDestQuery(`${item.title} (${code})`);
-              setDestList([]);
-            }}
-          />
         </div>
 
-        {/* 4. Travel Date Block (Lower) */}
-        <div className="space-y-2 pt-2 border-t border-slate-800/80 z-10 relative">
-          <div className="flex items-center justify-between">
-            <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Date of Journey (Optional)</span>
-            </label>
-            {travelDate && (
-              <button
-                type="button"
-                onClick={() => setTravelDate('')}
-                className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300"
-              >
-                Reset Date
-              </button>
-            )}
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
-            <div className="relative flex-1">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 pointer-events-none">
-                <Calendar className="h-4.5 w-4.5 text-slate-450" />
+        {/* Intermediate City Rows */}
+        {intermediateCities.map((city, idx) => (
+          <div key={idx} className="space-y-1 relative z-10">
+            <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-slate-700 text-white text-[11px] font-black flex items-center justify-center">via</span>
+                <span>Via City / Junction #{idx + 1}</span>
               </span>
-              <input
-                type="date"
-                value={travelDate}
-                onChange={(e) => setTravelDate(e.target.value)}
-                className="glass-input rounded-xl w-full pl-10 pr-3.5 py-3 text-slate-200 outline-none text-xs sm:text-sm font-semibold cursor-pointer [color-scheme:dark]"
-              />
-            </div>
-
-            {/* Quick Date Shortcuts */}
-            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
-                onClick={() => setQuickDate(0)}
-                className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold border transition ${
-                  travelDate === getTodayDateString()
-                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-950/40'
-                    : 'bg-slate-900 hover:bg-slate-850 text-slate-300 border-slate-800'
+                onClick={() => setIntermediateCities(prev => prev.filter((_, i) => i !== idx))}
+                className="text-xs text-rose-400 hover:text-rose-300"
+              >
+                Remove
+              </button>
+            </label>
+            <input
+              type="text"
+              value={city}
+              onChange={(e) => {
+                const val = e.target.value;
+                setIntermediateCities(prev => prev.map((c, i) => i === idx ? val : c));
+              }}
+              placeholder="Intermediate Junction (e.g. BZA, ET, NGP)..."
+              className="bg-slate-950 border border-slate-800 rounded-xl w-full px-3.5 py-2.5 text-slate-200 outline-none text-xs sm:text-sm font-semibold placeholder-slate-500 focus:border-indigo-500 transition"
+            />
+          </div>
+        ))}
+
+        {/* + Add Another City Button */}
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={() => setIntermediateCities(prev => [...prev, ''])}
+            className="w-full border border-dashed border-slate-700 hover:border-blue-500 py-2.5 rounded-xl text-blue-400 hover:text-blue-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Another City</span>
+          </button>
+        </div>
+
+        {/* Transfers & Nearby Controls */}
+        <div className="pt-2 border-t border-slate-800 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-300">Transfers</span>
+            <div className="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800">
+              <button
+                type="button"
+                onClick={() => setTransferFilter('ALL')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  transferFilter === 'ALL'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Today
+                All Connections
               </button>
               <button
                 type="button"
-                onClick={() => setQuickDate(1)}
-                className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold border transition ${
-                  travelDate === getTomorrowDateString()
-                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-950/40'
-                    : 'bg-slate-900 hover:bg-slate-850 text-slate-300 border-slate-800'
+                onClick={() => setTransferFilter('DIRECT')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  transferFilter === 'DIRECT'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Tomorrow
+                Direct Only
               </button>
             </div>
           </div>
+
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={includeNearby}
+              onChange={(e) => setIncludeNearby(e.target.checked)}
+              className="rounded bg-slate-950 border-slate-700 text-blue-600 focus:ring-0 focus:ring-offset-0 h-4 w-4 cursor-pointer"
+            />
+            <span className="text-xs text-slate-400 font-medium">Include nearby city stations</span>
+          </label>
         </div>
 
-        {/* 5. Big Full-Width "Find Travel Routes" Button (Bottom) */}
+        {/* Search Multi-City Trains Button */}
         <div className="pt-2 z-10 relative">
           <button
             onClick={handlePlanJourney}
             disabled={!selectedSource || !selectedDest || loading}
-            className="w-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:from-slate-900 disabled:to-slate-900 disabled:text-slate-500 disabled:border-white/5 text-white font-black text-xs sm:text-sm uppercase tracking-wider py-3.5 sm:py-4 px-6 rounded-xl sm:rounded-2xl shadow-xl shadow-indigo-650/20 hover:shadow-indigo-500/30 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none transition-all duration-300 border border-indigo-400/20 cursor-pointer flex items-center justify-center gap-2.5"
+            className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:bg-slate-900 disabled:text-slate-500 text-white font-bold text-xs sm:text-sm py-3.5 px-6 rounded-xl shadow-xl shadow-blue-600/20 hover:shadow-blue-500/30 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                <span>Solving Journey Routes...</span>
+                <span>Searching Multi-City Routes...</span>
               </>
             ) : (
               <>
-                <Navigation className="w-4 h-4 text-indigo-200" />
-                <span>{t('findTravelRoutes')}</span>
+                <Navigation className="w-4 h-4 text-white" />
+                <span>Search Multi-City Trains</span>
               </>
             )}
           </button>
@@ -572,33 +622,49 @@ export default function JourneyPlanner() {
       )}
 
       {/* Results Dashboard */}
-      {!loading && searched && (
-        <div className="space-y-6 relative z-10 animate-fade-in">
-          <div className="border-b border-white/5 pb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-bold text-slate-200 flex items-center space-x-2.5">
-              <Clock className="h-5.5 w-5.5 text-indigo-400" />
-              <span>{t('availableJourneys')} ({journeys.length})</span>
-            </h2>
+      {!loading && searched && (() => {
+        const filteredJourneys = journeys.filter((j) => {
+          if (transferFilter === 'DIRECT' && !j.direct) return false;
+          if (preferredTime !== 'ANY') {
+            const timeStr = j.originDepartureTime || '';
+            const hour = parseInt(timeStr.split(':')[0], 10);
+            if (!isNaN(hour)) {
+              if (preferredTime === 'MORNING' && (hour < 6 || hour >= 12)) return false;
+              if (preferredTime === 'AFTERNOON' && (hour < 12 || hour >= 18)) return false;
+              if (preferredTime === 'EVENING' && (hour < 18 || hour >= 24)) return false;
+              if (preferredTime === 'NIGHT' && hour >= 6) return false;
+            }
+          }
+          return true;
+        });
 
-            {journeys.length > 0 && (
-              <button
-                onClick={toggleDelayOverlay}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
-                  showOverlay
-                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                    : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
-                }`}
-              >
-                <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />
-                <span>{showOverlay ? 'Hide Delay Overlay' : 'Overlay Delay Stats'}</span>
-                {loadingOverlay && <RefreshCw className="w-3 h-3 animate-spin" />}
-              </button>
-            )}
-          </div>
+        return (
+          <div className="space-y-6 relative z-10 animate-fade-in">
+            <div className="border-b border-white/5 pb-3 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-xl font-bold text-slate-200 flex items-center space-x-2.5">
+                <Clock className="h-5.5 w-5.5 text-indigo-400" />
+                <span>{t('availableJourneys')} ({filteredJourneys.length})</span>
+              </h2>
 
-          {journeys.length > 0 ? (
-            <div className="space-y-4">
-              {journeys.map((j, idx) => (
+              {journeys.length > 0 && (
+                <button
+                  onClick={toggleDelayOverlay}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
+                    showOverlay
+                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                      : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
+                  }`}
+                >
+                  <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>{showOverlay ? 'Hide Delay Overlay' : 'Overlay Delay Stats'}</span>
+                  {loadingOverlay && <RefreshCw className="w-3 h-3 animate-spin" />}
+                </button>
+              )}
+            </div>
+
+            {filteredJourneys.length > 0 ? (
+              <div className="space-y-4">
+                {filteredJourneys.map((j, idx) => (
                 <div
                   key={idx}
                   className="glass-panel rounded-2xl overflow-hidden hover:border-indigo-500/30 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/5 hover:-translate-y-1 p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-8 group relative animate-fade-in"
@@ -774,7 +840,8 @@ export default function JourneyPlanner() {
             </div>
           )}
         </div>
-      )}
+      );
+    })()}
 
       {/* Email Itinerary Modal */}
       {emailModalJourney && (
