@@ -507,10 +507,6 @@ public class AdaptiveAlarmManager {
             return "Scheduled";
         }
         String clean = rawTime.trim();
-        // If already formatted in 12h AM/PM like "02:58 PM" or "2:58 AM", return directly
-        if (clean.matches("(?i).*\\d{1,2}:\\d{2}\\s*(AM|PM).*")) {
-            return clean;
-        }
         try {
             if (clean.contains("T")) {
                 int tIdx = clean.indexOf("T");
@@ -519,12 +515,10 @@ public class AdaptiveAlarmManager {
                     timePart = timePart.substring(0, timePart.indexOf("+"));
                 } else if (timePart.contains("-")) {
                     timePart = timePart.substring(0, timePart.indexOf("-"));
-                } else if (timePart.contains("Z")) {
-                    timePart = timePart.substring(0, timePart.indexOf("Z"));
                 }
                 String[] parts = timePart.split(":");
-                int hour = Integer.parseInt(parts[0].replaceAll("[^0-9]", ""));
-                int min = Integer.parseInt(parts[1].replaceAll("[^0-9]", ""));
+                int hour = Integer.parseInt(parts[0]);
+                int min = Integer.parseInt(parts[1]);
                 Calendar c = Calendar.getInstance();
                 c.set(Calendar.HOUR_OF_DAY, hour);
                 c.set(Calendar.MINUTE, min);
@@ -532,8 +526,8 @@ public class AdaptiveAlarmManager {
                 return sdf.format(c.getTime());
             } else if (clean.contains(":")) {
                 String[] parts = clean.split(":");
-                int hour = Integer.parseInt(parts[0].replaceAll("[^0-9]", ""));
-                int min = Integer.parseInt(parts[1].replaceAll("[^0-9]", ""));
+                int hour = Integer.parseInt(parts[0]);
+                int min = Integer.parseInt(parts[1]);
                 Calendar c = Calendar.getInstance();
                 c.set(Calendar.HOUR_OF_DAY, hour);
                 c.set(Calendar.MINUTE, min);
@@ -541,7 +535,7 @@ public class AdaptiveAlarmManager {
                 return sdf.format(c.getTime());
             }
         } catch (Exception e) {
-            Log.w(TAG, "formatTimeClean fallback: " + rawTime, e);
+            Log.w(TAG, "formatTimeClean fallback: " + rawTime);
         }
         return clean;
     }

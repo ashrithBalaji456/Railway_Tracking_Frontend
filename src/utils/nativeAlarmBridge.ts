@@ -216,25 +216,26 @@ export const syncCustomAudioToNative = async (blob: Blob): Promise<boolean> => {
     // 1. Initialize fresh temp file on native Android storage
     await callNative('startCustomAudioUpload');
 
-    // 2. Read full blob into an ArrayBuffer for safe, high-speed binary chunking
-    const arrayBuffer = await blob.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
-    const totalBytes = uint8Array.byteLength;
-    const CHUNK_SIZE = 128 * 1024; // 128 KB chunks (safe within Android Binder 1MB transaction ceiling)
-
+    // 2. Stream chunk-by-chunk using native browser Blob.slice & FileReader (C++ hardware encoding)
+    const totalBytes = blob.size;
+    const CHUNK_SIZE = 128 * 1024; // 128 KB chunks
     let offset = 0;
+
     while (offset < totalBytes) {
       const end = Math.min(offset + CHUNK_SIZE, totalBytes);
-      const chunkSlice = uint8Array.subarray(offset, end);
+      const chunkBlob = blob.slice(offset, end);
       const isLast = end >= totalBytes;
 
-      // Fast binary byte-string to base64 encoding
-      let binaryStr = '';
-      const sliceLen = chunkSlice.byteLength;
-      for (let i = 0; i < sliceLen; i++) {
-        binaryStr += String.fromCharCode(chunkSlice[i]);
-      }
-      const chunkBase64 = btoa(binaryStr);
+      const chunkBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const res = (reader.result as string) || '';
+          const b64 = res.includes(',') ? res.split(',')[1] : res;
+          resolve(b64);
+        };
+        reader.onerror = () => reject(new Error('FileReader slice read error'));
+        reader.readAsDataURL(chunkBlob);
+      });
 
       await callNative('appendCustomAudioChunk', {
         chunk: chunkBase64,

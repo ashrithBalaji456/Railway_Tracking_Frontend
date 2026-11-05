@@ -90,7 +90,7 @@ public class AlarmSoundPlayer {
 
             // 3. Determine sound source: User's custom uploaded MP3 or Android System Alarm Ringtone
             File customFile = new File(context.getFilesDir(), "custom_alarm_sound.mp3");
-            boolean usePhysicalCustomFile = customFile.exists() && customFile.length() > 50000;
+            boolean usePhysicalCustomFile = customFile.exists() && customFile.length() > 1024;
 
             // 4. Initialize and start primary MediaPlayer
             stopMediaPlayerOnly();
