@@ -82,6 +82,7 @@ public class AlarmForegroundService extends Service {
 
         if (intent != null) {
             String tn = intent.getStringExtra("trainNumber");
+            String tname = intent.getStringExtra("trainName");
             String sc = intent.getStringExtra("stationCode");
             String sn = intent.getStringExtra("stationName");
             String pf = intent.getStringExtra("platform");
@@ -93,6 +94,7 @@ public class AlarmForegroundService extends Service {
                 prefs.edit()
                         .putString("ringing_alarm_id", aid != null ? aid : AdaptiveAlarmManager.buildAlarmId(tn, sc))
                         .putString("ringing_train_number", tn)
+                        .putString("ringing_train_name", tname != null ? tname : "")
                         .putString("ringing_station_code", sc)
                         .putString("ringing_station_name", sn != null ? sn : sc)
                         .putString("ringing_platform", pf != null ? pf : "")

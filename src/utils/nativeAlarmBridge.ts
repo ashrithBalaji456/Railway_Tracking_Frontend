@@ -7,7 +7,16 @@ export interface NativeAlarmPermissions {
 }
 
 export interface NativeAlarmPluginInterface {
-  scheduleExactAlarm(options: { seconds: number; title?: string; body?: string }): Promise<{
+  scheduleExactAlarm(options: {
+    seconds: number;
+    title?: string;
+    body?: string;
+    trainNumber?: string;
+    trainName?: string;
+    stationName?: string;
+    stationCode?: string;
+    platform?: string;
+  }): Promise<{
     scheduled: boolean;
     triggerAtMillis: number;
     seconds: number;
@@ -106,12 +115,19 @@ export const isNativeApp = (): boolean => {
 export const scheduleNativeAlarm = async (
   seconds: number,
   title: string = '🌅 RailTrack Wake-Up Alarm!',
-  body: string = 'Your train departure alarm is ringing now! Tap to open.'
+  body: string = 'Your train departure alarm is ringing now! Tap to open.',
+  extra?: {
+    trainNumber?: string;
+    trainName?: string;
+    stationName?: string;
+    stationCode?: string;
+    platform?: string;
+  }
 ) => {
   if (isNativeApp()) {
     return await callNative<{ scheduled: boolean; triggerAtMillis: number; seconds: number }>(
       'scheduleExactAlarm',
-      { seconds, title, body }
+      { seconds, title, body, ...(extra || {}) }
     );
   }
   return null;

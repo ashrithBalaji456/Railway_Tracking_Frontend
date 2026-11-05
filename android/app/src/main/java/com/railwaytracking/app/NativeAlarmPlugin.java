@@ -67,9 +67,21 @@ public class NativeAlarmPlugin extends Plugin {
 
         long triggerAtMillis = System.currentTimeMillis() + (seconds * 1000L);
 
+        String trainNumber = call.getString("trainNumber", "12952");
+        String trainName = call.getString("trainName", "");
+        String stationName = call.getString("stationName", "");
+        String stationCode = call.getString("stationCode", "NDLS");
+        String platform = call.getString("platform", "");
+
         Intent intent = new Intent(context, AlarmReceiver.class);
         intent.putExtra("title", title);
         intent.putExtra("body", body);
+        intent.putExtra("trainNumber", trainNumber);
+        intent.putExtra("trainName", trainName);
+        intent.putExtra("stationName", stationName);
+        intent.putExtra("stationCode", stationCode);
+        intent.putExtra("platform", platform);
+        intent.putExtra("triggerMinutes", Math.max(1, (int)(seconds / 60)));
 
         PendingIntent pendingIntent = PendingIntent.getBroadcast(
             context,
@@ -431,7 +443,7 @@ public class NativeAlarmPlugin extends Plugin {
 
         String ringingId = prefs.getString("ringing_alarm_id", "");
         String trainNumber = prefs.getString("ringing_train_number", prefs.getString("trainNumber", ""));
-        String trainName = prefs.getString("trainName", "");
+        String trainName = prefs.getString("ringing_train_name", prefs.getString("trainName", ""));
         String stationName = prefs.getString("ringing_station_name", prefs.getString("stationName", ""));
         String stationCode = prefs.getString("ringing_station_code", prefs.getString("stationCode", ""));
         String rawPlatform = prefs.getString("ringing_platform", prefs.getString("platform", ""));

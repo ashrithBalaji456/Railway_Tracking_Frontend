@@ -258,13 +258,18 @@ class AlarmAudioService {
     }
 
     // 2. Continuous Device Vibration
-    const triggerVibration = () => {
-      if ('vibrate' in navigator) {
-        navigator.vibrate([600, 200, 600, 200, 1000, 400]);
-      }
-    };
-    triggerVibration();
-    this.vibrationInterval = setInterval(triggerVibration, 3000);
+    // IMPORTANT: On native Android Capacitor APK, do NOT call navigator.vibrate()!
+    // Native AlarmSoundPlayer already runs an un-killable hardware VibrationEffect waveform looping indefinitely at index 0.
+    // Calling navigator.vibrate() inside the WebView cancels Android's native hardware waveform!
+    if (!isNative) {
+      const triggerVibration = () => {
+        if ('vibrate' in navigator) {
+          navigator.vibrate([600, 200, 600, 200, 1000, 400]);
+        }
+      };
+      triggerVibration();
+      this.vibrationInterval = setInterval(triggerVibration, 3000);
+    }
 
     // 3. Spoken Voice Wake-Up Announcement
     // Run speech synthesis only on browser/desktop for synthetic beeps.
@@ -373,7 +378,7 @@ class AlarmAudioService {
       }
     }
 
-    if ('vibrate' in navigator) {
+    if (!isNativeApp() && 'vibrate' in navigator) {
       navigator.vibrate(0);
     }
 

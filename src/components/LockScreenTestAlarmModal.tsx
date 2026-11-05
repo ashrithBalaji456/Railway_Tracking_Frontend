@@ -206,7 +206,13 @@ export default function LockScreenTestAlarmModal({
         await scheduleNativeAlarm(
           testSeconds,
           `🌅 RailTrack: ${trainName} Departure!`,
-          `Approaching ${stationName}. Tap to open or silence alarm.`
+          `Approaching ${stationName}. Tap to open or silence alarm.`,
+          {
+            trainNumber,
+            trainName,
+            stationName,
+            stationCode: 'NDLS'
+          }
         );
       } catch (e) {
         console.warn('Native alarm schedule fallback to web worker:', e);
@@ -271,6 +277,7 @@ export default function LockScreenTestAlarmModal({
           customSoundUrl: preloadedCustomUrl,
           customSoundName: preloadedCustomName,
           trainNumber,
+          trainName,
           stationName,
           etaMinutes: 25
         });
