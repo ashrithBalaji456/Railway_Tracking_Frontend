@@ -5,7 +5,8 @@ const config: CapacitorConfig = {
   appName: 'Railway Tracking',
   webDir: 'dist',
   server: {
-    url: 'https://railway-tracking-frontend.vercel.app',
+    // Commented out remote Vercel URL so Capacitor loads the fresh local bundled assets directly from the APK
+    // url: 'https://railway-tracking-frontend.vercel.app',
     cleartext: true,
     androidScheme: 'https'
   }
