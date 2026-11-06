@@ -158,14 +158,34 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                 boolean isAtStation = false;
                 String livePlatform = platform;
 
+                // Sequence & distance tracking for Hybrid Distance Rule
+                int currentSeq = -1;
+                int targetSeq = -1;
+                double currentDist = -1.0;
+                double targetDist = -1.0;
+                double targetLat = 0.0;
+                double targetLng = 0.0;
+                String currentStationCodeFromData = data.optString("currentStationCode", "");
+
                 if (stations != null) {
                     for (int i = 0; i < stations.length(); i++) {
                         JSONObject st = stations.getJSONObject(i);
                         String code = st.optString("stationCode", "");
+                        int seq = st.optInt("sequenceNumber", i + 1);
+                        String status = st.optString("status", "").toUpperCase();
+
+                        boolean passed = status.equals("PASSED") || status.equals("DEPARTED") || status.equals("AT_STATION") || status.equals("ARRIVED") || code.equalsIgnoreCase(currentStationCodeFromData);
+                        if (passed && seq > currentSeq) {
+                            currentSeq = seq;
+                            if (st.has("distance") && !st.isNull("distance")) {
+                                currentDist = st.optDouble("distance", -1.0);
+                            }
+                        }
+
                         if (code.equalsIgnoreCase(stationCode)) {
                             stationFound = true;
+                            targetSeq = seq;
                             liveArrival = st.optString("expectedArrival", st.optString("arrivalTime", ""));
-                            String status = st.optString("status", "").toUpperCase();
                             if (status.equals("AT_STATION") || status.equals("ARRIVED")) {
                                 isAtStation = true;
                             }
@@ -175,7 +195,11 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                                     livePlatform = rawPlat;
                                 }
                             }
-                            break;
+                            if (st.has("distance") && !st.isNull("distance")) {
+                                targetDist = st.optDouble("distance", -1.0);
+                            }
+                            targetLat = st.optDouble("latitude", st.optDouble("lat", 0.0));
+                            targetLng = st.optDouble("longitude", st.optDouble("lng", 0.0));
                         }
                     }
                 }
@@ -186,6 +210,21 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                     triggerAlarmNow(context, stationName, trainNumber, stationCode, livePlatform, triggerMinutes);
                     return;
                 }
+
+                // Calculate remaining distance to destination station
+                double remainingKm = -1.0;
+                if (targetDist > 0 && currentDist > 0 && targetDist >= currentDist) {
+                    remainingKm = targetDist - currentDist;
+                } else if (targetLat != 0.0 && targetLng != 0.0) {
+                    double trainLat = data.optDouble("latitude", 0.0);
+                    double trainLng = data.optDouble("longitude", 0.0);
+                    if (trainLat != 0.0 && trainLng != 0.0) {
+                        remainingKm = haversineKm(trainLat, trainLng, targetLat, targetLng);
+                    }
+                }
+
+                double safeDistanceThreshold = getSafeDistanceThresholdKm(triggerMinutes);
+                boolean isDistanceTriggered = (remainingKm > 0 && remainingKm <= safeDistanceThreshold && (currentSeq < 0 || targetSeq >= currentSeq));
 
                 // Origin Departure Guard: Check if train has actually departed from the origin station
                 boolean isOriginStation = false;
@@ -205,6 +244,19 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                     if (unstarted && !originDeparted) {
                         hasDepartedOrigin = false;
                     }
+                }
+
+                // Hybrid Distance Rule Trigger (Whichever Comes First: Time <= triggerMinutes OR Distance <= safeDistanceThreshold)
+                if (isDistanceTriggered) {
+                    if (!isOriginStation && !hasDepartedOrigin) {
+                        Log.d(TAG, "Train " + trainNumber + " has not yet departed origin station! Delaying downline alarm.");
+                        AdaptiveAlarmManager.getInstance().scheduleNextSync(context, trainNumber, stationCode, 3 * 60 * 1000L);
+                        return;
+                    }
+                    Log.d(TAG, "Hybrid Distance Rule: Train " + trainNumber + " is " + String.format("%.1f", remainingKm)
+                            + " km away from " + stationCode + " (<= threshold " + safeDistanceThreshold + " km). Firing alarm now!");
+                    triggerAlarmNow(context, stationName, trainNumber, stationCode, livePlatform, triggerMinutes);
+                    return;
                 }
 
                 long effectiveTargetMillis = currentTargetMillis;
@@ -285,6 +337,11 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                     nextDelay = 15 * 60 * 1000L;
                 }
 
+                // If train is nearing safe distance boundary (threshold + 10 km), tighten sync to 1 min
+                if (remainingKm > 0 && remainingKm <= (safeDistanceThreshold + 10.0)) {
+                    nextDelay = Math.min(nextDelay, 60 * 1000L);
+                }
+
                 long nextSyncMillis = System.currentTimeMillis() + nextDelay;
 
                 // Post visible status notification so user sees proof of live check + delay in hrs/mins
@@ -356,5 +413,33 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
             Log.e(TAG, "Failed launching AlarmForegroundService from AdaptiveSyncReceiver: " + ex.getMessage());
             AlarmSoundPlayer.getInstance().startAlarm(context);
         }
+    }
+
+    /**
+     * Calibrated safe distance thresholds corresponding to the selected alarm advance minutes:
+     * 15m -> 12km, 30m -> 25km, 45m -> 38km, 60m -> 50km, 90m -> 75km, 120m -> 100km.
+     */
+    private static double getSafeDistanceThresholdKm(int triggerMinutes) {
+        if (triggerMinutes <= 15) return 12.0;
+        if (triggerMinutes <= 30) return 25.0;
+        if (triggerMinutes <= 45) return 38.0;
+        if (triggerMinutes <= 60) return 50.0;
+        if (triggerMinutes <= 90) return 75.0;
+        if (triggerMinutes <= 120) return 100.0;
+        return Math.round(triggerMinutes * 0.83); // ~50 km/h baseline
+    }
+
+    /**
+     * Great-circle geodesic distance between two GPS coordinates in kilometers.
+     */
+    private static double haversineKm(double lat1, double lon1, double lat2, double lon2) {
+        double R = 6371.0;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                   Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                   Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
     }
 }

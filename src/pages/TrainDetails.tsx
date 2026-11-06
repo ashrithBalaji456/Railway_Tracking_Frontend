@@ -374,6 +374,17 @@ export default function TrainDetails() {
     return liveStatus.nextStationCode && !isSkippedStation(liveStatus.nextStationCode) ? liveStatus.nextStationCode.toUpperCase() : null;
   })();
 
+  // Helper: Get safe distance threshold for the configured trigger minutes (Hybrid Rule)
+  const getSafeDistanceThresholdKm = (triggerMins: number): number => {
+    if (triggerMins <= 15) return 12;
+    if (triggerMins <= 30) return 25;
+    if (triggerMins <= 45) return 38;
+    if (triggerMins <= 60) return 50;
+    if (triggerMins <= 90) return 75;
+    if (triggerMins <= 120) return 100;
+    return Math.round(triggerMins * 0.83); // ~50 km/h baseline
+  };
+
   // Monitor train position against all armed wake-up alarms for this train
   useEffect(() => {
     if (!armedAlarms.length || isAlarmRinging || hasTriggeredAlarmRef.current) return;
@@ -389,8 +400,8 @@ export default function TrainDetails() {
 
       if (!liveStop && !routeStop) continue;
 
-      // Origin Departure Guard: If user station is 1 or 2 stations downline from source,
-      // but the train has NOT yet departed from the origin station (e.g. delayed at source platform),
+      // Origin Departure Guard: If user station is downline from source,
+      // but the train has NOT yet departed from the origin station,
       // DO NOT trigger alarms for downline stations until the train departs origin!
       const originStation = liveStatus?.stations?.[0] || route?.stations?.[0];
       const targetStationSeq = (routeStop || liveStop)?.sequenceNumber;
@@ -440,7 +451,7 @@ export default function TrainDetails() {
         }
       }
 
-      // 3. Station sequence & proximity guard
+      // 3. Station sequence & distance calculation
       const currentBubbleStation = route?.stations?.find(
         (st: any) => st.stationCode?.toUpperCase() === bubbleStationCode
       );
@@ -451,20 +462,20 @@ export default function TrainDetails() {
       const targetDist = routeStop?.distance ?? liveStop?.distance;
       const distanceRemaining = (currentDist != null && targetDist != null) ? (targetDist - currentDist) : null;
 
-      if (currentBubbleSeq != null && targetSeq != null) {
-        const stopsDifference = targetSeq - currentBubbleSeq;
-        if (stopsDifference === 0) {
-          shouldTrigger = true;
-        } else if (stopsDifference === 1) {
-          const isTimeTriggered = diffMinutes != null && diffMinutes > 0 && diffMinutes <= alarmCfg.triggerMinutes;
-          const proportionalDistanceKm = Math.max(10, Math.round(alarmCfg.triggerMinutes * 0.85));
-          const isDistanceProportionalTriggered = diffMinutes == null && distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= proportionalDistanceKm;
-          const isEmergencyYardParachute = distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= 5;
-          const noTelemetryAvailable = distanceRemaining == null && diffMinutes == null;
+      // 4. Hybrid Rule: Whichever Comes First (Time Remaining <= triggerMinutes OR Distance Remaining <= safeDistanceThreshold)
+      const safeDistanceKm = getSafeDistanceThresholdKm(alarmCfg.triggerMinutes);
+      const isApproaching = currentBubbleSeq != null && targetSeq != null && targetSeq >= currentBubbleSeq;
 
-          if (isTimeTriggered || isDistanceProportionalTriggered || isEmergencyYardParachute || noTelemetryAvailable) {
-            shouldTrigger = true;
-          }
+      const isTimeTriggered = diffMinutes != null && diffMinutes > 0 && diffMinutes <= alarmCfg.triggerMinutes;
+      const isDistanceTriggered = isApproaching && distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= safeDistanceKm;
+      const isEmergencyYardParachute = isApproaching && distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= 5;
+      const isSameStation = currentBubbleSeq != null && targetSeq != null && currentBubbleSeq >= targetSeq;
+
+      if (isTimeTriggered || isDistanceTriggered || isEmergencyYardParachute || isSameStation) {
+        shouldTrigger = true;
+        if (isDistanceTriggered && (diffMinutes == null || diffMinutes > alarmCfg.triggerMinutes)) {
+          // Set computedEta from distance assuming ~50 km/h average approach speed
+          computedEta = Math.min(alarmCfg.triggerMinutes, Math.max(1, Math.round(distanceRemaining! * 1.2)));
         }
       }
 

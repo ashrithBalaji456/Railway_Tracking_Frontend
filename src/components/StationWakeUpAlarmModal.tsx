@@ -207,18 +207,23 @@ export default function StationWakeUpAlarmModal({
 
           {/* Trigger Time Options */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Wake Me Up When Train Is:</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Wake Me Up When Train Is:</span>
+              </label>
+              <span className="text-[10px] text-amber-300/90 font-semibold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                Time or Distance (1st match)
+              </span>
+            </div>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {[
-                { mins: 15, label: '15 mins', sub: 'prior' },
-                { mins: 30, label: '30 mins', sub: 'prior' },
-                { mins: 45, label: '45 mins', sub: 'prior' },
-                { mins: 60, label: '1 hour', sub: 'prior' },
-                { mins: 90, label: '1.5 hrs', sub: 'prior' },
-                { mins: 120, label: '2 hours', sub: 'prior' }
+                { mins: 15, label: '15 mins', sub: '≤ 12 km' },
+                { mins: 30, label: '30 mins', sub: '≤ 25 km' },
+                { mins: 45, label: '45 mins', sub: '≤ 38 km' },
+                { mins: 60, label: '1 hour', sub: '≤ 50 km' },
+                { mins: 90, label: '1.5 hrs', sub: '≤ 75 km' },
+                { mins: 120, label: '2 hours', sub: '≤ 100 km' }
               ].map(({ mins, label, sub }) => (
                 <button
                   key={mins}
@@ -231,10 +236,13 @@ export default function StationWakeUpAlarmModal({
                   }`}
                 >
                   <div>~{label}</div>
-                  <div className="text-[9px] font-normal text-slate-400 mt-0.5">{sub}</div>
+                  <div className="text-[9px] font-semibold text-emerald-400 mt-0.5">{sub}</div>
                 </button>
               ))}
             </div>
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              💡 <strong>Hybrid Rule:</strong> Guarantees alarm rings if train is within selected minutes <em>OR</em> enters the distance radius, protecting you if the train speeds up or delays.
+            </p>
           </div>
 
           {/* Ringtone Selection & Preview */}
