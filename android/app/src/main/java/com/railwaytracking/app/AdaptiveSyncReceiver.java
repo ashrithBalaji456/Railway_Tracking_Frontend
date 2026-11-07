@@ -228,9 +228,10 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                 double safeDistanceThreshold = getSafeDistanceThresholdKm(triggerMinutes);
                 boolean isDistanceTriggered = (remainingKm > 0 && remainingKm <= safeDistanceThreshold && (currentSeq < 0 || targetSeq >= currentSeq));
 
-                // Origin Departure Guard: Check if train has actually departed from the origin station
+                // Origin Departure Guard & Smart Sleep Back-Off: Check if train has actually departed from the origin station
                 boolean isOriginStation = false;
                 boolean hasDepartedOrigin = true;
+                long millisUntilOriginDeparture = 0L;
                 if (stations != null && stations.length() > 0) {
                     JSONObject firstStation = stations.getJSONObject(0);
                     String firstCode = firstStation.optString("stationCode", "");
@@ -245,6 +246,14 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                     boolean unstarted = runStatus.equals("not-started") || runStatus.equals("scheduled") || runStatus.equals("yet_to_start");
                     if (unstarted && !originDeparted) {
                         hasDepartedOrigin = false;
+                        String originDepartureStr = firstStation.optString("scheduledDeparture",
+                                firstStation.optString("departureTime",
+                                firstStation.optString("expectedDeparture",
+                                data.optString("originDepartureTime", ""))));
+                        if (!originDepartureStr.isEmpty()) {
+                            long originDepMillis = AdaptiveAlarmManager.calculateTriggerMillis(originDepartureStr, 0);
+                            millisUntilOriginDeparture = originDepMillis - System.currentTimeMillis();
+                        }
                     }
                 }
 
@@ -341,8 +350,20 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                     nextDelay = 15 * 60 * 1000L;
                 }
 
-                // If train is nearing safe distance boundary (threshold + 10 km), tighten sync to 1 min
-                if (remainingKm > 0 && remainingKm <= (safeDistanceThreshold + 10.0)) {
+                // SMART ORIGIN SLEEP BACK-OFF:
+                // If user armed alarm overnight and train has NOT started from origin station,
+                // and scheduled origin departure is more than 1 hour away:
+                // Put background sync into deep sleep until 30 minutes before origin departure (capped at 90 mins max).
+                if (!isOriginStation && !hasDepartedOrigin && millisUntilOriginDeparture > (60 * 60 * 1000L)) {
+                    long sleepUntilOriginWindow = millisUntilOriginDeparture - (30 * 60 * 1000L);
+                    nextDelay = Math.min(90 * 60 * 1000L, Math.max(30 * 60 * 1000L, sleepUntilOriginWindow));
+                    Log.d(TAG, "Train " + trainNumber + " unstarted. Origin departure in "
+                            + (millisUntilOriginDeparture / 3600000) + "h " + ((millisUntilOriginDeparture % 3600000) / 60000)
+                            + "m. Sleeping sync for " + (nextDelay / 60000) + "m until 30m before origin start.");
+                }
+
+                // If train has departed and is nearing safe distance boundary (threshold + 10 km), tighten sync to 1 min
+                if (hasDepartedOrigin && remainingKm > 0 && remainingKm <= (safeDistanceThreshold + 10.0)) {
                     nextDelay = Math.min(nextDelay, 60 * 1000L);
                 }
 

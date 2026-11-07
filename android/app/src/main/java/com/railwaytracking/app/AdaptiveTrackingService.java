@@ -57,6 +57,7 @@ public class AdaptiveTrackingService extends Service {
 
     // Active polling interval: every 5 minutes while armed
     private static final long POLL_INTERVAL_MS = 5 * 60 * 1000L;
+    private volatile long currentPollIntervalMs = POLL_INTERVAL_MS;
 
     private final Runnable pollTask = new Runnable() {
         @Override
@@ -64,7 +65,7 @@ public class AdaptiveTrackingService extends Service {
             if (!isTracking) return;
             performLiveTelemetryCheck();
             if (isTracking) {
-                handler.postDelayed(this, POLL_INTERVAL_MS);
+                handler.postDelayed(this, currentPollIntervalMs);
             }
         }
     };
@@ -218,8 +219,50 @@ public class AdaptiveTrackingService extends Service {
                         }
                     }
 
+                    // Origin Departure Guard & Smart Sleep Back-Off: Check if train has departed origin station
+                    boolean isOriginStation = false;
+                    boolean hasDepartedOrigin = true;
+                    long millisUntilOriginDeparture = 0L;
+                    if (stations != null && stations.length() > 0) {
+                        JSONObject firstStation = stations.getJSONObject(0);
+                        String firstCode = firstStation.optString("stationCode", "");
+                        if (firstCode.equalsIgnoreCase(stationCode)) {
+                            isOriginStation = true;
+                        }
+                        String firstStatus = firstStation.optString("status", "").toLowerCase();
+                        String firstActualDep = firstStation.optString("actualDeparture", "");
+                        String runStatus = data.optString("runStatus", data.optString("status", "")).toLowerCase();
+
+                        boolean originDeparted = firstStatus.equals("departed") || firstStatus.equals("passed") || (!firstActualDep.isEmpty() && !firstActualDep.equalsIgnoreCase("null"));
+                        boolean unstarted = runStatus.equals("not-started") || runStatus.equals("scheduled") || runStatus.equals("yet_to_start");
+                        if (unstarted && !originDeparted) {
+                            hasDepartedOrigin = false;
+                            String originDepartureStr = firstStation.optString("scheduledDeparture",
+                                    firstStation.optString("departureTime",
+                                    firstStation.optString("expectedDeparture",
+                                    data.optString("originDepartureTime", ""))));
+                            if (!originDepartureStr.isEmpty()) {
+                                long originDepMillis = AdaptiveAlarmManager.calculateTriggerMillis(originDepartureStr, 0);
+                                millisUntilOriginDeparture = originDepMillis - System.currentTimeMillis();
+                            }
+                        }
+                    }
+
+                    // Smart Sleep Back-Off for unstarted overnight trains
+                    if (!isOriginStation && !hasDepartedOrigin && millisUntilOriginDeparture > (60 * 60 * 1000L)) {
+                        long sleepDelay = Math.min(60 * 60 * 1000L, Math.max(15 * 60 * 1000L, millisUntilOriginDeparture - (30 * 60 * 1000L)));
+                        currentPollIntervalMs = sleepDelay;
+                        Log.d(TAG, "Train " + trainNumber + " unstarted from origin. Service polling relaxed to " + (sleepDelay / 60000) + "m.");
+                    } else {
+                        currentPollIntervalMs = POLL_INTERVAL_MS;
+                    }
+
                     // 1. Train physically arrived or at station: Trigger alarm immediately!
                     if (isAtStation) {
+                        if (!isOriginStation && !hasDepartedOrigin) {
+                            Log.d(TAG, "Train " + trainNumber + " has not yet departed origin station! Delaying downline alarm.");
+                            continue;
+                        }
                         Log.d(TAG, "Train " + trainNumber + " arrived at " + stationCode + "! Firing wake-up alarm immediately.");
                         triggerAlarmNow(stationName, trainNumber, stationCode, livePlatform, triggerMinutes);
                         return;
@@ -233,6 +276,10 @@ public class AdaptiveTrackingService extends Service {
 
                         // 2. Train running early: Target time reached or passed! Fire alarm now!
                         if (remainingToNewTarget <= 0) {
+                            if (!isOriginStation && !hasDepartedOrigin) {
+                                Log.d(TAG, "Train " + trainNumber + " has not yet departed origin station! Delaying downline alarm.");
+                                continue;
+                            }
                             Log.d(TAG, "Train running early! Target reached (" + remainingToNewTarget + "ms). Firing alarm now!");
                             triggerAlarmNow(stationName, trainNumber, stationCode, livePlatform, triggerMinutes);
                             return;
