@@ -4,6 +4,8 @@ interface RingingAlarmOverlayProps {
   isOpen: boolean;
   onDismiss: () => void;
   onSnooze?: () => void;
+  onSnooze5Mins?: () => void;
+  onSnoozeArrivalBuffer?: () => void;
   trainNumber: string;
   trainName?: string;
   stationName: string;
@@ -17,6 +19,8 @@ export default function RingingAlarmOverlay({
   isOpen,
   onDismiss,
   onSnooze,
+  onSnooze5Mins,
+  onSnoozeArrivalBuffer,
   trainNumber,
   trainName,
   stationName,
@@ -26,6 +30,9 @@ export default function RingingAlarmOverlay({
   platform
 }: RingingAlarmOverlayProps) {
   if (!isOpen) return null;
+
+  const handleSnooze5 = onSnooze5Mins || onSnooze;
+  const handleArrivalBuffer = onSnoozeArrivalBuffer;
 
   return (
     <div className="fixed inset-0 z-[100] bg-rose-950/95 flex flex-col items-center justify-between p-6 sm:p-10 animate-pulse text-white select-none">
@@ -102,7 +109,7 @@ export default function RingingAlarmOverlay({
         </div>
       </div>
 
-      {/* Big Dismiss and Snooze Buttons */}
+      {/* Big Dismiss and Dual Snooze Buttons */}
       <div className="w-full max-w-xl pt-4 space-y-3">
         <button
           type="button"
@@ -113,16 +120,31 @@ export default function RingingAlarmOverlay({
           <span>I AM AWAKE &bull; STOP ALARM</span>
         </button>
 
-        {onSnooze && (
-          <button
-            type="button"
-            onClick={onSnooze}
-            className="w-full py-3.5 px-6 rounded-xl bg-black/60 hover:bg-black/80 text-amber-300 border border-amber-400/50 text-sm sm:text-base font-bold uppercase tracking-wider shadow-lg flex items-center justify-center gap-2.5 transition-all active:scale-95 cursor-pointer"
-          >
-            <Clock className="w-5 h-5 text-amber-300" />
-            <span>Snooze for 5 Minutes</span>
-          </button>
-        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {handleSnooze5 && (
+            <button
+              type="button"
+              onClick={handleSnooze5}
+              className="w-full py-3 px-4 rounded-xl bg-black/60 hover:bg-black/80 text-amber-300 border border-amber-400/50 text-xs sm:text-sm font-bold uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+              title="Silences alarm and rings again in exactly 5 minutes"
+            >
+              <Clock className="w-4 h-4 text-amber-300 shrink-0" />
+              <span>Snooze 5 Minutes</span>
+            </button>
+          )}
+
+          {handleArrivalBuffer && (
+            <button
+              type="button"
+              onClick={handleArrivalBuffer}
+              className="w-full py-3 px-4 rounded-xl bg-indigo-950/80 hover:bg-indigo-900 text-indigo-200 border border-indigo-400/50 text-xs sm:text-sm font-bold uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+              title="Sleep until the final safe window — 5 minutes before train arrival"
+            >
+              <Train className="w-4 h-4 text-indigo-300 shrink-0" />
+              <span>Wake 5m Before Train</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

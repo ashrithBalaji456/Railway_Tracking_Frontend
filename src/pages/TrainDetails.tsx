@@ -266,9 +266,42 @@ export default function TrainDetails() {
       window.removeEventListener('rail-alarms-updated', handleAlarmsUpdated);
     };
   }, [trainNumber]);
+
   const [isAlarmRinging, setIsAlarmRinging] = useState(false);
   const [ringingAlarmData, setRingingAlarmData] = useState<any | null>(null);
   const hasTriggeredAlarmRef = useRef<boolean>(false);
+
+  // Handle fixed snooze trigger event (Option 1: exactly 5 minutes from tap)
+  useEffect(() => {
+    const handleFixedTrigger = (e: any) => {
+      const { trainNumber: tNum, stationCode: sCode } = e.detail || {};
+      const targetTrain = tNum || trainNumber || train?.trainNumber || '';
+      const alarmCfg = multiAlarmManager.getArmedAlarm(targetTrain, sCode || '');
+      if (alarmCfg && !isAlarmRinging) {
+        hasTriggeredAlarmRef.current = false;
+        const effectiveTrainName = train?.trainName || liveStatus?.trainName || alarmCfg.trainName || '';
+        const alarmPayload = {
+          stationCode: alarmCfg.stationCode,
+          stationName: alarmCfg.stationName,
+          trainName: effectiveTrainName,
+          etaMinutes: 5,
+          distanceKm: undefined,
+          platform: alarmCfg.platform
+        };
+        setRingingAlarmData(alarmPayload);
+        setIsAlarmRinging(true);
+        alarmAudioService.startContinuousAlarm({
+          toneType: alarmCfg.toneType === 'custom' ? undefined : (alarmCfg.toneType as AlarmToneType),
+          trainNumber: targetTrain,
+          trainName: effectiveTrainName,
+          stationName: alarmCfg.stationName,
+          stationCode: alarmCfg.stationCode,
+        });
+      }
+    };
+    window.addEventListener('rail-alarm-fixed-trigger', handleFixedTrigger);
+    return () => window.removeEventListener('rail-alarm-fixed-trigger', handleFixedTrigger);
+  }, [trainNumber, train, liveStatus, isAlarmRinging]);
   const [isDisruptionModalOpen, setIsDisruptionModalOpen] = useState(false);
   const [isFoodModalOpen, setIsFoodModalOpen] = useState(false);
 
@@ -3814,11 +3847,18 @@ export default function TrainDetails() {
             setIsAlarmRinging(false);
             setRingingAlarmData(null);
           }}
-          onSnooze={() => {
+          onSnooze5Mins={() => {
             alarmAudioService.stopAlarm();
             setIsAlarmRinging(false);
             if (ringingAlarmData?.stationCode) {
-              multiAlarmManager.snoozeAlarm(trainNumber || train?.trainNumber || '', ringingAlarmData.stationCode, 5);
+              multiAlarmManager.snoozeAlarmFixed(trainNumber || train?.trainNumber || '', ringingAlarmData.stationCode, 5);
+            }
+          }}
+          onSnoozeArrivalBuffer={() => {
+            alarmAudioService.stopAlarm();
+            setIsAlarmRinging(false);
+            if (ringingAlarmData?.stationCode) {
+              multiAlarmManager.snoozeAlarmArrivalBuffer(trainNumber || train?.trainNumber || '', ringingAlarmData.stationCode, 5);
             }
           }}
           trainNumber={trainNumber || train?.trainNumber || ''}

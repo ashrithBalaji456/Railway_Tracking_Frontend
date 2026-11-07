@@ -497,6 +497,22 @@ public class NativeAlarmPlugin extends Plugin {
         long nextTriggerMillis = System.currentTimeMillis() + (snoozeMinutes * 60 * 1000L);
         AdaptiveAlarmManager.getInstance().scheduleAlarmClock(context, nextTriggerMillis, trainNumber, trainName, stationCode, stationName, snoozeMinutes);
 
+        // Save isFixedSnooze flag so background telemetry does not overwrite this exact clock timer
+        try {
+            org.json.JSONObject alarmsMap = AdaptiveAlarmManager.getAlarmsMap(prefs);
+            String aid = AdaptiveAlarmManager.buildAlarmId(trainNumber, stationCode);
+            org.json.JSONObject obj = alarmsMap.optJSONObject(aid);
+            if (obj != null) {
+                obj.put("targetTriggerMillis", nextTriggerMillis);
+                obj.put("isFixedSnooze", true);
+                obj.put("fixedSnoozeTargetMillis", nextTriggerMillis);
+                alarmsMap.put(aid, obj);
+                prefs.edit().putString(AdaptiveAlarmManager.PREF_ALARMS_MAP, alarmsMap.toString()).apply();
+            }
+        } catch (Exception ex) {
+            Log.w(TAG, "Failed updating isFixedSnooze flag: " + ex.getMessage());
+        }
+
         Log.d(TAG, "Alarm snoozed for [" + trainNumber + "_" + stationCode + "] for " + snoozeMinutes + " minutes; will re-ring at " + new java.util.Date(nextTriggerMillis));
 
         JSObject ret = new JSObject();

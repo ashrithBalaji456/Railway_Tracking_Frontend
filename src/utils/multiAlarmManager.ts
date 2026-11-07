@@ -157,22 +157,51 @@ class MultiAlarmManager {
     this.notifyUpdate();
   }
 
-  public async snoozeAlarm(trainNumber: string, stationCode: string, minutes: number = 5): Promise<void> {
-    const alarm = this.getArmedAlarm(trainNumber, stationCode);
+  /**
+   * Option 1: True Clock Snooze — silences audio and rings again in exactly X minutes from now (e.g. 4:30 -> 4:35 AM).
+   */
+  public async snoozeAlarmFixed(trainNumber: string, stationCode: string, minutes: number = 5): Promise<void> {
     alarmAudioService.stopAlarm();
 
     await snoozeNativeAlarm(minutes, { trainNumber, stationCode });
 
+    // Set fallback in-browser timer so if web app stays in foreground, it rings in exactly X minutes
+    setTimeout(() => {
+      const alarm = this.getArmedAlarm(trainNumber, stationCode);
+      if (alarm) {
+        window.dispatchEvent(new CustomEvent('rail-alarm-fixed-trigger', {
+          detail: { trainNumber, stationCode }
+        }));
+      }
+    }, minutes * 60 * 1000);
+
+    this.notifyUpdate();
+  }
+
+  /**
+   * Option 2: Train Arrival Buffer Snooze — sets triggerMinutes to X minutes BEFORE the train pulls into destination.
+   */
+  public async snoozeAlarmArrivalBuffer(trainNumber: string, stationCode: string, bufferMinutes: number = 5): Promise<void> {
+    const alarm = this.getArmedAlarm(trainNumber, stationCode);
+    alarmAudioService.stopAlarm();
+
     if (alarm) {
       const snoozed: WakeUpAlarmConfig = {
         ...alarm,
-        triggerMinutes: minutes,
+        triggerMinutes: bufferMinutes,
         armedAt: new Date().toISOString()
       };
       await this.armAlarm(snoozed);
     } else {
       this.notifyUpdate();
     }
+  }
+
+  /**
+   * Default snooze delegate (defaults to fixed clock snooze)
+   */
+  public async snoozeAlarm(trainNumber: string, stationCode: string, minutes: number = 5): Promise<void> {
+    await this.snoozeAlarmFixed(trainNumber, stationCode, minutes);
   }
 
   private notifyUpdate() {

@@ -100,6 +100,8 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
         final String rawPlatform = targetAlarm.optString("platform", "");
         final String platform = (rawPlatform != null && !rawPlatform.equalsIgnoreCase("null") && !rawPlatform.equalsIgnoreCase("undefined")) ? rawPlatform : "";
         final long currentTargetMillis = targetAlarm.optLong("targetTriggerMillis", 0L);
+        final boolean isFixedSnooze = targetAlarm.optBoolean("isFixedSnooze", false);
+        final long fixedSnoozeTargetMillis = targetAlarm.optLong("fixedSnoozeTargetMillis", 0L);
         long now = System.currentTimeMillis();
 
         // Query backend live API with Android goAsync() to query latest train progress, source departure, and schedule shifts
@@ -259,8 +261,10 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                     return;
                 }
 
+                boolean fixedSnoozeActive = isFixedSnooze && fixedSnoozeTargetMillis > System.currentTimeMillis();
+
                 long effectiveTargetMillis = currentTargetMillis;
-                if (stationFound && liveArrival != null && !liveArrival.trim().isEmpty()) {
+                if (!fixedSnoozeActive && stationFound && liveArrival != null && !liveArrival.trim().isEmpty()) {
                     long newTargetMillis = AdaptiveAlarmManager.calculateTriggerMillis(liveArrival, triggerMinutes);
                     long shiftDifference = Math.abs(newTargetMillis - currentTargetMillis);
 
