@@ -3379,3 +3379,84 @@ flowchart TD
      - **IRCA Rule 213 Break Journey:** Minimum 500 km distance requirement, allowable break count, 2-day duration limit, and station master endorsement.
      - **Telescopic Circular Journey Tickets:** Base fare savings through non-linear distance scaling.
      - **Connection Sweet Spot & PNR Linking:** Explaining the 2h–4h layover sweet spot and official IRCTC Connecting Journey Booking 100% refund protection.
+
+
+---
+
+#### Q24: How does the Hybrid Dual-Trigger Rule (Time OR Distance) work for Wake-Up Alarms?
+* **The Problem:**
+  - Users observed that setting an alarm for "30 mins prior" did not ring when the train reached ~20–35 km away, instead delaying until ~15 km away or later if the train was running ahead of schedule or delayed.
+  - Relying exclusively on time remaining ($\text{diffMinutes} \le \text{triggerMinutes}$) failed when dynamic ETAs were sluggish or trains ran at high speeds between outer signals. Conversely, relying strictly on distance failed during slow terminal approaches or outer yard congestion.
+* **The Architectural Resolution:**
+  1. **Calibrated Safe Distance Threshold Matrix:**
+     $$\begin{array}{|c|c|c|}
+     \hline
+     \textbf{Selected Advance Warning} & \textbf{Time Threshold} & \textbf{Safe Distance Threshold} \\
+     \hline
+     \text{15 mins prior} & \le 15\text{ mins} & \le 12\text{ km} \\
+     \text{30 mins prior} & \le 30\text{ mins} & \le 25\text{ km} \\
+     \text{45 mins prior} & \le 45\text{ mins} & \le 38\text{ km} \\
+     \text{1 hour prior (60m)} & \le 60\text{ mins} & \le 50\text{ km} \\
+     \text{1.5 hours prior (90m)} & \le 90\text{ mins} & \le 75\text{ km} \\
+     \text{2 hours prior (120m)} & \le 120\text{ mins} & \le 100\text{ km} \\
+     \hline
+     \end{array}$$
+  2. **Whichever-Comes-First Logic:**
+     - The alarm triggers immediately when **EITHER** of the two conditions is met:
+       $$\text{Alarm Fires if } (\text{diffMinutes} \le \text{triggerMinutes}) \lor (\text{distanceRemaining} \le \text{safeDistanceThreshold})$$
+     - If distance triggers first, dynamic ETA is automatically adjusted to $\min(\text{triggerMinutes}, \text{distance} \times 1.2)$ to prevent negative countdowns.
+  3. **Origin Departure Safety Guard:**
+     - Checks `data.status` and `stations[0].status`. If the train has not yet departed the origin station (`unstarted` && `!originDeparted`), alarms for downstream stations are prevented from firing prematurely due to distance proximity when parked at the origin yard.
+  4. **Multi-Platform Parity:**
+     - Implemented identically across:
+       - React Frontend: `TrainDetails.tsx` (`checkAlarms`)
+       - Native Android Receiver: `AdaptiveSyncReceiver.java` (`getSafeDistanceThresholdKm`)
+       - Modal Configuration: `StationWakeUpAlarmModal.tsx`
+
+---
+
+#### Q25: Why did Snooze ring 5 minutes before arrival instead of in 5 minutes, and how is the Dual Snooze Architecture implemented?
+* **The Problem:**
+  - A passenger whose alarm rang at 4:30 AM clicked "Snooze" expecting it to ring at 4:35 AM. Instead, the alarm was rescheduled to 5:00 AM (5 minutes before the train's delayed arrival at 5:04 AM).
+  - This occurred because the legacy snooze implementation reassigned the alarm config parameter `triggerMinutes = 5` (meaning *"wake me 5 minutes prior to station arrival"*), which dynamically recalculated against live arrival delays rather than acting as a standard clock timer.
+* **The Architectural Resolution (`RingingAlarmOverlay.tsx`):**
+  1. **Dual Independent Snooze Controls:**
+     - **⚪ I AM AWAKE • STOP ALARM:** Complete dismissal of audio, wake locks, foreground notifications, and multi-alarm queue.
+     - **🟡 Snooze 5 Minutes (Clock Timer):** Pure stopwatch snooze. Computes $\text{now} + 5\text{ minutes}$ sharp. Dispatches `rail-alarm-fixed-trigger` and locks out live delay shifts via the `isFixedSnooze` flag in `AdaptiveSyncReceiver.java`.
+     - **🔵 Wake 5m Before Train (Arrival Warning Buffer):** Dynamic arrival buffer. Re-arms the alarm with `triggerMinutes = 5`, following dynamic IRCTC delay updates until 5 minutes before final halt.
+  2. **`isFixedSnooze` Guard in Native Android:**
+     - When a 5-minute fixed snooze is set, `AdaptiveSyncReceiver.java` locks the target trigger time:
+       ```java
+       boolean fixedSnoozeActive = isFixedSnooze && fixedSnoozeTargetMillis > System.currentTimeMillis();
+       if (!fixedSnoozeActive && liveArrival != null) { ... }
+       ```
+     - This guarantees that subsequent live delay changes never overwrite a passenger's active 5-minute clock snooze.
+
+---
+
+#### Q26: How does the Smart Origin Sleep Back-Off save phone battery for overnight alarms without disturbing guaranteed wake-up?
+* **The Problem:**
+  - When passengers set an alarm the night before for a train departing origin 5 to 8 hours later, the background tracking service repeatedly queried the NTES API every 5 to 15 minutes, burning battery and mobile data on repeated `"NOT_STARTED"` responses throughout the night.
+* **The Architectural Resolution:**
+  1. **Hardware AlarmClock Preserved (Zero Disruption Rule):**
+     - Android's native hardware `AlarmClock` (`scheduleAlarmClock`) remains set to the destination trigger time at all times. Even if the phone enters deep Doze mode or network disconnects, the hardware alarm will still ring at the scheduled destination time.
+  2. **Intelligent Deep Sleep Calculation (`AdaptiveSyncReceiver.java` & `AdaptiveTrackingService.java`):**
+     - Reads `firstStation.scheduledDeparture` and calculates:
+       $$\text{millisUntilOriginDeparture} = \text{originDepartureMillis} - \text{System.currentTimeMillis()}$$
+     - If $\text{millisUntilOriginDeparture} > 60\text{ minutes}$:
+       - Background sync enters deep sleep until **30 minutes before origin departure**:
+         $$\text{nextDelay} = \min(90\text{ mins}, \max(30\text{ mins}, \text{millisUntilOriginDeparture} - 30\text{ mins}))$$
+       - Caps maximum single sleep at 90 minutes as a periodic safety check against early timetable updates.
+     - Once within 30 minutes of origin departure, the system resumes normal 5–15 minute checks to verify origin departure.
+  3. **Battery Reduction:**
+     - Reduces overnight network queries from ~35+ down to ~4–5, saving extensive battery life while guaranteeing 100% arrival alarm reliability.
+
+---
+
+#### Q27: How does Action-Aware Email Dispatching work across all alarm buttons?
+* **The Architecture:**
+  - Whether a passenger interacts with the alarm from the app's full-screen overlay (`TrainDetails.tsx`, `ActiveAlarmBanner.tsx`) or from the Android lock-screen notification action button (`StopAlarmReceiver.java`), a dedicated confirmation email is dispatched to their inbox:
+    - **I AM AWAKE:** Sends `action: "AWAKE"`, rendering a green confirmation email verifying that the alarm was acknowledged and stopped.
+    - **Snooze 5 Minutes:** Sends `action: "SNOOZE_5M"`, rendering a gold snooze confirmation informing the passenger of their 5-minute timer.
+    - **Wake 5m Before Train:** Sends `action: "SNOOZE_ARRIVAL_5M"`, rendering an indigo confirmation confirming the final 5-minute arrival warning.
+  - Every action email includes both the **🎒 Boarding Checklist** and **🧳 Deboarding Checklist**, platform assignment, train coordinates, and live timetable links.
