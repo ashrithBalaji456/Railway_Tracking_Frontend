@@ -280,13 +280,43 @@ export default function TrainDetails() {
       if (alarmCfg && !isAlarmRinging) {
         hasTriggeredAlarmRef.current = false;
         const effectiveTrainName = train?.trainName || liveStatus?.trainName || alarmCfg.trainName || '';
+
+        // Calculate true dynamic remaining time to station arrival instead of hardcoding snooze minutes!
+        const liveStop = liveStatus?.stations?.find((s: any) => s.stationCode?.toUpperCase() === (sCode || '').toUpperCase());
+        const routeStop = route?.stations?.find((s: any) => s.stationCode?.toUpperCase() === (sCode || '').toUpperCase());
+        const expArr = liveStop?.expectedArrival || routeStop?.arrivalTime || alarmCfg.expectedArrival;
+
+        let actualEta = Math.max(1, (alarmCfg.triggerMinutes || 30) - 5);
+        if (expArr) {
+          try {
+            let clean = expArr.trim();
+            if (clean.includes('T')) {
+              const idx = clean.indexOf('T');
+              clean = clean.substring(idx + 1, Math.min(clean.length(), idx + 6));
+            }
+            const [h, m] = clean.split(':').map(Number);
+            if (!isNaN(h) && !isNaN(m)) {
+              const now = new Date();
+              const target = new Date(now);
+              target.setHours(h, m, 0, 0);
+              if (target.getTime() < now.getTime() - 30 * 60 * 1000) {
+                target.setDate(target.getDate() + 1);
+              }
+              const diffMins = Math.round((target.getTime() - now.getTime()) / (60 * 1000));
+              if (diffMins > 0) {
+                actualEta = diffMins;
+              }
+            }
+          } catch (ignored) {}
+        }
+
         const alarmPayload = {
           stationCode: alarmCfg.stationCode,
           stationName: alarmCfg.stationName,
           trainName: effectiveTrainName,
-          etaMinutes: 5,
-          distanceKm: undefined,
-          platform: alarmCfg.platform,
+          etaMinutes: actualEta,
+          distanceKm: routeStop?.distance,
+          platform: liveStop?.platform || routeStop?.platform || alarmCfg.platform,
           backupEmail: alarmCfg.backupEmail
         };
         setRingingAlarmData(alarmPayload);
