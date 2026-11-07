@@ -4,6 +4,7 @@ import alarmAudioService, { type ActiveAlarmInfo } from '../utils/alarmAudioServ
 import { stopNativeAlarm, checkNativeAlarmRinging } from '../utils/nativeAlarmBridge';
 import multiAlarmManager from '../utils/multiAlarmManager';
 import RingingAlarmOverlay from './RingingAlarmOverlay';
+import api from '../services/api';
 
 export default function ActiveAlarmBanner() {
   const [alarmInfo, setAlarmInfo] = useState<(ActiveAlarmInfo & { stationCode?: string }) | null>(() => {
@@ -75,7 +76,30 @@ export default function ActiveAlarmBanner() {
     return null;
   }
 
+  const sendAlarmActionEmail = (action: 'AWAKE' | 'SNOOZE_5M' | 'SNOOZE_ARRIVAL_5M') => {
+    try {
+      const email = (
+        (alarmInfo.trainNumber && alarmInfo.stationCode ? multiAlarmManager.getArmedAlarm(alarmInfo.trainNumber, alarmInfo.stationCode)?.backupEmail : '') ||
+        localStorage.getItem('email') ||
+        ''
+      ).trim();
+      if (!email || !email.includes('@')) return;
+
+      api.post('/api/v1/alarm/approaching', {
+        email,
+        trainNumber: String(alarmInfo.trainNumber || '').trim(),
+        trainName: String(alarmInfo.trainName || 'Express').trim(),
+        stationCode: String(alarmInfo.stationCode || '').trim().toUpperCase(),
+        stationName: String(alarmInfo.stationName || '').trim(),
+        etaMinutes: alarmInfo.etaMinutes || 5,
+        platform: String(alarmInfo.platform || '').trim(),
+        action
+      }).catch(() => {});
+    } catch (e) {}
+  };
+
   const handleTurnOff = async () => {
+    sendAlarmActionEmail('AWAKE');
     alarmAudioService.stopAlarm();
     await stopNativeAlarm();
     if (alarmInfo.trainNumber && alarmInfo.stationCode) {
@@ -87,11 +111,21 @@ export default function ActiveAlarmBanner() {
   };
 
   const handleSnooze = async () => {
+    sendAlarmActionEmail('SNOOZE_5M');
     alarmAudioService.stopAlarm();
     if (alarmInfo.trainNumber && alarmInfo.stationCode) {
-      await multiAlarmManager.snoozeAlarm(alarmInfo.trainNumber, alarmInfo.stationCode, 5);
+      await multiAlarmManager.snoozeAlarmFixed(alarmInfo.trainNumber, alarmInfo.stationCode, 5);
     } else {
       await multiAlarmManager.snoozeAlarm('', '', 5);
+    }
+    setAlarmInfo(null);
+  };
+
+  const handleSnoozeArrivalBuffer = async () => {
+    sendAlarmActionEmail('SNOOZE_ARRIVAL_5M');
+    alarmAudioService.stopAlarm();
+    if (alarmInfo.trainNumber && alarmInfo.stationCode) {
+      await multiAlarmManager.snoozeAlarmArrivalBuffer(alarmInfo.trainNumber, alarmInfo.stationCode, 5);
     }
     setAlarmInfo(null);
   };
@@ -157,6 +191,8 @@ export default function ActiveAlarmBanner() {
         isOpen={Boolean(alarmInfo && alarmInfo.isPlaying)}
         onDismiss={handleTurnOff}
         onSnooze={handleSnooze}
+        onSnooze5Mins={handleSnooze}
+        onSnoozeArrivalBuffer={handleSnoozeArrivalBuffer}
         trainNumber={alarmInfo.trainNumber || ''}
         trainName={alarmInfo.trainName || ''}
         stationName={alarmInfo.stationName || 'Upcoming Station'}

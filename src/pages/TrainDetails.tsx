@@ -286,7 +286,8 @@ export default function TrainDetails() {
           trainName: effectiveTrainName,
           etaMinutes: 5,
           distanceKm: undefined,
-          platform: alarmCfg.platform
+          platform: alarmCfg.platform,
+          backupEmail: alarmCfg.backupEmail
         };
         setRingingAlarmData(alarmPayload);
         setIsAlarmRinging(true);
@@ -521,7 +522,8 @@ export default function TrainDetails() {
           trainName: effectiveTrainName,
           etaMinutes: computedEta,
           distanceKm: routeStop?.distance,
-          platform: liveStop?.platform || routeStop?.platform
+          platform: liveStop?.platform || routeStop?.platform,
+          backupEmail: alarmCfg.backupEmail
         };
 
         setRingingAlarmData(alarmPayload);
@@ -3838,6 +3840,28 @@ export default function TrainDetails() {
         <RingingAlarmOverlay
           isOpen={isAlarmRinging}
           onDismiss={() => {
+            try {
+              const email = (
+                ringingAlarmData?.backupEmail ||
+                armedAlarms.find(a => a.stationCode === ringingAlarmData?.stationCode)?.backupEmail ||
+                localStorage.getItem('email') ||
+                ''
+              ).trim();
+              if (email && email.includes('@')) {
+                api.post('/api/v1/alarm/approaching', {
+                  email,
+                  trainNumber: String(trainNumber || train?.trainNumber || '').trim(),
+                  trainName: String(ringingAlarmData?.trainName || train?.trainName || liveStatus?.trainName || 'Express').trim(),
+                  stationCode: String(ringingAlarmData?.stationCode || '').trim().toUpperCase(),
+                  stationName: String(ringingAlarmData?.stationName || '').trim(),
+                  etaMinutes: ringingAlarmData?.etaMinutes ? Math.round(Number(ringingAlarmData.etaMinutes)) : 5,
+                  distanceKm: ringingAlarmData?.distanceKm ? Math.round(Number(ringingAlarmData.distanceKm)) : undefined,
+                  platform: String(ringingAlarmData?.platform || '').trim(),
+                  action: 'AWAKE'
+                }).catch(() => {});
+              }
+            } catch (e) {}
+
             alarmAudioService.stopAlarm();
             if (ringingAlarmData?.stationCode) {
               multiAlarmManager.disarmAlarm(trainNumber || train?.trainNumber || '', ringingAlarmData.stationCode);
@@ -3848,6 +3872,28 @@ export default function TrainDetails() {
             setRingingAlarmData(null);
           }}
           onSnooze5Mins={() => {
+            try {
+              const email = (
+                ringingAlarmData?.backupEmail ||
+                armedAlarms.find(a => a.stationCode === ringingAlarmData?.stationCode)?.backupEmail ||
+                localStorage.getItem('email') ||
+                ''
+              ).trim();
+              if (email && email.includes('@')) {
+                api.post('/api/v1/alarm/approaching', {
+                  email,
+                  trainNumber: String(trainNumber || train?.trainNumber || '').trim(),
+                  trainName: String(ringingAlarmData?.trainName || train?.trainName || liveStatus?.trainName || 'Express').trim(),
+                  stationCode: String(ringingAlarmData?.stationCode || '').trim().toUpperCase(),
+                  stationName: String(ringingAlarmData?.stationName || '').trim(),
+                  etaMinutes: 5,
+                  distanceKm: ringingAlarmData?.distanceKm ? Math.round(Number(ringingAlarmData.distanceKm)) : undefined,
+                  platform: String(ringingAlarmData?.platform || '').trim(),
+                  action: 'SNOOZE_5M'
+                }).catch(() => {});
+              }
+            } catch (e) {}
+
             alarmAudioService.stopAlarm();
             setIsAlarmRinging(false);
             if (ringingAlarmData?.stationCode) {
@@ -3855,6 +3901,28 @@ export default function TrainDetails() {
             }
           }}
           onSnoozeArrivalBuffer={() => {
+            try {
+              const email = (
+                ringingAlarmData?.backupEmail ||
+                armedAlarms.find(a => a.stationCode === ringingAlarmData?.stationCode)?.backupEmail ||
+                localStorage.getItem('email') ||
+                ''
+              ).trim();
+              if (email && email.includes('@')) {
+                api.post('/api/v1/alarm/approaching', {
+                  email,
+                  trainNumber: String(trainNumber || train?.trainNumber || '').trim(),
+                  trainName: String(ringingAlarmData?.trainName || train?.trainName || liveStatus?.trainName || 'Express').trim(),
+                  stationCode: String(ringingAlarmData?.stationCode || '').trim().toUpperCase(),
+                  stationName: String(ringingAlarmData?.stationName || '').trim(),
+                  etaMinutes: 5,
+                  distanceKm: ringingAlarmData?.distanceKm ? Math.round(Number(ringingAlarmData.distanceKm)) : undefined,
+                  platform: String(ringingAlarmData?.platform || '').trim(),
+                  action: 'SNOOZE_ARRIVAL_5M'
+                }).catch(() => {});
+              }
+            } catch (e) {}
+
             alarmAudioService.stopAlarm();
             setIsAlarmRinging(false);
             if (ringingAlarmData?.stationCode) {
