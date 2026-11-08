@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Train, Building2, Map, ShieldAlert, Sparkles, History, Ticket, ArrowUpDown, GitFork, ArrowRight, X } from 'lucide-react';
+import { Search, Train, Building2, Map, ShieldAlert, Sparkles, History, Ticket, ArrowUpDown, GitFork, ArrowRight, X, BookOpen } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import api from '../services/api';
 import { searchHistoryService } from '../services/searchHistoryService';
@@ -266,9 +266,20 @@ export default function Home() {
       <header className="relative bg-gradient-to-br from-indigo-950/40 via-slate-950 to-slate-950 py-8 sm:py-16 md:py-20 px-3 sm:px-4 text-center rounded-2xl border border-indigo-900/10 overflow-hidden shadow-2xl">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/15 via-transparent to-transparent -z-10" />
         <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4">
-          <div className="inline-flex items-center space-x-1.5 bg-indigo-900/40 border border-indigo-750 px-3 py-1 rounded-full text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-1 sm:mb-2">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Real-time Tracking Enabled</span>
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-1 sm:mb-2">
+            <div className="inline-flex items-center space-x-1.5 bg-indigo-900/40 border border-indigo-750 px-3 py-1 rounded-full text-indigo-400 text-xs font-semibold uppercase tracking-wider">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Real-time Tracking Enabled</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('app:open-welcome-guide'))}
+              className="inline-flex items-center space-x-1.5 bg-gradient-to-r from-amber-500/20 to-indigo-500/20 hover:from-amber-500/30 hover:to-indigo-500/30 border border-amber-500/30 hover:border-amber-400/50 px-3 py-1 rounded-full text-amber-300 hover:text-amber-200 text-xs font-bold tracking-wide transition-all cursor-pointer shadow-sm active:scale-95"
+              title="Read App Overview, Capabilities & Edge Cases Guide"
+            >
+              <BookOpen className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
+              <span>Why RailTrack & App Guide</span>
+            </button>
           </div>
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-slate-100 tracking-tight leading-tight">
             {t('heroTitle')}

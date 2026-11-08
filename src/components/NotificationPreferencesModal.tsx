@@ -89,6 +89,27 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
   useEffect(() => {
     if (!isOpen) return;
 
+    // Intercept Android hardware back gesture to close modal and prevent app exit
+    const handleAndroidBack = (e: Event) => {
+      e.preventDefault();
+      if (isSoundManagerOpen) {
+        setIsSoundManagerOpen(false);
+      } else if (isLockScreenTesterOpen) {
+        setIsLockScreenTesterOpen(false);
+      } else {
+        onClose();
+      }
+    };
+
+    window.addEventListener('app:android-back', handleAndroidBack);
+    return () => {
+      window.removeEventListener('app:android-back', handleAndroidBack);
+    };
+  }, [isOpen, onClose, isSoundManagerOpen, isLockScreenTesterOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
     const storedEmail = localStorage.getItem('email') || localStorage.getItem('user_email') || '';
     const storedPhone = localStorage.getItem('whatsapp_phone') || '';
     if (storedEmail) setEmail(storedEmail);
@@ -211,7 +232,7 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div data-modal-open="true" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
       <div 
         className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={e => e.stopPropagation()}
@@ -233,6 +254,8 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
           </div>
           <button
             onClick={onClose}
+            data-modal-close="true"
+            aria-label="Close"
             className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />

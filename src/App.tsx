@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -23,8 +24,29 @@ import AndroidBackButtonHandler from './components/AndroidBackButtonHandler';
 import InAppNotificationToast from './components/InAppNotificationToast';
 import ActiveAlarmBanner from './components/ActiveAlarmBanner';
 import PermissionPromptBanner from './components/PermissionPromptBanner';
+import WelcomeGuideModal from './components/WelcomeGuideModal';
 
 export default function App() {
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+
+  useEffect(() => {
+    // If user has not marked the guide as read, pop it up automatically on launch
+    const hasRead = localStorage.getItem('railtrack_welcome_guide_read') === 'true';
+    if (!hasRead) {
+      setIsGuideOpen(true);
+    }
+
+    // Allow any button (e.g. on Home page or Navbar) to open the guide document anytime
+    const handleOpenGuide = () => {
+      setIsGuideOpen(true);
+    };
+
+    window.addEventListener('app:open-welcome-guide', handleOpenGuide);
+    return () => {
+      window.removeEventListener('app:open-welcome-guide', handleOpenGuide);
+    };
+  }, []);
+
   return (
     <LanguageProvider>
       <Router>
@@ -43,6 +65,8 @@ export default function App() {
               <Route path="/trains/:trainNumber" element={<TrainDetails />} />
               <Route path="/map" element={<MapTracker />} />
               <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
+              <Route path="/alerts" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
+              <Route path="/reminders" element={<PnrStatus />} />
               <Route path="/journey" element={<JourneyPlanner />} />
               <Route path="/trains-between" element={<TrainsBetweenStations />} />
               <Route path="/pnr" element={<PnrStatus />} />
@@ -57,6 +81,11 @@ export default function App() {
           <RailAiWidget />
           <InAppNotificationToast />
           <PermissionPromptBanner />
+          <WelcomeGuideModal
+            isOpen={isGuideOpen}
+            onClose={() => setIsGuideOpen(false)}
+            onMarkAsRead={() => setIsGuideOpen(false)}
+          />
         </div>
       </Router>
     </LanguageProvider>
