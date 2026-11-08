@@ -5,20 +5,14 @@ import {
   Sparkles, 
   Train, 
   Clock, 
-  Bell, 
-  MapPin, 
   Bot, 
   ShieldCheck, 
   Zap, 
   Compass, 
   FileText, 
-  Lock, 
   Radio, 
   ChevronDown, 
-  Utensils, 
-  HeartHandshake, 
   HelpCircle,
-  Eye,
   AlertTriangle
 } from 'lucide-react';
 import heroImg from '../assets/hero.png';
