@@ -36,6 +36,8 @@ export interface WakeUpAlarmConfig {
   customSoundName?: string;
   backupEmail?: string;
   expectedArrival?: string;
+  scheduledTime?: string;
+  distanceKm?: number;
   journeyDate?: string;
   armedAt: string;
 }
@@ -184,7 +186,7 @@ export default function StationWakeUpAlarmModal({
       stationCode: station.stationCode,
       stationName: station.stationName,
       platform: station.platform,
-      triggerMinutes: triggerMode === 'landmark_station' ? 10 : triggerMinutes,
+      triggerMinutes: triggerMode === 'landmark_station' ? 0 : triggerMinutes,
       triggerMode,
       anchorStationCode: triggerMode === 'landmark_station' ? effectiveAnchor.stationCode : undefined,
       anchorStationName: triggerMode === 'landmark_station' ? effectiveAnchor.stationName : undefined,

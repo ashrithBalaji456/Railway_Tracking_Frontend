@@ -605,37 +605,7 @@ export default function TrainDetails() {
       let shouldTrigger = false;
       let computedEta = alarmCfg.triggerMinutes;
 
-      // 1. Dynamic live ETA calculation (handles delay, slack time, and speed variations automatically)
-      let diffMinutes: number | null = null;
-      const expArr = liveStop?.expectedArrival || routeStop?.arrivalTime;
-      if (expArr) {
-        try {
-          const [h, m] = expArr.split(':').map(Number);
-          const now = new Date();
-          const targetTime = new Date(now);
-          targetTime.setHours(h, m, 0, 0);
-          if (targetTime.getTime() <= now.getTime()) {
-            targetTime.setDate(targetTime.getDate() + 1);
-          }
-          diffMinutes = Math.round((targetTime.getTime() - now.getTime()) / (1000 * 60));
-          if (diffMinutes > 0 && diffMinutes <= alarmCfg.triggerMinutes) {
-            shouldTrigger = true;
-            computedEta = diffMinutes;
-          }
-        } catch (e) {
-          // ignore
-        }
-      }
-
-      // 2. Physical arrival at target station
-      if (liveStop) {
-        const statusUpper = (liveStop.status || '').toUpperCase();
-        if (statusUpper === 'AT_STATION' || statusUpper === 'ARRIVED') {
-          shouldTrigger = true;
-        }
-      }
-
-      // 3. Station sequence & distance calculation
+      // Station sequence & distance calculation
       const currentBubbleStation = route?.stations?.find(
         (st: any) => st.stationCode?.toUpperCase() === bubbleStationCode
       );
@@ -646,26 +616,10 @@ export default function TrainDetails() {
       const targetDist = routeStop?.distance ?? liveStop?.distance;
       const distanceRemaining = (currentDist != null && targetDist != null) ? (targetDist - currentDist) : null;
 
-      // 4. Hybrid Rule: Whichever Comes First (Time Remaining <= triggerMinutes OR Distance Remaining <= safeDistanceThreshold)
-      const safeDistanceKm = getSafeDistanceThresholdKm(alarmCfg.triggerMinutes);
-      const isApproaching = currentBubbleSeq != null && targetSeq != null && targetSeq >= currentBubbleSeq;
-
-      const isTimeTriggered = diffMinutes != null && diffMinutes > 0 && diffMinutes <= alarmCfg.triggerMinutes;
-      const isDistanceTriggered = isApproaching && distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= safeDistanceKm;
-      const isEmergencyYardParachute = isApproaching && distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= 5;
-      const isSameStation = currentBubbleSeq != null && targetSeq != null && currentBubbleSeq >= targetSeq;
-
-      if (isTimeTriggered || isDistanceTriggered || isEmergencyYardParachute || isSameStation) {
-        shouldTrigger = true;
-        if (isDistanceTriggered && (diffMinutes == null || diffMinutes > alarmCfg.triggerMinutes)) {
-          // Set computedEta from distance assuming ~50 km/h average approach speed
-          computedEta = Math.min(alarmCfg.triggerMinutes, Math.max(1, Math.round(distanceRemaining! * 1.2)));
-        }
-      }
-
-      // 5. Physical Milestone Landmark Trigger (e.g., 2 stations prior or non-stopping passing station)
-      if (alarmCfg.triggerMode === 'landmark_station' && alarmCfg.anchorStationCode) {
-        const anchorCode = alarmCfg.anchorStationCode.toUpperCase();
+      if (alarmCfg.triggerMode === 'landmark_station') {
+        // Physical Milestone Landmark Mode (non-stopping passing station, exact station, or N stations prior)
+        // CRITICAL: Landmark alarms trigger strictly upon physical arrival/passing of the milestone, NEVER on advance time countdown!
+        const anchorCode = (alarmCfg.anchorStationCode || alarmCfg.stationCode).toUpperCase();
         const anchorLiveStop = liveStatus?.stations?.find((ls: any) => ls.stationCode?.toUpperCase() === anchorCode);
         const anchorRouteStop = route?.stations?.find((rs: any) => rs.stationCode?.toUpperCase() === anchorCode);
 
@@ -674,9 +628,61 @@ export default function TrainDetails() {
         const anchorSeq = (anchorRouteStop || anchorLiveStop)?.sequenceNumber;
         const isAnchorPassed = currentBubbleSeq != null && anchorSeq != null && currentBubbleSeq >= anchorSeq;
 
-        if (isCurrentAnchor || isAnchorArrived || isAnchorPassed) {
+        const anchorDist = (anchorRouteStop || anchorLiveStop)?.distance ?? alarmCfg.distanceKm;
+        const isAnchorDistPassed = anchorDist != null && currentDist != null && currentDist >= anchorDist;
+
+        if (isCurrentAnchor || isAnchorArrived || isAnchorPassed || isAnchorDistPassed) {
           shouldTrigger = true;
-          computedEta = 5; // Milestone station reached; arrival countdown imminent
+          computedEta = 0;
+        }
+      } else {
+        // Mode A: Dynamic Time/Distance ETA countdown (e.g. 15m, 30m before destination)
+        // 1. Dynamic live ETA calculation (handles delay, slack time, and speed variations automatically)
+        let diffMinutes: number | null = null;
+        const expArr = liveStop?.expectedArrival || routeStop?.arrivalTime;
+        if (expArr) {
+          try {
+            const [h, m] = expArr.split(':').map(Number);
+            const now = new Date();
+            const targetTime = new Date(now);
+            targetTime.setHours(h, m, 0, 0);
+            if (targetTime.getTime() <= now.getTime()) {
+              targetTime.setDate(targetTime.getDate() + 1);
+            }
+            diffMinutes = Math.round((targetTime.getTime() - now.getTime()) / (1000 * 60));
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        // 2. Physical arrival at target station
+        let isAtDestination = false;
+        if (liveStop) {
+          const statusUpper = (liveStop.status || '').toUpperCase();
+          if (statusUpper === 'AT_STATION' || statusUpper === 'ARRIVED') {
+            isAtDestination = true;
+          }
+        }
+
+        // 3. Hybrid Rule: Whichever Comes First (Time Remaining <= triggerMinutes OR Distance Remaining <= safeDistanceThreshold)
+        const safeDistanceKm = getSafeDistanceThresholdKm(alarmCfg.triggerMinutes);
+        const isApproaching = currentBubbleSeq != null && targetSeq != null && targetSeq >= currentBubbleSeq;
+
+        const isTimeTriggered = diffMinutes != null && diffMinutes > 0 && diffMinutes <= alarmCfg.triggerMinutes;
+        const isDistanceTriggered = isApproaching && distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= safeDistanceKm;
+        const isEmergencyYardParachute = isApproaching && distanceRemaining != null && distanceRemaining > 0 && distanceRemaining <= 5;
+        const isSameStation = currentBubbleSeq != null && targetSeq != null && currentBubbleSeq >= targetSeq;
+
+        if (isAtDestination || isSameStation || isTimeTriggered || isDistanceTriggered || isEmergencyYardParachute) {
+          shouldTrigger = true;
+          if (isDistanceTriggered && (diffMinutes == null || diffMinutes > alarmCfg.triggerMinutes)) {
+            // Set computedEta from distance assuming ~50 km/h average approach speed
+            computedEta = Math.min(alarmCfg.triggerMinutes, Math.max(1, Math.round(distanceRemaining! * 1.2)));
+          } else if (diffMinutes != null && diffMinutes > 0) {
+            computedEta = diffMinutes;
+          } else {
+            computedEta = 0;
+          }
         }
       }
 
