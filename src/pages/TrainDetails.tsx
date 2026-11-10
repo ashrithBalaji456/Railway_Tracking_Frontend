@@ -1720,14 +1720,15 @@ export default function TrainDetails() {
 
   type TimelineItem = TimelineHalt | TimelinePassThroughBlock;
 
-  // Monotonic Downstream Delay Propagation Map:
-  // Guarantees downstream stations never display an arrival time earlier than upstream halts.
-  // Fixes anomalies where upstream station (e.g. SKZR) is delayed to 2:01 AM, but downstream passing waypoint (VEM) shows 1:47 AM.
+  // Downstream Delay Propagation Map:
+  // Propagates the live delay of each station to downstream passing waypoints that lack explicit sensor telemetry.
+  // Tracks the most recent preceding station's live delay so waypoints accurately reflect local line speed
+  // without carrying obsolete historical delays from hundreds of kilometers ago.
   const effectiveDelaysMap = useMemo(() => {
     const map = new Map<string, number>();
     if (!route || !route.stations) return map;
 
-    let accumulatedDelay = Number(liveStatus?.delayMinutes) || 0;
+    let currentPrecedingDelay = Number(liveStatus?.delayMinutes) || 0;
 
     for (const st of route.stations) {
       const code = st.stationCode?.toUpperCase();
@@ -1736,10 +1737,10 @@ export default function TrainDetails() {
       if (liveStop?.delayMinutes !== undefined && liveStop?.delayMinutes !== null) {
         const d = Number(liveStop.delayMinutes);
         if (!isNaN(d)) {
-          accumulatedDelay = Math.max(accumulatedDelay, d);
+          currentPrecedingDelay = d;
         }
       }
-      map.set(code, accumulatedDelay);
+      map.set(code, currentPrecedingDelay);
     }
     return map;
   }, [route?.stations, liveStatus?.stations, liveStatus?.delayMinutes]);
