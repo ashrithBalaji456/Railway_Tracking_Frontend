@@ -290,8 +290,13 @@ public class AdaptiveTrackingService extends Service {
                         currentPollIntervalMs = POLL_INTERVAL_MS;
                     }
 
-                    // 1. Train physically arrived or passed target milestone distance!
-                    boolean isMilestoneDistanceReached = (targetDistanceKm > 0 && currentDist > 0 && currentDist >= targetDistanceKm);
+                    // High precision polling when nearing within 3.0 km radius of target milestone
+                    if (targetDistanceKm > 0 && currentDist > 0 && (targetDistanceKm - currentDist) <= 3.0 && (targetDistanceKm - currentDist) > 0) {
+                        currentPollIntervalMs = 3 * 60 * 1000L;
+                    }
+
+                    // 1. Train physically arrived or reached within 1.0 km of target milestone distance!
+                    boolean isMilestoneDistanceReached = (targetDistanceKm > 0 && currentDist > 0 && currentDist >= (targetDistanceKm - 1.0));
 
                     if (isAtStation || isMilestoneDistanceReached) {
                         if (!isOriginStation && !hasDepartedOrigin) {

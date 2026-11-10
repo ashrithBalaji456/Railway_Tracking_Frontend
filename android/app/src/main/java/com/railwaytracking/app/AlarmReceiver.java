@@ -74,18 +74,43 @@ public class AlarmReceiver extends BroadcastReceiver {
             body = "Your scheduled train departure alarm is ringing now! Tap to open or silence.";
         }
 
+        int triggerMinutes = intent != null ? intent.getIntExtra("triggerMinutes", 30) : 30;
+        String alarmId = intent != null ? intent.getStringExtra("alarmId") : null;
+        String trainNumber = intent != null ? intent.getStringExtra("trainNumber") : null;
+        String stationCode = intent != null ? intent.getStringExtra("stationCode") : null;
+
+        // Physical Distance Guard for At-Station Landmark Alarms (triggerMinutes == 0):
+        // First preference is ALWAYS physical distance. If clock timer fires but train is still > 1.0 km away,
+        // DO NOT ring the siren! Defer and trigger immediate sync to track live physical arrival!
+        if (triggerMinutes == 0 && stationCode != null) {
+            android.content.SharedPreferences prefs = context.getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE);
+            org.json.JSONObject alarmsMap = AdaptiveAlarmManager.getAlarmsMap(prefs);
+            String targetAlarmId = alarmId != null ? alarmId : AdaptiveAlarmManager.buildAlarmId(trainNumber, stationCode);
+            org.json.JSONObject targetAlarm = alarmsMap.optJSONObject(targetAlarmId);
+            if (targetAlarm != null) {
+                double targetDist = targetAlarm.optDouble("distanceKm", -1.0);
+                double lastKnownDist = prefs.getFloat("lastKnownDistanceKm", -1.0f);
+                if (targetDist > 0 && lastKnownDist > 0 && lastKnownDist < (targetDist - 1.0)) {
+                    Log.d(TAG, "Landmark Alarm Clock fired on time, but physical train is at " + lastKnownDist
+                            + " km (target " + targetDist + " km, > 1.0 km away). Suppressing premature ring and polling live tracking!");
+                    AdaptiveAlarmManager.getInstance().scheduleNextSync(context, trainNumber, stationCode, 0);
+                    return;
+                }
+            }
+        }
+
         // Delegate execution to un-killable Foreground Service
         Intent serviceIntent = new Intent(context, AlarmForegroundService.class);
         serviceIntent.putExtra("title", title);
         serviceIntent.putExtra("body", body);
         if (intent != null) {
-            serviceIntent.putExtra("trainNumber", intent.getStringExtra("trainNumber"));
+            serviceIntent.putExtra("trainNumber", trainNumber);
             serviceIntent.putExtra("trainName", intent.getStringExtra("trainName"));
-            serviceIntent.putExtra("stationCode", intent.getStringExtra("stationCode"));
+            serviceIntent.putExtra("stationCode", stationCode);
             serviceIntent.putExtra("stationName", intent.getStringExtra("stationName"));
             serviceIntent.putExtra("platform", intent.getStringExtra("platform"));
-            serviceIntent.putExtra("triggerMinutes", intent.getIntExtra("triggerMinutes", 30));
-            serviceIntent.putExtra("alarmId", intent.getStringExtra("alarmId"));
+            serviceIntent.putExtra("triggerMinutes", triggerMinutes);
+            serviceIntent.putExtra("alarmId", alarmId);
         }
 
         try {

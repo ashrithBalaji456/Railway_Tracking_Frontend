@@ -229,8 +229,15 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                     if (liveDist > currentDist) currentDist = liveDist;
                 }
 
-                // If train has physically arrived or passed target landmark milestone distance, wake user immediately!
-                boolean isMilestonePassed = (targetDist > 0 && currentDist > 0 && currentDist >= targetDist);
+                if (currentDist > 0) {
+                    context.getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE)
+                            .edit()
+                            .putFloat("lastKnownDistanceKm", (float) currentDist)
+                            .apply();
+                }
+
+                // If train has physically arrived, departed, or reached within 1.0 km of landmark milestone, wake user immediately!
+                boolean isMilestonePassed = (targetDist > 0 && currentDist > 0 && currentDist >= (targetDist - 1.0));
                 if (isAtStation || isMilestonePassed) {
                     Log.d(TAG, "Train " + trainNumber + " physically arrived/passed " + stationCode + " (currentDist=" + currentDist + "km, target=" + targetDist + "km)! Firing alarm immediately.");
                     triggerAlarmNow(context, stationName, trainNumber, stationCode, livePlatform, triggerMinutes);
@@ -401,8 +408,11 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                             + "m. Sleeping sync for " + (nextDelay / 60000) + "m until 30m before origin start.");
                 }
 
-                // If train has departed and is nearing safe distance boundary (threshold + 10 km), tighten sync to 1 min
-                if (hasDepartedOrigin && remainingKm > 0 && remainingKm <= (safeDistanceThreshold + 10.0)) {
+                // High-precision approach cadence:
+                // When train enters 3.0 km radius of the target milestone, poll every 2-3 minutes to catch exact arrival
+                if (hasDepartedOrigin && remainingKm > 0 && remainingKm <= 3.0) {
+                    nextDelay = Math.min(nextDelay, 3 * 60 * 1000L);
+                } else if (hasDepartedOrigin && remainingKm > 0 && remainingKm <= (safeDistanceThreshold + 10.0)) {
                     nextDelay = Math.min(nextDelay, 60 * 1000L);
                 }
 

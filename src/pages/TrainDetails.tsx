@@ -629,7 +629,7 @@ export default function TrainDetails() {
         const isAnchorPassed = currentBubbleSeq != null && anchorSeq != null && currentBubbleSeq >= anchorSeq;
 
         const anchorDist = (anchorRouteStop || anchorLiveStop)?.distance ?? alarmCfg.distanceKm;
-        const isAnchorDistPassed = anchorDist != null && currentDist != null && currentDist >= anchorDist;
+        const isAnchorDistPassed = anchorDist != null && currentDist != null && (currentDist >= (anchorDist - 1.0));
 
         if (isCurrentAnchor || isAnchorArrived || isAnchorPassed || isAnchorDistPassed) {
           shouldTrigger = true;
@@ -1698,6 +1698,30 @@ export default function TrainDetails() {
   }
 
   type TimelineItem = TimelineHalt | TimelinePassThroughBlock;
+
+  // Monotonic Downstream Delay Propagation Map:
+  // Guarantees downstream stations never display an arrival time earlier than upstream halts.
+  // Fixes anomalies where upstream station (e.g. SKZR) is delayed to 2:01 AM, but downstream passing waypoint (VEM) shows 1:47 AM.
+  const effectiveDelaysMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!route || !route.stations) return map;
+
+    let accumulatedDelay = Number(liveStatus?.delayMinutes) || 0;
+
+    for (const st of route.stations) {
+      const code = st.stationCode?.toUpperCase();
+      const liveStop = liveStatus?.stations?.find((ls: any) => ls.stationCode?.toUpperCase() === code);
+
+      if (liveStop?.delayMinutes !== undefined && liveStop?.delayMinutes !== null) {
+        const d = Number(liveStop.delayMinutes);
+        if (!isNaN(d)) {
+          accumulatedDelay = Math.max(accumulatedDelay, d);
+        }
+      }
+      map.set(code, accumulatedDelay);
+    }
+    return map;
+  }, [route?.stations, liveStatus?.stations, liveStatus?.delayMinutes]);
 
   const getTimelineItems = (): TimelineItem[] => {
     if (!route || !route.stations) return [];
@@ -3276,11 +3300,16 @@ export default function TrainDetails() {
                           ) : showLive && liveStop ? (
                             <div className="mt-0.5 leading-none">
                               {liveStop.isPredicted || liveStop.status?.toUpperCase() === 'UPCOMING' || liveStop.status?.toUpperCase() === 'SCHEDULED' ? (
-                                <div className={`text-[10px] sm:text-xs font-bold ${
-                                  (liveStop.delayMinutes && liveStop.delayMinutes > 0) ? 'text-amber-400' : 'text-emerald-400'
-                                }`}>
-                                  Exp: {format12Hour(liveStop.expectedArrival || (s.arrivalTime && liveStop.delayMinutes !== undefined && liveStop.delayMinutes !== null ? formatDelayedTime(s.arrivalTime, liveStop.delayMinutes) : s.arrivalTime))}
-                                </div>
+                                (() => {
+                                  const effectiveHaltDelay = effectiveDelaysMap.get(s.stationCode?.toUpperCase()) ?? (liveStop.delayMinutes ?? 0);
+                                  return (
+                                    <div className={`text-[10px] sm:text-xs font-bold ${
+                                      (effectiveHaltDelay > 0) ? 'text-amber-400' : 'text-emerald-400'
+                                    }`}>
+                                      Exp: {format12Hour(liveStop.expectedArrival || (s.arrivalTime && effectiveHaltDelay > 0 ? formatDelayedTime(s.arrivalTime, effectiveHaltDelay) : s.arrivalTime))}
+                                    </div>
+                                  );
+                                })()
                               ) : liveStop.actualArrival ? (
                                 <div className={`text-[10px] sm:text-xs font-bold ${
                                   (liveStop.delayMinutes && liveStop.delayMinutes > 0) ? 'text-amber-400' : 'text-emerald-400'
@@ -3602,10 +3631,11 @@ export default function TrainDetails() {
                               );
                               const isPassPredicted = Boolean(passLiveStop?.isPredicted || isPassUpcoming || (!isPassStopDeparted && !isPassAtStation));
 
-                              // Resolve effective delay from station or train general delay
-                              const passDelay = (passLiveStop?.delayMinutes !== undefined && passLiveStop?.delayMinutes !== null)
-                                ? passLiveStop.delayMinutes
-                                : (liveStatus?.delayMinutes ?? 0);
+                              // Resolve effective delay with monotonic downstream propagation
+                              const passDelay = effectiveDelaysMap.get(passStation.stationCode?.toUpperCase()) ??
+                                ((passLiveStop?.delayMinutes !== undefined && passLiveStop?.delayMinutes !== null)
+                                  ? passLiveStop.delayMinutes
+                                  : (liveStatus?.delayMinutes ?? 0));
 
                               return (
                                 <div key={passStation.sequenceNumber} className={`flex items-center py-1.5 relative rounded transition-colors ${
@@ -4138,8 +4168,9 @@ export default function TrainDetails() {
             const routeStop = route?.stations?.find((rs: any) => rs.stationCode?.toUpperCase() === targetCode);
             // Immutable static timetable schedule time (never tainted with live delay)
             const staticScheduleTime = routeStop?.arrivalTime || routeStop?.departureTime || selectedAlarmStation?.arrivalTime || selectedAlarmStation?.departureTime || targetStop?.arrivalTime || targetStop?.departureTime || '';
-            // Live dynamic expected arrival (fallback to static schedule)
-            const expArrival = targetStop?.expectedArrival || staticScheduleTime || '';
+            // Live dynamic expected arrival with downstream delay propagation
+            const effectiveDelay = effectiveDelaysMap.get(targetCode) ?? (liveStatus?.delayMinutes ?? 0);
+            const expArrival = targetStop?.expectedArrival || (staticScheduleTime && effectiveDelay > 0 ? formatDelayedTime(staticScheduleTime, effectiveDelay) : staticScheduleTime) || '';
             const platform = targetStop?.platform || routeStop?.platform || selectedAlarmStation?.platform || cfg.platform || '';
             const targetDist = routeStop?.distance !== undefined && routeStop?.distance !== null 
               ? Number(routeStop.distance) 
