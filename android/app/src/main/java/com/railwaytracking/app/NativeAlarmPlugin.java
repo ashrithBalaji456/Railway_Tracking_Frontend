@@ -139,6 +139,7 @@ public class NativeAlarmPlugin extends Plugin {
         String platform = call.getString("platform", "");
         String backupEmail = call.getString("backupEmail", "");
         Double distanceKm = call.getDouble("distanceKm", -1.0);
+        Double currentDistanceKm = call.getDouble("currentDistanceKm", -1.0);
         String scheduledTime = call.getString("scheduledTime", "");
 
         if (trainNumber == null || stationCode == null) {
@@ -147,6 +148,14 @@ public class NativeAlarmPlugin extends Plugin {
         }
 
         Context context = getContext();
+
+        // Immediately persist current live train distance so landmark alarms never trigger prematurely
+        if (currentDistanceKm != null && currentDistanceKm > 0) {
+            context.getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit()
+                    .putFloat("lastKnownDistanceKm", currentDistanceKm.floatValue())
+                    .apply();
+        }
 
         // Check exact alarm permission on Android 12+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -180,6 +189,21 @@ public class NativeAlarmPlugin extends Plugin {
         ret.put("trainNumber", trainNumber);
         ret.put("stationCode", stationCode);
         ret.put("triggerMinutes", triggerMinutes);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void updateCurrentDistance(PluginCall call) {
+        Double dist = call.getDouble("distanceKm", -1.0);
+        if (dist != null && dist > 0) {
+            getContext().getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit()
+                    .putFloat("lastKnownDistanceKm", dist.floatValue())
+                    .apply();
+        }
+        JSObject ret = new JSObject();
+        ret.put("updated", true);
+        ret.put("distanceKm", dist);
         call.resolve(ret);
     }
 

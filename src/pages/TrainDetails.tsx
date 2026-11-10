@@ -18,6 +18,7 @@ import { alarmAudioService, type AlarmToneType } from '../utils/alarmAudioServic
 import customAlarmSoundService from '../utils/customAlarmSoundService';
 import whatsappShareService from '../utils/whatsappShareService';
 import webNotificationService from '../utils/webNotificationService';
+import { updateNativeTrainDistance } from '../utils/nativeAlarmBridge';
 
 interface StationSelectorDropdownProps {
   label: string;
@@ -569,6 +570,20 @@ export default function TrainDetails() {
     return Math.round(triggerMins * 0.83); // ~50 km/h baseline
   };
 
+  // Persist live train distance to native SharedPreferences immediately upon arrival of live telemetry
+  useEffect(() => {
+    if (!liveStatus) return;
+    const currentDist = liveStatus.currentDistanceKm ?? (
+      bubbleStationCode ? (
+        route?.stations?.find((st: any) => st.stationCode?.toUpperCase() === bubbleStationCode)?.distance ??
+        liveStatus.stations?.find((st: any) => st.stationCode?.toUpperCase() === bubbleStationCode)?.distance
+      ) : null
+    );
+    if (currentDist != null && Number(currentDist) > 0) {
+      updateNativeTrainDistance(Number(currentDist));
+    }
+  }, [liveStatus, bubbleStationCode, route]);
+
   // Monitor train position against all armed wake-up alarms for this train
   useEffect(() => {
     if (!armedAlarms.length || isAlarmRinging || hasTriggeredAlarmRef.current) return;
@@ -609,11 +624,14 @@ export default function TrainDetails() {
       const currentBubbleStation = route?.stations?.find(
         (st: any) => st.stationCode?.toUpperCase() === bubbleStationCode
       );
-      const currentBubbleSeq = currentBubbleStation?.sequenceNumber;
+      const liveCurrentStation = liveStatus?.stations?.find(
+        (ls: any) => ls.stationCode?.toUpperCase() === bubbleStationCode
+      );
+      const currentBubbleSeq = currentBubbleStation?.sequenceNumber ?? liveCurrentStation?.sequenceNumber;
       const targetSeq = (routeStop || liveStop)?.sequenceNumber;
 
-      const currentDist = currentBubbleStation?.distance;
-      const targetDist = routeStop?.distance ?? liveStop?.distance;
+      const currentDist = liveStatus?.currentDistanceKm ?? currentBubbleStation?.distance ?? liveCurrentStation?.distance;
+      const targetDist = routeStop?.distance ?? liveStop?.distance ?? alarmCfg.distanceKm;
       const distanceRemaining = (currentDist != null && targetDist != null) ? (targetDist - currentDist) : null;
 
       if (alarmCfg.triggerMode === 'landmark_station') {
@@ -631,7 +649,10 @@ export default function TrainDetails() {
         const anchorDist = (anchorRouteStop || anchorLiveStop)?.distance ?? alarmCfg.distanceKm;
         const isAnchorDistPassed = anchorDist != null && currentDist != null && (currentDist >= (anchorDist - 1.0));
 
-        if (isCurrentAnchor || isAnchorArrived || isAnchorPassed || isAnchorDistPassed) {
+        // Physical Distance Preference: if landmark station is > 1.0 km away, NEVER ring prematurely
+        const isTooFar = anchorDist != null && currentDist != null && currentDist < (anchorDist - 1.0);
+
+        if (!isTooFar && (isCurrentAnchor || isAnchorArrived || isAnchorPassed || isAnchorDistPassed)) {
           shouldTrigger = true;
           computedEta = 0;
         }
@@ -4176,11 +4197,22 @@ export default function TrainDetails() {
               ? Number(routeStop.distance) 
               : (selectedAlarmStation?.distance !== undefined ? Number(selectedAlarmStation.distance) : undefined);
 
+            const currentTrainDist = liveStatus?.currentDistanceKm ?? (
+              bubbleStationCode ? (
+                route?.stations?.find((st: any) => st.stationCode?.toUpperCase() === bubbleStationCode)?.distance ??
+                liveStatus?.stations?.find((st: any) => st.stationCode?.toUpperCase() === bubbleStationCode)?.distance
+              ) : undefined
+            );
+            if (currentTrainDist != null && Number(currentTrainDist) > 0) {
+              updateNativeTrainDistance(Number(currentTrainDist));
+            }
+
             await multiAlarmManager.armAlarm({
               ...cfg,
               trainNumber: cfg.trainNumber || trainNumber || train?.trainNumber || '',
               platform: platform,
               distanceKm: targetDist,
+              currentDistanceKm: currentTrainDist != null ? Number(currentTrainDist) : undefined,
               scheduledTime: staticScheduleTime
             }, {
               expectedArrival: expArrival,
@@ -4188,6 +4220,7 @@ export default function TrainDetails() {
               trainName: train?.trainName,
               platform: platform,
               distanceKm: targetDist,
+              currentDistanceKm: currentTrainDist != null ? Number(currentTrainDist) : undefined,
               scheduledTime: staticScheduleTime
             });
           }}

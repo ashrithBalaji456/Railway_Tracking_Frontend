@@ -178,6 +178,7 @@ export const armAdaptiveNativeAlarm = async (options: {
   expectedArrival?: string;
   scheduledTime?: string;
   distanceKm?: number;
+  currentDistanceKm?: number;
   trainName?: string;
   journeyDate?: string;
   backendUrl?: string;
@@ -192,6 +193,17 @@ export const armAdaptiveNativeAlarm = async (options: {
       });
     } catch (e) {
       console.warn('Could not arm adaptive native alarm:', e);
+    }
+  }
+  return null;
+};
+
+export const updateNativeTrainDistance = async (distanceKm: number) => {
+  if (isNativeApp() && distanceKm != null && distanceKm > 0) {
+    try {
+      return await callNative('updateCurrentDistance', { distanceKm });
+    } catch (e) {
+      console.warn('Could not update native train distance:', e);
     }
   }
   return null;

@@ -252,6 +252,13 @@ public class AdaptiveTrackingService extends Service {
                         if (liveDist > currentDist) currentDist = liveDist;
                     }
 
+                    if (currentDist > 0) {
+                        getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE)
+                                .edit()
+                                .putFloat("lastKnownDistanceKm", (float) currentDist)
+                                .apply();
+                    }
+
                     // Origin Departure Guard & Smart Sleep Back-Off: Check if train has departed origin station
                     boolean isOriginStation = false;
                     boolean hasDepartedOrigin = true;

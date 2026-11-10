@@ -81,7 +81,7 @@ public class AlarmReceiver extends BroadcastReceiver {
 
         // Physical Distance Guard for At-Station Landmark Alarms (triggerMinutes == 0):
         // First preference is ALWAYS physical distance. If clock timer fires but train is still > 1.0 km away,
-        // DO NOT ring the siren! Defer and trigger immediate sync to track live physical arrival!
+        // or physical distance has not been confirmed yet, DO NOT ring the siren! Defer and trigger immediate sync to track live physical arrival!
         if (triggerMinutes == 0 && stationCode != null) {
             android.content.SharedPreferences prefs = context.getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE);
             org.json.JSONObject alarmsMap = AdaptiveAlarmManager.getAlarmsMap(prefs);
@@ -90,11 +90,18 @@ public class AlarmReceiver extends BroadcastReceiver {
             if (targetAlarm != null) {
                 double targetDist = targetAlarm.optDouble("distanceKm", -1.0);
                 double lastKnownDist = prefs.getFloat("lastKnownDistanceKm", -1.0f);
-                if (targetDist > 0 && lastKnownDist > 0 && lastKnownDist < (targetDist - 1.0)) {
-                    Log.d(TAG, "Landmark Alarm Clock fired on time, but physical train is at " + lastKnownDist
-                            + " km (target " + targetDist + " km, > 1.0 km away). Suppressing premature ring and polling live tracking!");
-                    AdaptiveAlarmManager.getInstance().scheduleNextSync(context, trainNumber, stationCode, 0);
-                    return;
+                if (targetDist > 0) {
+                    if (lastKnownDist > 0 && lastKnownDist < (targetDist - 1.0)) {
+                        Log.d(TAG, "Landmark Alarm Clock fired on time, but physical train is at " + lastKnownDist
+                                + " km (target " + targetDist + " km, > 1.0 km away). Suppressing premature ring and polling live tracking!");
+                        AdaptiveAlarmManager.getInstance().scheduleNextSync(context, trainNumber, stationCode, 0);
+                        return;
+                    } else if (lastKnownDist <= 0) {
+                        Log.d(TAG, "Landmark Alarm Clock fired on time, but physical train distance is unverified (target "
+                                + targetDist + " km). Suppressing premature ring and polling live tracking!");
+                        AdaptiveAlarmManager.getInstance().scheduleNextSync(context, trainNumber, stationCode, 0);
+                        return;
+                    }
                 }
             }
         }
