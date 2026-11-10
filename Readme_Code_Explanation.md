@@ -3720,3 +3720,113 @@ $$\begin{aligned}
 1. **20 km does NOT mean 20 minutes:** The train stops at intermediate junction Ravindrakhani (RVKH) at 6:59 PM before slowing down for Mancheral Platform 2 entry. The total scheduled running time across this 19.7 km stretch is **34 to 41 minutes**.
 2. **Preventing Premature Awakening:** If the alarm rang immediately when the train entered the 20 km zone (e.g. at 6:37 PM), the passenger would be jolted awake **41 minutes before arrival**, defeating the purpose of choosing a 30-minute rest buffer.
 3. **Parallel Hybrid Distance Guard:** While the hardware alarm clock is set to `6:48 PM`, the background telemetry monitor keeps the safe distance guard (\(\le 25\text{ km}\) for a 30m warning) active. If the train unexpectedly skips loop lines and accelerates, the distance trigger fires immediately as an override to guarantee the passenger never oversleeps.
+
+---
+
+### 21.11. Physical Station Milestone Alarms: 2-Stations-Before & Non-Stopping Waypoint Triggers (Zero Alarm Code Impact)
+
+#### The Passenger Challenge: Skepticism of Purely Dynamic Algorithmic ETAs
+While the Hybrid Adaptive Alarm (Time ETA + Distance) provides mathematical precision, some passengers experience psychological anxiety when relying solely on algorithmic time countdowns (e.g., *"Wake me 30 minutes before arrival"*). 
+
+In the Indian Railways operating ecosystem:
+* Passenger speeds fluctuate between block sections due to speed restrictions, caution orders, and track maintenance.
+* A passenger may fear: *"What if the train suddenly covers the last 20 km in 15 minutes while I am asleep, or what if GPS telemetry stutters?"*
+* For generations, Indian rail passengers have relied on **physical railway landmarks**: *"Wake me up when the train reaches the station before mine, or when we pass through the junction 2 stops earlier."*
+
+To satisfy both algorithmic and milestone-oriented travelers, RailTrack India supports **Physical Station Milestone Alarms**:
+1. **Relative Landmark Anchors (1 or 2 Stations Prior):** A passenger traveling to Mancheral (`MCI`) can set the wake-up alarm to fire the exact moment the train arrives at **Ravindrakhani (`RVKH`, 1 stop prior)** or **Belampalli (`BPA`, 2 stops prior)**.
+2. **Intermediate Non-Stopping Passing Stations:** Express and Superfast trains (such as Vande Bharat, Rajdhani, or SF Expresses) bypass several smaller stations at line speed (110–130 km/h). RailTrack India surfaces these intermediate passing tracks so passengers can anchor alarms to non-stopping physical railway waypoints.
+
+---
+
+#### Architectural Proof: Achieving Physical Landmark Alarms With ZERO Alarm Code Modifications
+
+The cardinal rule of high-reliability audio and alert systems is **Strict Separation of Concerns**:
+
+```
++-----------------------------------------------------------------------------------+
+|                            CONDITION EVALUATOR LAYER                              |
+|                               (TrainDetails.tsx)                                  |
+|                                                                                   |
+|  [Mode A: Dynamic ETA]                 [Mode B: Physical Station Landmark]        |
+|  diffMinutes <= triggerMinutes         currentStation == anchorStation            |
+|  OR remainingKm <= thresholdKm         OR liveStop.hasArrived == true             |
++------------------------------------------+----------------------------------------+
+                                           |
+                                           | Dispatches Standardized Trigger Event:
+                                           | { trainNumber, stationName, toneType }
+                                           v
++-----------------------------------------------------------------------------------+
+|                               ALARM ENGINE LAYER                                  |
+|         (alarmAudioService.ts, customAlarmSoundService.ts, RingingAlarmOverlay)    |
+|                                                                                   |
+|  * 100% UNTOUCHED & PRISTINE                                                      |
+|  * Synthesizes Web Audio API alternating siren (880 Hz <-> 960 Hz)                |
+|  * Triggers Android Doze-bypassing AlarmClock intent via Native Bridge            |
+|  * Displays Fullscreen Lock-Screen Overlay ("I AM AWAKE" & "Snooze 5m")           |
+|  * Fires Brevo Transactional Email Snapshot                                       |
++-----------------------------------------------------------------------------------+
+```
+
+#### How the Implementation Works Step-by-Step Without Touching Alarm Code:
+
+1. **Pure Consumer Execution Pipeline (`alarmAudioService.ts`):**
+   * The audio engine does not know—and does not need to know—*why* an alarm was fired.
+   * Its sole method signature is:
+     ```typescript
+     alarmAudioService.startContinuousAlarm({
+       toneType,
+       trainNumber,
+       trainName,
+       stationName,
+       stationCode,
+       platform,
+       etaMinutes
+     });
+     ```
+   * Because it is a pure execution actor, changing the condition under which `startContinuousAlarm()` is called leaves the audio synthesis, volume ramping, vibration cadences, and native alarm clock bridges **100% unaltered**.
+
+2. **Native Support via `multiAlarmManager`:**
+   * `multiAlarmManager` stores alarms keyed by `trainNumber + stationCode`:
+     ```typescript
+     export interface WakeUpAlarmConfig {
+       trainNumber: string;
+       stationCode: string;   // e.g. "BPA" (2 stops prior) or "MCI" (destination)
+       stationName: string;
+       triggerMode?: 'dynamic_eta' | 'station_arrival';
+       targetDestinationCode?: string; // e.g. "MCI"
+       triggerMinutes: number;
+       toneType: AlarmToneType | 'custom';
+       ...
+     }
+     ```
+   * When a passenger chooses *"Wake me 2 stations before Mancheral"*, the system mathematically locates Mancheral in the route array (`destIndex = 14`), calculates `anchorIndex = 14 - 2 = 12` (Belampalli), and arms Belampalli (`BPA`) inside `multiAlarmManager`.
+
+3. **Physical Station Arrival Detection in Telemetry Loop:**
+   * During the 5s–15s telemetry heartbeat in `TrainDetails.tsx`, the application checks:
+     ```typescript
+     // Check for Physical Station Landmark Trigger
+     if (alarmCfg.triggerMode === 'station_arrival') {
+       const isAnchorReached = 
+         liveStatus.currentStation?.stationCode === alarmCfg.stationCode ||
+         liveStop?.hasArrived === true ||
+         (routeStop?.distance !== undefined && liveStatus.currentDistanceKm >= routeStop.distance);
+
+       if (isAnchorReached && !hasTriggeredAlarmRef.current) {
+         hasTriggeredAlarmRef.current = true;
+         // Invoke existing, untouched alarm pipeline
+         alarmAudioService.startContinuousAlarm(alarmPayload);
+         setIsAlarmRinging(true);
+       }
+     }
+     ```
+
+4. **Non-Stopping Passing Station Handling:**
+   * In Indian Railways timetables, non-stopping stations are recorded with `haltMinutes: 0` or passing times.
+   * The timetable viewer surfaces these waypoints with a subtle `Pass-through Track` indicator. 
+   * When selected as an alarm milestone, the condition checks when the train passes the kilometer marker of that passing station, ensuring that passengers on non-stop high-speed trains have granular control over their wake-up points.
+
+#### Key Architectural Advantages:
+* **Zero Audio Regression:** No chance of breaking existing lock-screen sirens, custom ringtones, or volume controls.
+* **Dual Choice for Users:** Passengers can choose between **Time-based peace of mind** or **Physical landmark certainty**.
+* **Offline Resilience:** If cellular connectivity drops before the destination, the physical landmark alarm that triggered at the prior station has already ensured the passenger is safely awake.

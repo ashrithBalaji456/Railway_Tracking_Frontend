@@ -261,6 +261,13 @@ export default function WelcomeGuideModal({ isOpen, onClose, onMarkAsRead }: Wel
                   Commercial train apps bombard you with full-screen rummy ads, instant loan banners, and insurance popups. RailTrack India is <strong>100% clean, ad-free, and respects your privacy</strong>.
                 </p>
               </div>
+
+              <div className="p-3 bg-emerald-950/20 border border-emerald-500/20 rounded-xl">
+                <strong className="text-emerald-300">Problem 4: Skepticism of Purely Algorithmic Countdown Timers</strong>
+                <p className="text-slate-300 mt-1">
+                  Some passengers distrust time-based countdowns (&quot;wake me 30 mins before&quot;) because train speeds fluctuate unpredictably. <strong>RailTrack India introduces Physical Station Milestone Alarms:</strong> anchor your wake-up alarm to a concrete physical station — such as <strong>2 stations before</strong> your destination, or even an intermediate <strong>non-stopping passing junction</strong>. When the train physically arrives at that landmark station, the alarm siren sounds with zero guesswork!
+                </p>
+              </div>
             </div>
           </section>
 
@@ -278,7 +285,7 @@ export default function WelcomeGuideModal({ isOpen, onClose, onMarkAsRead }: Wel
                 <strong className="text-white">Explore Live Station Boards:</strong> Visit the Station Explorer, type any station code (e.g. <code>MCI</code>, <code>NDLS</code>, <code>BPA</code>), pick a time window (2, 4, or 8 hours), and click <em>"Email Board"</em> to send an offline table to your inbox.
               </li>
               <li>
-                <strong className="text-white">Set Night Wake-Up Alarms:</strong> On the train details screen, tap <em>"Alarm Cockpit"</em>, choose your destination station, select an advance warning buffer (15m to 120m), and arm the alarm. Control the alarm on your lock screen with <strong>"I AM AWAKE"</strong> or <strong>"Snooze 5m"</strong>.
+                <strong className="text-white">Set Night Wake-Up & Intermediate Landmark Alarms:</strong> On the train details screen, tap <em>&quot;Alarm Cockpit&quot;</em> or the <em>&quot;Set Alarm&quot;</em> bell beside any station. You have dual flexibility: choose a dynamic ETA buffer (15m to 120m) OR set a <strong>Physical Milestone Alarm</strong> (e.g. exactly 1 or 2 stations before your destination, or an intermediate non-stopping passing station). Control the ringing siren directly on your lock screen with <strong>&quot;I AM AWAKE&quot;</strong> or <strong>&quot;Snooze 5m&quot;</strong>.
               </li>
               <li>
                 <strong className="text-white">Chat with RailAI:</strong> Click the floating RailAI bubble in the bottom corner to ask questions like <em>"What is the 3AC fare on 12952 from Delhi to Mumbai?"</em> or <em>"Is 12758 running on time?"</em>.
@@ -348,6 +355,13 @@ export default function WelcomeGuideModal({ isOpen, onClose, onMarkAsRead }: Wel
                     <td className="p-3 text-red-400">❌ Basic Push</td>
                   </tr>
                   <tr>
+                    <td className="p-3 font-semibold text-white">Physical Landmark Alarm (2 Stops Prior / Passing Tracks)</td>
+                    <td className="p-3 text-emerald-400 font-bold">✅ Yes (Anchor to 1-2 stations prior or non-stopping junctions)</td>
+                    <td className="p-3 text-red-400">❌ None</td>
+                    <td className="p-3 text-amber-400">⚠️ Destination only</td>
+                    <td className="p-3 text-red-400">❌ None</td>
+                  </tr>
+                  <tr>
                     <td className="p-3 font-semibold text-white">Transactional Email Delivery</td>
                     <td className="p-3 text-emerald-400 font-bold">✅ Brevo v3 (Snapshots & 6 AM memos)</td>
                     <td className="p-3 text-red-400">❌ None</td>
@@ -394,6 +408,10 @@ export default function WelcomeGuideModal({ isOpen, onClose, onMarkAsRead }: Wel
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-emerald-400 font-bold">✓</span>
+                <span><strong>Physical Landmark Station Verification:</strong> If you set an alarm for 2 stations before your stop, the engine tracks the train&apos;s physical progress station-by-station. Even if cellular telemetry fluctuates, reaching that physical milestone triggers the siren without relying on time estimates.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-emerald-400 font-bold">✓</span>
                 <span><strong>Signal Halts Outside Junction:</strong> Prevents premature awakening while the train is halted at an outer signal.</span>
               </li>
               <li className="flex items-start gap-2">
@@ -425,6 +443,10 @@ export default function WelcomeGuideModal({ isOpen, onClose, onMarkAsRead }: Wel
               <div className="p-3 bg-indigo-950/20 border border-indigo-500/20 rounded-xl">
                 <strong className="text-indigo-300">Pantry Car Cleanliness Audits:</strong>
                 <p className="text-slate-300 mt-1">Passenger-verified food safety ratings and official IRCTC standard meal price monitors.</p>
+              </div>
+              <div className="p-3 bg-amber-950/20 border border-amber-500/20 rounded-xl sm:col-span-2">
+                <strong className="text-amber-300">High-Speed Passing Waypoint Radar:</strong>
+                <p className="text-slate-300 mt-1">Surfaces intermediate non-stopping crossing cabins and bypass loops so passengers can set micro-milestone alarms even between long non-stop express segments.</p>
               </div>
             </div>
           </section>
