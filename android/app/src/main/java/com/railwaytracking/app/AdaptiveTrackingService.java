@@ -221,7 +221,18 @@ public class AdaptiveTrackingService extends Service {
 
                             if (code.equalsIgnoreCase(stationCode)) {
                                 stationFound = true;
-                                liveArrival = st.optString("expectedArrival", st.optString("arrivalTime", ""));
+                                String rawExp = st.optString("expectedArrival", "");
+                                if (rawExp != null && !rawExp.isEmpty() && !rawExp.equalsIgnoreCase("null")) {
+                                    liveArrival = rawExp;
+                                } else {
+                                    liveArrival = "";
+                                }
+                                String rawSched = st.optString("arrivalTime", st.optString("departureTime", ""));
+                                if (rawSched != null && !rawSched.isEmpty() && !rawSched.equalsIgnoreCase("null")) {
+                                    if (scheduledTime.isEmpty() || scheduledTime.equalsIgnoreCase("null")) {
+                                        scheduledTime = rawSched;
+                                    }
+                                }
                                 if (status.equals("AT_STATION") || status.equals("ARRIVED")) {
                                     isAtStation = true;
                                 }
@@ -293,12 +304,15 @@ public class AdaptiveTrackingService extends Service {
                     }
 
                     long newTargetMillis = 0L;
+                    long expectedArrivalMillis = 0L;
                     if (stationFound && liveArrival != null && !liveArrival.trim().isEmpty() && !liveArrival.equalsIgnoreCase("null")) {
-                        newTargetMillis = AdaptiveAlarmManager.calculateTriggerMillis(liveArrival, triggerMinutes);
+                        expectedArrivalMillis = AdaptiveAlarmManager.calculateTriggerMillis(liveArrival, 0);
+                        newTargetMillis = expectedArrivalMillis - (triggerMinutes * 60 * 1000L);
                     } else if (!scheduledTime.isEmpty() && !scheduledTime.equalsIgnoreCase("null")) {
-                        long schedBase = AdaptiveAlarmManager.calculateTriggerMillis(scheduledTime, triggerMinutes);
+                        long schedBase = AdaptiveAlarmManager.calculateTriggerMillis(scheduledTime, 0);
                         if (schedBase > 0) {
-                            newTargetMillis = schedBase + (currentDelay * 60 * 1000L);
+                            expectedArrivalMillis = schedBase + (currentDelay * 60 * 1000L);
+                            newTargetMillis = expectedArrivalMillis - (triggerMinutes * 60 * 1000L);
                         }
                     }
 

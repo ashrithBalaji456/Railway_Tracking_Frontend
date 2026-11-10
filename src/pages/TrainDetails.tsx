@@ -4136,8 +4136,10 @@ export default function TrainDetails() {
             const targetCode = cfg.stationCode.toUpperCase();
             const targetStop = liveStatus?.stations?.find((ls: any) => ls.stationCode?.toUpperCase() === targetCode);
             const routeStop = route?.stations?.find((rs: any) => rs.stationCode?.toUpperCase() === targetCode);
-            const rawDeparture = targetStop?.departureTime || routeStop?.departureTime || selectedAlarmStation?.departureTime || '';
-            const expArrival = targetStop?.expectedArrival || targetStop?.arrivalTime || rawDeparture || routeStop?.arrivalTime || selectedAlarmStation?.expectedArrival || '';
+            // Immutable static timetable schedule time (never tainted with live delay)
+            const staticScheduleTime = routeStop?.arrivalTime || routeStop?.departureTime || selectedAlarmStation?.arrivalTime || selectedAlarmStation?.departureTime || targetStop?.arrivalTime || targetStop?.departureTime || '';
+            // Live dynamic expected arrival (fallback to static schedule)
+            const expArrival = targetStop?.expectedArrival || staticScheduleTime || '';
             const platform = targetStop?.platform || routeStop?.platform || selectedAlarmStation?.platform || cfg.platform || '';
             const targetDist = routeStop?.distance !== undefined && routeStop?.distance !== null 
               ? Number(routeStop.distance) 
@@ -4148,14 +4150,14 @@ export default function TrainDetails() {
               trainNumber: cfg.trainNumber || trainNumber || train?.trainNumber || '',
               platform: platform,
               distanceKm: targetDist,
-              scheduledTime: rawDeparture || expArrival
+              scheduledTime: staticScheduleTime
             }, {
               expectedArrival: expArrival,
               journeyDate: effectiveJourneyDate,
               trainName: train?.trainName,
               platform: platform,
               distanceKm: targetDist,
-              scheduledTime: rawDeparture || expArrival
+              scheduledTime: staticScheduleTime
             });
           }}
           onDisarmAlarm={async () => {

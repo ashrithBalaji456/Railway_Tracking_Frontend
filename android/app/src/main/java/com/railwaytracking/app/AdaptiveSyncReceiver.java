@@ -16,6 +16,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -112,6 +115,7 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
         final PowerManager.WakeLock asyncScreenLock = screenLock;
 
         executor.execute(() -> {
+            String effectiveScheduledTime = scheduledTime;
             try {
                 StringBuilder urlBuilder = new StringBuilder(backendUrl)
                         .append("/api/v1/trains/")
@@ -190,7 +194,18 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                         if (code.equalsIgnoreCase(stationCode)) {
                             stationFound = true;
                             targetSeq = seq;
-                            liveArrival = st.optString("expectedArrival", st.optString("arrivalTime", ""));
+                            String rawExp = st.optString("expectedArrival", "");
+                            if (rawExp != null && !rawExp.isEmpty() && !rawExp.equalsIgnoreCase("null")) {
+                                liveArrival = rawExp;
+                            } else {
+                                liveArrival = "";
+                            }
+                            String rawSched = st.optString("arrivalTime", st.optString("departureTime", ""));
+                            if (rawSched != null && !rawSched.isEmpty() && !rawSched.equalsIgnoreCase("null")) {
+                                if (effectiveScheduledTime.isEmpty() || effectiveScheduledTime.equalsIgnoreCase("null")) {
+                                    effectiveScheduledTime = rawSched;
+                                }
+                            }
                             if (status.equals("AT_STATION") || status.equals("ARRIVED")) {
                                 isAtStation = true;
                             }
@@ -283,13 +298,16 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
 
                 long effectiveTargetMillis = currentTargetMillis;
                 long newTargetMillis = 0L;
+                long expectedArrivalMillis = 0L;
 
                 if (!fixedSnoozeActive && stationFound && liveArrival != null && !liveArrival.trim().isEmpty() && !liveArrival.equalsIgnoreCase("null")) {
-                    newTargetMillis = AdaptiveAlarmManager.calculateTriggerMillis(liveArrival, triggerMinutes);
-                } else if (!fixedSnoozeActive && !scheduledTime.isEmpty() && !scheduledTime.equalsIgnoreCase("null")) {
-                    long schedBase = AdaptiveAlarmManager.calculateTriggerMillis(scheduledTime, triggerMinutes);
+                    expectedArrivalMillis = AdaptiveAlarmManager.calculateTriggerMillis(liveArrival, 0);
+                    newTargetMillis = expectedArrivalMillis - (triggerMinutes * 60 * 1000L);
+                } else if (!fixedSnoozeActive && !effectiveScheduledTime.isEmpty() && !effectiveScheduledTime.equalsIgnoreCase("null")) {
+                    long schedBase = AdaptiveAlarmManager.calculateTriggerMillis(effectiveScheduledTime, 0);
                     if (schedBase > 0) {
-                        newTargetMillis = schedBase + (currentDelay * 60 * 1000L);
+                        expectedArrivalMillis = schedBase + (currentDelay * 60 * 1000L);
+                        newTargetMillis = expectedArrivalMillis - (triggerMinutes * 60 * 1000L);
                     }
                 }
 
@@ -390,8 +408,17 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
 
                 long nextSyncMillis = System.currentTimeMillis() + nextDelay;
 
-                String arrivalDisplay = (liveArrival != null && !liveArrival.isEmpty() && !liveArrival.equalsIgnoreCase("null"))
-                        ? liveArrival : (defaultExpectedArrival != null && !defaultExpectedArrival.isEmpty() && !defaultExpectedArrival.equalsIgnoreCase("null") ? defaultExpectedArrival : scheduledTime);
+                String arrivalDisplay = "";
+                if (expectedArrivalMillis > 0) {
+                    SimpleDateFormat arrivalFmt = new SimpleDateFormat("hh:mm a", Locale.getDefault());
+                    arrivalDisplay = arrivalFmt.format(new Date(expectedArrivalMillis));
+                } else if (liveArrival != null && !liveArrival.isEmpty() && !liveArrival.equalsIgnoreCase("null")) {
+                    arrivalDisplay = liveArrival;
+                } else if (!effectiveScheduledTime.isEmpty() && !effectiveScheduledTime.equalsIgnoreCase("null")) {
+                    arrivalDisplay = effectiveScheduledTime;
+                } else if (defaultExpectedArrival != null && !defaultExpectedArrival.isEmpty() && !defaultExpectedArrival.equalsIgnoreCase("null")) {
+                    arrivalDisplay = defaultExpectedArrival;
+                }
 
                 // Post visible status notification so user sees proof of live check + delay in hrs/mins
                 AdaptiveAlarmManager.getInstance().postTelemetryStatusNotification(
