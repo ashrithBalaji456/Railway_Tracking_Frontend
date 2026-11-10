@@ -88,9 +88,16 @@ public class AdaptiveAlarmManager {
             String journeyDate,
             String backendUrl,
             String platform,
-            String backupEmail
+            String backupEmail,
+            double distanceKm,
+            String scheduledTime
     ) {
-        long targetTriggerMillis = calculateTriggerMillis(expectedArrival, triggerMinutes);
+        String effectiveTime = (expectedArrival != null && !expectedArrival.trim().isEmpty() && !expectedArrival.equalsIgnoreCase("null"))
+                ? expectedArrival : scheduledTime;
+        long targetTriggerMillis = calculateTriggerMillis(effectiveTime, triggerMinutes);
+        if (targetTriggerMillis <= 0) {
+            targetTriggerMillis = System.currentTimeMillis() + (triggerMinutes * 60 * 1000L);
+        }
         String alarmId = buildAlarmId(trainNumber, stationCode);
 
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
@@ -106,7 +113,9 @@ public class AdaptiveAlarmManager {
             String cleanPlatform = (platform != null && !platform.equalsIgnoreCase("null") && !platform.equalsIgnoreCase("undefined")) ? platform : "";
             alarmObj.put("platform", cleanPlatform);
             alarmObj.put("triggerMinutes", triggerMinutes);
-            alarmObj.put("expectedArrival", expectedArrival != null ? expectedArrival : "");
+            alarmObj.put("expectedArrival", effectiveTime != null ? effectiveTime : "");
+            alarmObj.put("scheduledTime", scheduledTime != null ? scheduledTime : "");
+            alarmObj.put("distanceKm", distanceKm);
             alarmObj.put("journeyDate", journeyDate != null ? journeyDate : "");
             alarmObj.put("backendUrl", backendUrl != null ? backendUrl : "https://railway-tracking-backend-gwa2.onrender.com");
             alarmObj.put("backupEmail", backupEmail != null ? backupEmail : "");
@@ -125,7 +134,9 @@ public class AdaptiveAlarmManager {
                     .putString("stationName", stationName)
                     .putString("platform", cleanPlatform)
                     .putInt("triggerMinutes", triggerMinutes)
-                    .putString("expectedArrival", expectedArrival != null ? expectedArrival : "")
+                    .putString("expectedArrival", effectiveTime != null ? effectiveTime : "")
+                    .putString("scheduledTime", scheduledTime != null ? scheduledTime : "")
+                    .putFloat("distanceKm", (float) distanceKm)
                     .putString("journeyDate", journeyDate != null ? journeyDate : "")
                     .putString("backendUrl", backendUrl != null ? backendUrl : "https://railway-tracking-backend-gwa2.onrender.com")
                     .putLong("targetTriggerMillis", targetTriggerMillis)
@@ -167,6 +178,22 @@ public class AdaptiveAlarmManager {
         } catch (Exception e) {
             Log.e(TAG, "Failed storing alarm for ID [" + alarmId + "]", e);
         }
+    }
+
+    public synchronized void armAlarm(
+            Context context,
+            String trainNumber,
+            String trainName,
+            String stationCode,
+            String stationName,
+            int triggerMinutes,
+            String expectedArrival,
+            String journeyDate,
+            String backendUrl,
+            String platform,
+            String backupEmail
+    ) {
+        armAlarm(context, trainNumber, trainName, stationCode, stationName, triggerMinutes, expectedArrival, journeyDate, backendUrl, platform, backupEmail, -1.0, "");
     }
 
     public void scheduleAlarmClock(
@@ -626,8 +653,8 @@ public class AdaptiveAlarmManager {
     }
 
     public static long calculateTriggerMillis(String timeStr, int triggerMinutes) {
-        if (timeStr == null || timeStr.trim().isEmpty()) {
-            return System.currentTimeMillis() + (triggerMinutes * 60 * 1000L);
+        if (timeStr == null || timeStr.trim().isEmpty() || timeStr.equalsIgnoreCase("null")) {
+            return 0L;
         }
 
         try {

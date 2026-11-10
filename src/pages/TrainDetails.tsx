@@ -3738,7 +3738,8 @@ export default function TrainDetails() {
                                             setSelectedAlarmStation({
                                               stationCode: passStation.stationCode,
                                               stationName: passStation.stationName,
-                                              expectedArrival: passLiveStop?.expectedArrival || passStation.arrivalTime,
+                                              expectedArrival: passLiveStop?.expectedArrival || passLiveStop?.expectedDeparture || passStation.arrivalTime || passStation.departureTime,
+                                              departureTime: passStation.departureTime,
                                               distance: passStation.distance,
                                               platform: passLiveStop?.platform || passStation.platform,
                                               isNonStopping: true
@@ -4129,18 +4130,26 @@ export default function TrainDetails() {
             const targetCode = cfg.stationCode.toUpperCase();
             const targetStop = liveStatus?.stations?.find((ls: any) => ls.stationCode?.toUpperCase() === targetCode);
             const routeStop = route?.stations?.find((rs: any) => rs.stationCode?.toUpperCase() === targetCode);
-            const expArrival = targetStop?.expectedArrival || targetStop?.arrivalTime || routeStop?.arrivalTime || '';
+            const rawDeparture = targetStop?.departureTime || routeStop?.departureTime || selectedAlarmStation?.departureTime || '';
+            const expArrival = targetStop?.expectedArrival || targetStop?.arrivalTime || rawDeparture || routeStop?.arrivalTime || selectedAlarmStation?.expectedArrival || '';
             const platform = targetStop?.platform || routeStop?.platform || selectedAlarmStation?.platform || cfg.platform || '';
+            const targetDist = routeStop?.distance !== undefined && routeStop?.distance !== null 
+              ? Number(routeStop.distance) 
+              : (selectedAlarmStation?.distance !== undefined ? Number(selectedAlarmStation.distance) : undefined);
 
             await multiAlarmManager.armAlarm({
               ...cfg,
               trainNumber: cfg.trainNumber || trainNumber || train?.trainNumber || '',
-              platform: platform
+              platform: platform,
+              distanceKm: targetDist,
+              scheduledTime: rawDeparture || expArrival
             }, {
               expectedArrival: expArrival,
               journeyDate: effectiveJourneyDate,
               trainName: train?.trainName,
-              platform: platform
+              platform: platform,
+              distanceKm: targetDist,
+              scheduledTime: rawDeparture || expArrival
             });
           }}
           onDisarmAlarm={async () => {

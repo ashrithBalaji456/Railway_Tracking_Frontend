@@ -200,23 +200,45 @@ public class AdaptiveTrackingService extends Service {
                     String liveArrival = null;
                     boolean isAtStation = false;
                     String livePlatform = platform;
+                    double targetDistanceKm = alarm.optDouble("distanceKm", -1.0);
+                    String scheduledTime = alarm.optString("scheduledTime", "");
+                    double currentDist = -1.0;
+                    String currentStationCodeFromData = data.optString("currentStationCode", "");
 
                     if (stations != null) {
                         for (int i = 0; i < stations.length(); i++) {
                             JSONObject st = stations.getJSONObject(i);
-                            if (st.optString("stationCode", "").equalsIgnoreCase(stationCode)) {
+                            String code = st.optString("stationCode", "");
+                            String status = st.optString("status", "").toUpperCase();
+
+                            boolean passed = status.equals("PASSED") || status.equals("DEPARTED") || status.equals("AT_STATION") || status.equals("ARRIVED") || code.equalsIgnoreCase(currentStationCodeFromData);
+                            if (passed) {
+                                if (st.has("distance") && !st.isNull("distance")) {
+                                    double d = st.optDouble("distance", -1.0);
+                                    if (d > currentDist) currentDist = d;
+                                }
+                            }
+
+                            if (code.equalsIgnoreCase(stationCode)) {
                                 stationFound = true;
                                 liveArrival = st.optString("expectedArrival", st.optString("arrivalTime", ""));
-                                String status = st.optString("status", "").toUpperCase();
                                 if (status.equals("AT_STATION") || status.equals("ARRIVED")) {
                                     isAtStation = true;
                                 }
                                 if (st.has("platform") && !st.optString("platform").isEmpty()) {
                                     livePlatform = st.optString("platform");
                                 }
+                                if (st.has("distance") && !st.isNull("distance")) {
+                                    targetDistanceKm = st.optDouble("distance", targetDistanceKm);
+                                }
                                 break;
                             }
                         }
+                    }
+
+                    if (data.has("currentDistanceKm") && !data.isNull("currentDistanceKm")) {
+                        double liveDist = data.optDouble("currentDistanceKm", -1.0);
+                        if (liveDist > currentDist) currentDist = liveDist;
                     }
 
                     // Origin Departure Guard & Smart Sleep Back-Off: Check if train has departed origin station
@@ -257,21 +279,31 @@ public class AdaptiveTrackingService extends Service {
                         currentPollIntervalMs = POLL_INTERVAL_MS;
                     }
 
-                    // 1. Train physically arrived or at station: Trigger alarm immediately!
-                    if (isAtStation) {
+                    // 1. Train physically arrived or passed target milestone distance!
+                    boolean isMilestoneDistanceReached = (targetDistanceKm > 0 && currentDist > 0 && currentDist >= targetDistanceKm);
+
+                    if (isAtStation || isMilestoneDistanceReached) {
                         if (!isOriginStation && !hasDepartedOrigin) {
                             Log.d(TAG, "Train " + trainNumber + " has not yet departed origin station! Delaying downline alarm.");
                             continue;
                         }
-                        Log.d(TAG, "Train " + trainNumber + " arrived at " + stationCode + "! Firing wake-up alarm immediately.");
+                        Log.d(TAG, "Train " + trainNumber + " reached landmark milestone " + stationCode + " (currentDist=" + currentDist + "km, target=" + targetDistanceKm + "km)! Firing alarm immediately.");
                         triggerAlarmNow(stationName, trainNumber, stationCode, livePlatform, triggerMinutes);
                         return;
                     }
 
-                    if (stationFound && liveArrival != null && !liveArrival.trim().isEmpty()) {
-                        long newTargetMillis = AdaptiveAlarmManager.calculateTriggerMillis(liveArrival, triggerMinutes);
-                        long shiftDelta = Math.abs(newTargetMillis - currentTargetMillis);
+                    long newTargetMillis = 0L;
+                    if (stationFound && liveArrival != null && !liveArrival.trim().isEmpty() && !liveArrival.equalsIgnoreCase("null")) {
+                        newTargetMillis = AdaptiveAlarmManager.calculateTriggerMillis(liveArrival, triggerMinutes);
+                    } else if (!scheduledTime.isEmpty() && !scheduledTime.equalsIgnoreCase("null")) {
+                        long schedBase = AdaptiveAlarmManager.calculateTriggerMillis(scheduledTime, triggerMinutes);
+                        if (schedBase > 0) {
+                            newTargetMillis = schedBase + (currentDelay * 60 * 1000L);
+                        }
+                    }
 
+                    if (newTargetMillis > 0) {
+                        long shiftDelta = Math.abs(newTargetMillis - currentTargetMillis);
                         long remainingToNewTarget = newTargetMillis - System.currentTimeMillis();
 
                         // 2. Train running early: Target time reached or passed! Fire alarm now!
@@ -280,7 +312,7 @@ public class AdaptiveTrackingService extends Service {
                                 Log.d(TAG, "Train " + trainNumber + " has not yet departed origin station! Delaying downline alarm.");
                                 continue;
                             }
-                            Log.d(TAG, "Train running early! Target reached (" + remainingToNewTarget + "ms). Firing alarm now!");
+                            Log.d(TAG, "Train running early or target reached! Firing alarm now!");
                             triggerAlarmNow(stationName, trainNumber, stationCode, livePlatform, triggerMinutes);
                             return;
                         }
@@ -291,7 +323,9 @@ public class AdaptiveTrackingService extends Service {
                                     + currentTargetMillis + " to " + newTargetMillis);
 
                             alarm.put("targetTriggerMillis", newTargetMillis);
-                            alarm.put("expectedArrival", liveArrival);
+                            if (liveArrival != null && !liveArrival.isEmpty() && !liveArrival.equalsIgnoreCase("null")) {
+                                alarm.put("expectedArrival", liveArrival);
+                            }
                             alarm.put("platform", livePlatform);
                             alarm.put("lastSyncMillis", System.currentTimeMillis());
                             alarmsMap.put(alarmId, alarm);

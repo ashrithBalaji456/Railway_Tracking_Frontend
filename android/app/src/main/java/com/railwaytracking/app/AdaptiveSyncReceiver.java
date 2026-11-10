@@ -97,6 +97,8 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
         final String journeyDate = targetAlarm.optString("journeyDate", "");
         final String backendUrl = targetAlarm.optString("backendUrl", "https://railway-tracking-backend-gwa2.onrender.com");
         final String defaultExpectedArrival = targetAlarm.optString("expectedArrival", "");
+        final String scheduledTime = targetAlarm.optString("scheduledTime", "");
+        final double storedDistanceKm = targetAlarm.optDouble("distanceKm", -1.0);
         final String rawPlatform = targetAlarm.optString("platform", "");
         final String platform = (rawPlatform != null && !rawPlatform.equalsIgnoreCase("null") && !rawPlatform.equalsIgnoreCase("undefined")) ? rawPlatform : "";
         final long currentTargetMillis = targetAlarm.optLong("targetTriggerMillis", 0L);
@@ -164,7 +166,7 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                 int currentSeq = -1;
                 int targetSeq = -1;
                 double currentDist = -1.0;
-                double targetDist = -1.0;
+                double targetDist = storedDistanceKm > 0 ? storedDistanceKm : -1.0;
                 double targetLat = 0.0;
                 double targetLng = 0.0;
                 String currentStationCodeFromData = data.optString("currentStationCode", "");
@@ -177,10 +179,11 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                         String status = st.optString("status", "").toUpperCase();
 
                         boolean passed = status.equals("PASSED") || status.equals("DEPARTED") || status.equals("AT_STATION") || status.equals("ARRIVED") || code.equalsIgnoreCase(currentStationCodeFromData);
-                        if (passed && seq > currentSeq) {
-                            currentSeq = seq;
+                        if (passed) {
+                            if (seq > currentSeq) currentSeq = seq;
                             if (st.has("distance") && !st.isNull("distance")) {
-                                currentDist = st.optDouble("distance", -1.0);
+                                double d = st.optDouble("distance", -1.0);
+                                if (d > currentDist) currentDist = d;
                             }
                         }
 
@@ -198,7 +201,7 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                                 }
                             }
                             if (st.has("distance") && !st.isNull("distance")) {
-                                targetDist = st.optDouble("distance", -1.0);
+                                targetDist = st.optDouble("distance", targetDist);
                             }
                             targetLat = st.optDouble("latitude", st.optDouble("lat", 0.0));
                             targetLng = st.optDouble("longitude", st.optDouble("lng", 0.0));
@@ -206,9 +209,15 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                     }
                 }
 
-                // If train has physically arrived or reached station, wake user immediately!
-                if (isAtStation) {
-                    Log.d(TAG, "Train " + trainNumber + " physically arrived at " + stationCode + "! Firing alarm immediately.");
+                if (data.has("currentDistanceKm") && !data.isNull("currentDistanceKm")) {
+                    double liveDist = data.optDouble("currentDistanceKm", -1.0);
+                    if (liveDist > currentDist) currentDist = liveDist;
+                }
+
+                // If train has physically arrived or passed target landmark milestone distance, wake user immediately!
+                boolean isMilestonePassed = (targetDist > 0 && currentDist > 0 && currentDist >= targetDist);
+                if (isAtStation || isMilestonePassed) {
+                    Log.d(TAG, "Train " + trainNumber + " physically arrived/passed " + stationCode + " (currentDist=" + currentDist + "km, target=" + targetDist + "km)! Firing alarm immediately.");
                     triggerAlarmNow(context, stationName, trainNumber, stationCode, livePlatform, triggerMinutes);
                     return;
                 }
@@ -273,8 +282,18 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                 boolean fixedSnoozeActive = isFixedSnooze && fixedSnoozeTargetMillis > System.currentTimeMillis();
 
                 long effectiveTargetMillis = currentTargetMillis;
-                if (!fixedSnoozeActive && stationFound && liveArrival != null && !liveArrival.trim().isEmpty()) {
-                    long newTargetMillis = AdaptiveAlarmManager.calculateTriggerMillis(liveArrival, triggerMinutes);
+                long newTargetMillis = 0L;
+
+                if (!fixedSnoozeActive && stationFound && liveArrival != null && !liveArrival.trim().isEmpty() && !liveArrival.equalsIgnoreCase("null")) {
+                    newTargetMillis = AdaptiveAlarmManager.calculateTriggerMillis(liveArrival, triggerMinutes);
+                } else if (!fixedSnoozeActive && !scheduledTime.isEmpty() && !scheduledTime.equalsIgnoreCase("null")) {
+                    long schedBase = AdaptiveAlarmManager.calculateTriggerMillis(scheduledTime, triggerMinutes);
+                    if (schedBase > 0) {
+                        newTargetMillis = schedBase + (currentDelay * 60 * 1000L);
+                    }
+                }
+
+                if (newTargetMillis > 0) {
                     long shiftDifference = Math.abs(newTargetMillis - currentTargetMillis);
 
                     // If schedule shift is >= 2 minutes, update AlarmClock!
@@ -290,7 +309,9 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                         JSONObject objToUpdate = freshMap.optJSONObject(finalAlarmId);
                         if (objToUpdate != null) {
                             objToUpdate.put("targetTriggerMillis", newTargetMillis);
-                            objToUpdate.put("expectedArrival", liveArrival);
+                            if (liveArrival != null && !liveArrival.isEmpty() && !liveArrival.equalsIgnoreCase("null")) {
+                                objToUpdate.put("expectedArrival", liveArrival);
+                            }
                             objToUpdate.put("platform", livePlatform);
                             objToUpdate.put("lastSyncMillis", System.currentTimeMillis());
                             freshMap.put(finalAlarmId, objToUpdate);
@@ -369,6 +390,9 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
 
                 long nextSyncMillis = System.currentTimeMillis() + nextDelay;
 
+                String arrivalDisplay = (liveArrival != null && !liveArrival.isEmpty() && !liveArrival.equalsIgnoreCase("null"))
+                        ? liveArrival : (defaultExpectedArrival != null && !defaultExpectedArrival.isEmpty() && !defaultExpectedArrival.equalsIgnoreCase("null") ? defaultExpectedArrival : scheduledTime);
+
                 // Post visible status notification so user sees proof of live check + delay in hrs/mins
                 AdaptiveAlarmManager.getInstance().postTelemetryStatusNotification(
                         context,
@@ -376,7 +400,7 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                         stationName,
                         stationCode,
                         currentDelay,
-                        liveArrival != null ? liveArrival : defaultExpectedArrival,
+                        arrivalDisplay,
                         effectiveTargetMillis,
                         nextSyncMillis
                 );

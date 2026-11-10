@@ -22,6 +22,8 @@ export interface WakeUpAlarmConfig {
   customSoundName?: string;
   backupEmail?: string;
   expectedArrival?: string;
+  scheduledTime?: string;
+  distanceKm?: number;
   journeyDate?: string;
   armedAt: string;
 }
@@ -77,7 +79,7 @@ class MultiAlarmManager {
 
   public async armAlarm(
     config: WakeUpAlarmConfig,
-    liveContext?: { expectedArrival?: string; journeyDate?: string; trainName?: string; platform?: string }
+    liveContext?: { expectedArrival?: string; journeyDate?: string; trainName?: string; platform?: string; distanceKm?: number; scheduledTime?: string }
   ): Promise<void> {
     const id = this.buildId(config.trainNumber, config.stationCode);
     const fullConfig: WakeUpAlarmConfig = {
@@ -86,6 +88,8 @@ class MultiAlarmManager {
       trainName: config.trainName || liveContext?.trainName,
       platform: config.platform || liveContext?.platform,
       expectedArrival: config.expectedArrival || liveContext?.expectedArrival,
+      scheduledTime: config.scheduledTime || liveContext?.scheduledTime,
+      distanceKm: config.distanceKm !== undefined ? config.distanceKm : liveContext?.distanceKm,
       journeyDate: config.journeyDate || liveContext?.journeyDate,
       armedAt: config.armedAt || new Date().toISOString()
     };
@@ -120,6 +124,8 @@ class MultiAlarmManager {
       platform: fullConfig.platform,
       triggerMinutes: fullConfig.triggerMinutes,
       expectedArrival: fullConfig.expectedArrival,
+      scheduledTime: fullConfig.scheduledTime,
+      distanceKm: fullConfig.distanceKm,
       journeyDate: fullConfig.journeyDate,
       backupEmail: fullConfig.backupEmail
     });

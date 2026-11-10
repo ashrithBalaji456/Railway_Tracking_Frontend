@@ -30,6 +30,8 @@ export interface NativeAlarmPluginInterface {
     stationName?: string;
     triggerMinutes?: number;
     expectedArrival?: string;
+    scheduledTime?: string;
+    distanceKm?: number;
     trainName?: string;
     journeyDate?: string;
     backendUrl?: string;
@@ -174,6 +176,8 @@ export const armAdaptiveNativeAlarm = async (options: {
   platform?: string;
   triggerMinutes?: number;
   expectedArrival?: string;
+  scheduledTime?: string;
+  distanceKm?: number;
   trainName?: string;
   journeyDate?: string;
   backendUrl?: string;

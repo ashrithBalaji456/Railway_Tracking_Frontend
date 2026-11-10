@@ -138,6 +138,8 @@ public class NativeAlarmPlugin extends Plugin {
         String backendUrl = call.getString("backendUrl", "https://railway-tracking-backend-gwa2.onrender.com");
         String platform = call.getString("platform", "");
         String backupEmail = call.getString("backupEmail", "");
+        Double distanceKm = call.getDouble("distanceKm", -1.0);
+        String scheduledTime = call.getString("scheduledTime", "");
 
         if (trainNumber == null || stationCode == null) {
             call.reject("trainNumber and stationCode are required");
@@ -168,7 +170,9 @@ public class NativeAlarmPlugin extends Plugin {
                 journeyDate,
                 backendUrl,
                 platform,
-                backupEmail
+                backupEmail,
+                distanceKm != null ? distanceKm : -1.0,
+                scheduledTime != null ? scheduledTime : ""
         );
 
         JSObject ret = new JSObject();
@@ -376,6 +380,8 @@ public class NativeAlarmPlugin extends Plugin {
         String stationCode = call.getString("stationCode", "");
         String platform = call.getString("platform", "");
         String backupEmail = call.getString("backupEmail", "");
+        Double distanceKm = call.getDouble("distanceKm", -1.0);
+        String scheduledTime = call.getString("scheduledTime", "");
         int triggerMinutes = call.getInt("triggerMinutes", 30);
 
         Intent serviceIntent = new Intent(context, AlarmForegroundService.class);
