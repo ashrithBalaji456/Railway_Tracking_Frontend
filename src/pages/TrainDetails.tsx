@@ -543,6 +543,23 @@ export default function TrainDetails() {
         }
       }
 
+      // 5. Physical Milestone Landmark Trigger (e.g., 2 stations prior or non-stopping passing station)
+      if (alarmCfg.triggerMode === 'landmark_station' && alarmCfg.anchorStationCode) {
+        const anchorCode = alarmCfg.anchorStationCode.toUpperCase();
+        const anchorLiveStop = liveStatus?.stations?.find((ls: any) => ls.stationCode?.toUpperCase() === anchorCode);
+        const anchorRouteStop = route?.stations?.find((rs: any) => rs.stationCode?.toUpperCase() === anchorCode);
+
+        const isCurrentAnchor = bubbleStationCode?.toUpperCase() === anchorCode;
+        const isAnchorArrived = anchorLiveStop?.status?.toUpperCase() === 'AT_STATION' || anchorLiveStop?.status?.toUpperCase() === 'ARRIVED';
+        const anchorSeq = (anchorRouteStop || anchorLiveStop)?.sequenceNumber;
+        const isAnchorPassed = currentBubbleSeq != null && anchorSeq != null && currentBubbleSeq >= anchorSeq;
+
+        if (isCurrentAnchor || isAnchorArrived || isAnchorPassed) {
+          shouldTrigger = true;
+          computedEta = 5; // Milestone station reached; arrival countdown imminent
+        }
+      }
+
       if (shouldTrigger) {
         hasTriggeredAlarmRef.current = true;
         const effectiveTrainName = train?.trainName || liveStatus?.trainName || alarmCfg.trainName || '';
@@ -3474,6 +3491,31 @@ export default function TrainDetails() {
                                           Skipped
                                         </span>
                                       )}
+                                      {!isPassStopDeparted && !isPassCancelled && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedAlarmStation({
+                                              stationCode: passStation.stationCode,
+                                              stationName: passStation.stationName,
+                                              expectedArrival: passLiveStop?.expectedArrival || passStation.arrivalTime,
+                                              distance: passStation.distance,
+                                              platform: passLiveStop?.platform || passStation.platform,
+                                              isNonStopping: true
+                                            });
+                                          }}
+                                          title={armedAlarms.some(a => a.stationCode?.toUpperCase() === passStation.stationCode?.toUpperCase()) ? "Waypoint alarm armed for this passing station! Tap to manage." : "Set milestone alarm for this non-stopping passing station"}
+                                          className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[7px] sm:text-[8px] font-bold border transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95 ml-1 ${
+                                            armedAlarms.some(a => a.stationCode?.toUpperCase() === passStation.stationCode?.toUpperCase())
+                                              ? 'bg-amber-500/25 border-amber-500 text-amber-300 animate-pulse shadow-amber-500/20'
+                                              : 'bg-slate-900/90 border-slate-700/80 text-slate-400 hover:text-amber-300 hover:border-amber-500/40'
+                                          }`}
+                                        >
+                                          <Bell className={`w-2 h-2 ${armedAlarms.some(a => a.stationCode?.toUpperCase() === passStation.stationCode?.toUpperCase()) ? 'fill-amber-400 text-amber-400' : ''}`} />
+                                          <span>{armedAlarms.some(a => a.stationCode?.toUpperCase() === passStation.stationCode?.toUpperCase()) ? 'Armed' : 'Alarm'}</span>
+                                        </button>
+                                      )}
                                     </div>
                                     <span className="text-[9px] text-slate-500">
                                       {passStation.distance !== undefined && passStation.distance !== null ? `${passStation.distance} km` : `${passStation.sequenceNumber * 80} km`}
@@ -3803,7 +3845,9 @@ export default function TrainDetails() {
                   className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 cursor-pointer"
                   title="Tap to manage alarm for this station"
                 >
-                  <span>{a.stationCode} (~{a.triggerMinutes}m)</span>
+                  <span>
+                    {a.stationCode} {a.triggerMode === 'landmark_station' && a.anchorStationCode ? `(⚓ ${a.anchorStationCode})` : `(~${a.triggerMinutes}m)`}
+                  </span>
                   <button
                     type="button"
                     onClick={(e) => {
@@ -3839,6 +3883,7 @@ export default function TrainDetails() {
           trainNumber={trainNumber || train?.trainNumber || ''}
           trainName={train?.trainName}
           station={selectedAlarmStation}
+          allStations={route?.stations || train?.stations || []}
           currentArmedConfig={multiAlarmManager.getArmedAlarm(trainNumber || train?.trainNumber || '', selectedAlarmStation?.stationCode || '')}
           onArmAlarm={async (cfg) => {
             const effectiveJourneyDate = selectedJourneyDate || liveStatus?.startDate || '';

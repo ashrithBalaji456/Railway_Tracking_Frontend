@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Bell, 
   Volume2, 
@@ -10,7 +10,10 @@ import {
   Smartphone,
   Music,
   Play,
-  Check
+  Check,
+  Compass,
+  Train,
+  Radio
 } from 'lucide-react';
 import { alarmAudioService, type AlarmToneType } from '../utils/alarmAudioService';
 import customAlarmSoundService, { type CustomAlarmSound } from '../utils/customAlarmSoundService';
@@ -24,6 +27,10 @@ export interface WakeUpAlarmConfig {
   stationName: string;
   platform?: string;
   triggerMinutes: number;
+  triggerMode?: 'time_eta' | 'landmark_station';
+  anchorStationCode?: string;
+  anchorStationName?: string;
+  anchorType?: '2_stops_prior' | '1_stop_prior' | 'exact_station' | 'non_stop_passing';
   toneType: AlarmToneType | 'custom';
   customSoundId?: string;
   customSoundName?: string;
@@ -44,7 +51,9 @@ interface StationWakeUpAlarmModalProps {
     expectedArrival?: string;
     distance?: number;
     platform?: string;
+    isNonStopping?: boolean;
   };
+  allStations?: any[];
   currentArmedConfig: WakeUpAlarmConfig | null;
   onArmAlarm: (config: WakeUpAlarmConfig) => void;
   onDisarmAlarm: () => void;
@@ -56,10 +65,21 @@ export default function StationWakeUpAlarmModal({
   trainNumber,
   trainName,
   station,
+  allStations = [],
   currentArmedConfig,
   onArmAlarm,
   onDisarmAlarm
 }: StationWakeUpAlarmModalProps) {
+  const [triggerMode, setTriggerMode] = useState<'time_eta' | 'landmark_station'>(() => {
+    if (currentArmedConfig?.triggerMode) return currentArmedConfig.triggerMode;
+    return station.isNonStopping ? 'landmark_station' : 'time_eta';
+  });
+
+  const [selectedAnchorType, setSelectedAnchorType] = useState<'2_stops_prior' | '1_stop_prior' | 'exact_station' | 'non_stop_passing'>(() => {
+    if (currentArmedConfig?.anchorType) return currentArmedConfig.anchorType;
+    return station.isNonStopping ? 'non_stop_passing' : '2_stops_prior';
+  });
+
   const [triggerMinutes, setTriggerMinutes] = useState<number>(
     currentArmedConfig?.triggerMinutes || 30
   );
@@ -75,6 +95,23 @@ export default function StationWakeUpAlarmModal({
   );
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [previewingCustom, setPreviewingCustom] = useState(false);
+
+  // Compute 1-station-before and 2-stations-before from complete station route
+  const { priorStation1, priorStation2 } = useMemo(() => {
+    if (!allStations || allStations.length === 0) {
+      return { priorStation1: null, priorStation2: null };
+    }
+    const targetIdx = allStations.findIndex(
+      (s: any) => s.stationCode?.toUpperCase() === station.stationCode?.toUpperCase()
+    );
+    if (targetIdx === -1) {
+      return { priorStation1: null, priorStation2: null };
+    }
+    return {
+      priorStation1: targetIdx > 0 ? allStations[targetIdx - 1] : null,
+      priorStation2: targetIdx > 1 ? allStations[targetIdx - 2] : null,
+    };
+  }, [allStations, station.stationCode]);
 
   useEffect(() => {
     let isMounted = true;
@@ -133,13 +170,25 @@ export default function StationWakeUpAlarmModal({
         console.warn('Audio sync error before arming:', e);
       }
     }
+
+    // Determine the landmark anchor station if landmark mode is chosen
+    const effectiveAnchor = 
+      station.isNonStopping ? station :
+      selectedAnchorType === '2_stops_prior' && priorStation2 ? priorStation2 :
+      selectedAnchorType === '1_stop_prior' && priorStation1 ? priorStation1 :
+      station;
+
     await onArmAlarm({
       trainNumber,
       trainName,
       stationCode: station.stationCode,
       stationName: station.stationName,
       platform: station.platform,
-      triggerMinutes,
+      triggerMinutes: triggerMode === 'landmark_station' ? 10 : triggerMinutes,
+      triggerMode,
+      anchorStationCode: triggerMode === 'landmark_station' ? effectiveAnchor.stationCode : undefined,
+      anchorStationName: triggerMode === 'landmark_station' ? effectiveAnchor.stationName : undefined,
+      anchorType: triggerMode === 'landmark_station' ? (station.isNonStopping ? 'non_stop_passing' : selectedAnchorType) : undefined,
       toneType: isCustom ? 'custom' : (selectedSoundMode as AlarmToneType),
       customSoundId: isCustom ? customSound?.id : undefined,
       customSoundName: isCustom ? customSound?.name : undefined,
@@ -205,44 +254,218 @@ export default function StationWakeUpAlarmModal({
             )}
           </div>
 
-          {/* Trigger Time Options */}
-          <div className="space-y-2">
+          {/* Trigger Mode Switcher Tabs */}
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Wake Me Up When Train Is:</span>
+                <Compass className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Wake-Up Trigger Method:</span>
               </label>
-              <span className="text-[10px] text-amber-300/90 font-semibold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                Time or Distance (1st match)
-              </span>
+              {station.isNonStopping && (
+                <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40">
+                  Passing Waypoint
+                </span>
+              )}
             </div>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-              {[
-                { mins: 15, label: '15 mins', sub: '≤ 12 km' },
-                { mins: 30, label: '30 mins', sub: '≤ 25 km' },
-                { mins: 45, label: '45 mins', sub: '≤ 38 km' },
-                { mins: 60, label: '1 hour', sub: '≤ 50 km' },
-                { mins: 90, label: '1.5 hrs', sub: '≤ 75 km' },
-                { mins: 120, label: '2 hours', sub: '≤ 100 km' }
-              ].map(({ mins, label, sub }) => (
-                <button
-                  key={mins}
-                  type="button"
-                  onClick={() => setTriggerMinutes(mins)}
-                  className={`py-2 px-1 text-center rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                    triggerMinutes === mins
-                      ? 'bg-indigo-600/30 border-indigo-500 text-indigo-200 shadow-md shadow-indigo-600/20'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                  }`}
-                >
-                  <div>~{label}</div>
-                  <div className="text-[9px] font-semibold text-emerald-400 mt-0.5">{sub}</div>
-                </button>
-              ))}
+
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
+              <button
+                type="button"
+                onClick={() => setTriggerMode('time_eta')}
+                className={`py-2 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  triggerMode === 'time_eta'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Dynamic ETA (Time)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setTriggerMode('landmark_station')}
+                className={`py-2 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  triggerMode === 'landmark_station'
+                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span>Station Landmark</span>
+              </button>
             </div>
-            <p className="text-[10px] text-slate-400 leading-relaxed">
-              💡 <strong>Hybrid Rule:</strong> Guarantees alarm rings if train is within selected minutes <em>OR</em> enters the distance radius, protecting you if the train speeds up or delays.
-            </p>
+
+            {/* Mode A: Dynamic Time Countdown Options */}
+            {triggerMode === 'time_eta' && (
+              <div className="space-y-2 pt-1 animate-fadeIn">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-slate-300">Advance Warning Buffer:</span>
+                  <span className="text-[10px] text-amber-300/90 font-semibold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                    Time or Distance (1st match)
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  {[
+                    { mins: 15, label: '15 mins', sub: '≤ 12 km' },
+                    { mins: 30, label: '30 mins', sub: '≤ 25 km' },
+                    { mins: 45, label: '45 mins', sub: '≤ 38 km' },
+                    { mins: 60, label: '1 hour', sub: '≤ 50 km' },
+                    { mins: 90, label: '1.5 hrs', sub: '≤ 75 km' },
+                    { mins: 120, label: '2 hours', sub: '≤ 100 km' }
+                  ].map(({ mins, label, sub }) => (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => setTriggerMinutes(mins)}
+                      className={`py-2 px-1 text-center rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                        triggerMinutes === mins
+                          ? 'bg-indigo-600/30 border-indigo-500 text-indigo-200 shadow-md shadow-indigo-600/20'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                      }`}
+                    >
+                      <div>~{label}</div>
+                      <div className="text-[9px] font-semibold text-emerald-400 mt-0.5">{sub}</div>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-slate-400 leading-relaxed">
+                  💡 <strong>Hybrid Rule:</strong> Guarantees alarm rings if train is within selected minutes <em>OR</em> enters the distance radius, protecting you if the train accelerates.
+                </p>
+              </div>
+            )}
+
+            {/* Mode B: Physical Milestone Station Landmark Options */}
+            {triggerMode === 'landmark_station' && (
+              <div className="space-y-2.5 pt-1 animate-fadeIn">
+                {station.isNonStopping ? (
+                  <div className="p-3 rounded-xl bg-sky-950/40 border border-sky-500/40 space-y-1.5">
+                    <div className="flex items-center gap-2 text-sky-300 font-bold text-xs">
+                      <Radio className="w-4 h-4 text-sky-400 animate-pulse" />
+                      <span>Non-Stopping Passing Waypoint Anchor</span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      This train does not commercially stop at <strong>{station.stationName} ({station.stationCode})</strong>. When armed, the alarm siren will sound the moment the train physically passes through this station block.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-semibold text-slate-300">
+                      Select Physical Landmark Station to Wake You:
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2">
+                      {/* Option 1: 2 Stations Before (Recommended) */}
+                      {priorStation2 && (
+                        <div
+                          onClick={() => setSelectedAnchorType('2_stops_prior')}
+                          className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                            selectedAnchorType === '2_stops_prior'
+                              ? 'bg-amber-500/15 border-amber-500 text-white shadow-md shadow-amber-500/10'
+                              : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className={`p-2 rounded-lg shrink-0 ${selectedAnchorType === '2_stops_prior' ? 'bg-amber-500/25 text-amber-300' : 'bg-slate-900 text-slate-400'}`}>
+                              <Train className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs font-bold text-white truncate">{priorStation2.stationName}</span>
+                                <span className="text-[9px] font-mono text-amber-400 font-bold">({priorStation2.stationCode})</span>
+                                <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-amber-500/25 text-amber-300 border border-amber-500/40">
+                                  2 STATIONS PRIOR
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-slate-400 mt-0.5">
+                                Rings when train arrives 2 stops before {station.stationName}
+                              </div>
+                            </div>
+                          </div>
+                          {selectedAnchorType === '2_stops_prior' && (
+                            <div className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center shrink-0">
+                              <Check className="w-3 h-3 stroke-[3]" />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Option 2: 1 Station Before */}
+                      {priorStation1 && (
+                        <div
+                          onClick={() => setSelectedAnchorType('1_stop_prior')}
+                          className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                            selectedAnchorType === '1_stop_prior'
+                              ? 'bg-amber-500/15 border-amber-500 text-white shadow-md shadow-amber-500/10'
+                              : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className={`p-2 rounded-lg shrink-0 ${selectedAnchorType === '1_stop_prior' ? 'bg-amber-500/25 text-amber-300' : 'bg-slate-900 text-slate-400'}`}>
+                              <Train className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs font-bold text-white truncate">{priorStation1.stationName}</span>
+                                <span className="text-[9px] font-mono text-sky-400 font-bold">({priorStation1.stationCode})</span>
+                                <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-sky-500/25 text-sky-300 border border-sky-500/40">
+                                  1 STATION PRIOR
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-slate-400 mt-0.5">
+                                Rings when train arrives 1 stop before {station.stationName}
+                              </div>
+                            </div>
+                          </div>
+                          {selectedAnchorType === '1_stop_prior' && (
+                            <div className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center shrink-0">
+                              <Check className="w-3 h-3 stroke-[3]" />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Option 3: Exact Target Station Arrival */}
+                      <div
+                        onClick={() => setSelectedAnchorType('exact_station')}
+                        className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                          selectedAnchorType === 'exact_station'
+                            ? 'bg-amber-500/15 border-amber-500 text-white shadow-md shadow-amber-500/10'
+                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`p-2 rounded-lg shrink-0 ${selectedAnchorType === 'exact_station' ? 'bg-amber-500/25 text-amber-300' : 'bg-slate-900 text-slate-400'}`}>
+                            <MapPin className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs font-bold text-white truncate">{station.stationName}</span>
+                              <span className="text-[9px] font-mono text-indigo-400 font-bold">({station.stationCode})</span>
+                              <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-indigo-500/25 text-indigo-300 border border-indigo-500/40">
+                                DESTINATION ARRIVAL
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              Rings upon physical platform entry at {station.stationName}
+                            </div>
+                          </div>
+                        </div>
+                        {selectedAnchorType === 'exact_station' && (
+                          <div className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center shrink-0">
+                            <Check className="w-3 h-3 stroke-[3]" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                      🛡️ <strong>Physical Milestone Guarantee:</strong> Eliminates guesswork. The alarm siren sounds the instant the train physically rolls into or passes your selected landmark station!
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Ringtone Selection & Preview */}
