@@ -652,6 +652,46 @@ public class AdaptiveAlarmManager {
         }
     }
 
+    /**
+     * Parse static clock timetable time (e.g. "03:02" or ISO) into absolute epoch milliseconds
+     * without clamping to System.currentTimeMillis().
+     */
+    public static long parseClockTimeToMillis(String timeStr) {
+        if (timeStr == null || timeStr.trim().isEmpty() || timeStr.equalsIgnoreCase("null")) {
+            return 0L;
+        }
+        try {
+            String clean = timeStr.trim();
+            if (clean.contains("T")) {
+                int idx = clean.indexOf("T");
+                clean = clean.substring(idx + 1, Math.min(clean.length(), idx + 6));
+            }
+            String[] parts = clean.split(":");
+            int hour = Integer.parseInt(parts[0]);
+            int min = Integer.parseInt(parts[1]);
+
+            Calendar cal = Calendar.getInstance();
+            cal.set(Calendar.HOUR_OF_DAY, hour);
+            cal.set(Calendar.MINUTE, min);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+
+            long millis = cal.getTimeInMillis();
+            long now = System.currentTimeMillis();
+
+            if (millis < (now - 12 * 60 * 60 * 1000L)) {
+                cal.add(Calendar.DAY_OF_YEAR, 1);
+                millis = cal.getTimeInMillis();
+            } else if (millis > (now + 12 * 60 * 60 * 1000L)) {
+                cal.add(Calendar.DAY_OF_YEAR, -1);
+                millis = cal.getTimeInMillis();
+            }
+            return millis;
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
+
     public static long calculateTriggerMillis(String timeStr, int triggerMinutes) {
         if (timeStr == null || timeStr.trim().isEmpty() || timeStr.equalsIgnoreCase("null")) {
             return 0L;

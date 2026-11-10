@@ -200,7 +200,7 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                             } else {
                                 liveArrival = "";
                             }
-                            String rawSched = st.optString("arrivalTime", st.optString("departureTime", ""));
+                            String rawSched = st.optString("scheduledArrival", st.optString("scheduledDeparture", st.optString("arrivalTime", st.optString("departureTime", ""))));
                             if (rawSched != null && !rawSched.isEmpty() && !rawSched.equalsIgnoreCase("null")) {
                                 if (effectiveScheduledTime.isEmpty() || effectiveScheduledTime.equalsIgnoreCase("null")) {
                                     effectiveScheduledTime = rawSched;
@@ -311,7 +311,7 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                     expectedArrivalMillis = AdaptiveAlarmManager.calculateTriggerMillis(liveArrival, 0);
                     newTargetMillis = expectedArrivalMillis - (triggerMinutes * 60 * 1000L);
                 } else if (!fixedSnoozeActive && !effectiveScheduledTime.isEmpty() && !effectiveScheduledTime.equalsIgnoreCase("null")) {
-                    long schedBase = AdaptiveAlarmManager.calculateTriggerMillis(effectiveScheduledTime, 0);
+                    long schedBase = AdaptiveAlarmManager.parseClockTimeToMillis(effectiveScheduledTime);
                     if (schedBase > 0) {
                         expectedArrivalMillis = schedBase + (currentDelay * 60 * 1000L);
                         newTargetMillis = expectedArrivalMillis - (triggerMinutes * 60 * 1000L);
@@ -409,11 +409,17 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                 }
 
                 // High-precision approach cadence:
-                // When train enters 3.0 km radius of the target milestone, poll every 2-3 minutes to catch exact arrival
-                if (hasDepartedOrigin && remainingKm > 0 && remainingKm <= 3.0) {
-                    nextDelay = Math.min(nextDelay, 3 * 60 * 1000L);
-                } else if (hasDepartedOrigin && remainingKm > 0 && remainingKm <= (safeDistanceThreshold + 10.0)) {
-                    nextDelay = Math.min(nextDelay, 60 * 1000L);
+                // Rapid checks based on actual physical distance so high-speed trains (80-100 km/h) never bypass milestones
+                if (hasDepartedOrigin && remainingKm > 0) {
+                    if (remainingKm <= 3.0) {
+                        nextDelay = Math.min(nextDelay, 60 * 1000L); // 1 minute within 3 km
+                    } else if (remainingKm <= 10.0) {
+                        nextDelay = Math.min(nextDelay, 2 * 60 * 1000L); // 2 minutes within 10 km (e.g. 9 km from Mandamari)
+                    } else if (remainingKm <= 20.0) {
+                        nextDelay = Math.min(nextDelay, 3 * 60 * 1000L); // 3 minutes within 20 km
+                    } else if (remainingKm <= 35.0) {
+                        nextDelay = Math.min(nextDelay, 5 * 60 * 1000L); // 5 minutes within 35 km
+                    }
                 }
 
                 long nextSyncMillis = System.currentTimeMillis() + nextDelay;

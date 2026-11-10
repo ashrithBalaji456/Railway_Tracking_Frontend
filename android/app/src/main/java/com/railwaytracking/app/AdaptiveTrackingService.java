@@ -227,7 +227,7 @@ public class AdaptiveTrackingService extends Service {
                                 } else {
                                     liveArrival = "";
                                 }
-                                String rawSched = st.optString("arrivalTime", st.optString("departureTime", ""));
+                                String rawSched = st.optString("scheduledArrival", st.optString("scheduledDeparture", st.optString("arrivalTime", st.optString("departureTime", ""))));
                                 if (rawSched != null && !rawSched.isEmpty() && !rawSched.equalsIgnoreCase("null")) {
                                     if (scheduledTime.isEmpty() || scheduledTime.equalsIgnoreCase("null")) {
                                         scheduledTime = rawSched;
@@ -297,9 +297,20 @@ public class AdaptiveTrackingService extends Service {
                         currentPollIntervalMs = POLL_INTERVAL_MS;
                     }
 
-                    // High precision polling when nearing within 3.0 km radius of target milestone
-                    if (targetDistanceKm > 0 && currentDist > 0 && (targetDistanceKm - currentDist) <= 3.0 && (targetDistanceKm - currentDist) > 0) {
-                        currentPollIntervalMs = 3 * 60 * 1000L;
+                    // High precision polling based on remaining distance to target milestone
+                    if (targetDistanceKm > 0 && currentDist > 0) {
+                        double remaining = targetDistanceKm - currentDist;
+                        if (remaining > 0) {
+                            if (remaining <= 3.0) {
+                                currentPollIntervalMs = 60 * 1000L; // 1 min within 3 km
+                            } else if (remaining <= 10.0) {
+                                currentPollIntervalMs = 2 * 60 * 1000L; // 2 min within 10 km
+                            } else if (remaining <= 20.0) {
+                                currentPollIntervalMs = 3 * 60 * 1000L; // 3 min within 20 km
+                            } else if (remaining <= 35.0) {
+                                currentPollIntervalMs = 5 * 60 * 1000L; // 5 min within 35 km
+                            }
+                        }
                     }
 
                     // 1. Train physically arrived or reached within 1.0 km of target milestone distance!
@@ -321,7 +332,7 @@ public class AdaptiveTrackingService extends Service {
                         expectedArrivalMillis = AdaptiveAlarmManager.calculateTriggerMillis(liveArrival, 0);
                         newTargetMillis = expectedArrivalMillis - (triggerMinutes * 60 * 1000L);
                     } else if (!scheduledTime.isEmpty() && !scheduledTime.equalsIgnoreCase("null")) {
-                        long schedBase = AdaptiveAlarmManager.calculateTriggerMillis(scheduledTime, 0);
+                        long schedBase = AdaptiveAlarmManager.parseClockTimeToMillis(scheduledTime);
                         if (schedBase > 0) {
                             expectedArrivalMillis = schedBase + (currentDelay * 60 * 1000L);
                             newTargetMillis = expectedArrivalMillis - (triggerMinutes * 60 * 1000L);
