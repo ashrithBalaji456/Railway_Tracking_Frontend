@@ -3830,3 +3830,37 @@ The cardinal rule of high-reliability audio and alert systems is **Strict Separa
 * **Zero Audio Regression:** No chance of breaking existing lock-screen sirens, custom ringtones, or volume controls.
 * **Dual Choice for Users:** Passengers can choose between **Time-based peace of mind** or **Physical landmark certainty**.
 * **Offline Resilience:** If cellular connectivity drops before the destination, the physical landmark alarm that triggered at the prior station has already ensured the passenger is safely awake.
+
+---
+
+### 21.12. Train Operational Telemetry Dashboard & One-Tap Return Train Navigation
+
+#### Overview
+To give travelers an instantaneous executive briefing of the train's operating characteristics without forcing them to manually tally 40+ timetable rows or compute speeds, `TrainDetails.tsx` features an **Operational Telemetry Dashboard Card** positioned directly below the journey date selector and above the station timetable.
+
+#### Dashboard Telemetry Data Points:
+1. **RUNS ON Weekday Bar (`Mon` - `Sun`):**
+   * Visual weekday pill row parsed from `train.runningDays` (supporting daily, all, comma-separated, and day-index representations).
+   * Highlights the actively selected journey date in solid blue (`bg-blue-600 text-white font-bold shadow-md`) so users immediately see if the train runs on their journey date.
+   * Dimmed representation for days the train does not operate.
+2. **DISTANCE (`km`):**
+   * Derived from `train.distance` or the cumulative track kilometer marker of the final destination stop in the route.
+3. **DURATION (`Xh Ym`):**
+   * Total scheduled running time formatted from minutes into human-friendly hours and minutes (e.g. `12h` or `12h 15m`).
+4. **HALTS:**
+   * Total count of physical passenger halts where `isHalt === true` or `haltMinutes > 0`, distinguishing true passenger stops from passing waypoints.
+5. **AVG SPEED (`km/h`):**
+   * Mathematically computed as `Distance / (Duration / 60)`, yielding the exact operational average velocity (e.g. `38.7 km/h` for a 464.5 km route over 12 hours).
+6. **MAX SPEED (`km/h`):**
+   * Derived from the peak sectional permissible speed (`speedToNextStationKmph`), active live GPS speed, or class-based Maximum Permissible Speed (MPS) guidelines:
+     * Vande Bharat / Gatimaan / Tejas: 160.0 km/h
+     * Rajdhani / Shatabdi / Duronto: 130.0 km/h
+     * Superfast: 116.7 km/h
+     * Express / Mail: 110.0 km/h
+7. **RETURN Service Navigation:**
+   * Automatically calculates the paired return train number via the Indian Railways $N \pm 1$ consecutive numbering convention (`num % 2 === 0 ? num - 1 : num + 1`).
+   * Renders as an interactive, clickable card with return swap icon (`⇄`). Tapping it instantly routes the user to `/trains/:returnTrainNumber`.
+
+#### Zero Impact on Audio / Alarm Subsystems:
+* All telemetry calculations are contained within isolated memoized hooks (`useMemo`) and presentation components.
+* No changes were introduced to `alarmAudioService.ts`, `customAlarmSoundService.ts`, `multiAlarmManager.ts`, `nativeAlarmBridge.ts`, or `RingingAlarmOverlay.tsx`.

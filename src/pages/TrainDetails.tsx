@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X, ArrowLeftRight, Info, Sparkles, Zap, Search, Check, RotateCw, MessageSquare, Mail } from 'lucide-react';
+import { ArrowRight, ArrowLeft, AlertTriangle, Play, Navigation, Heart, Bell, Train, ChevronDown, TrendingUp, CreditCard, Clock, X, ArrowLeftRight, Info, Sparkles, Zap, Search, Check, RotateCw, MessageSquare, Mail, Gauge, MapPin, Route } from 'lucide-react';
 import DisruptionAlertModal from '../components/DisruptionAlertModal';
 import FoodOnTrackModal from '../components/FoodOnTrackModal';
 import api, { getTrainDelayReport } from '../services/api';
@@ -354,6 +354,103 @@ export default function TrainDetails() {
     train?.trainName?.toUpperCase().includes('SPL') ||
     train?.trainType?.toUpperCase().includes('SPECIAL')
   );
+
+  // Train Operational Telemetry Metrics (Runs On, Distance, Duration, Halts, Speeds, Return Train)
+  const currentDayOfWeekShort = useMemo(() => {
+    try {
+      const dateObj = selectedJourneyDate ? new Date(selectedJourneyDate + 'T12:00:00+05:30') : new Date();
+      return new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: 'Asia/Kolkata' }).format(dateObj);
+    } catch {
+      return 'Tue';
+    }
+  }, [selectedJourneyDate]);
+
+  const trainRunsOnDay = (dayShort: string) => {
+    if (!train?.runningDays) return true;
+    const raw = String(train.runningDays).toUpperCase();
+    const dUpper = dayShort.toUpperCase();
+    if (raw.includes('DAILY') || raw.includes('ALL')) return true;
+    if (raw.includes(dUpper)) return true;
+    const dayIndexMap: Record<string, number> = { SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6 };
+    const idx = dayIndexMap[dUpper];
+    if (idx !== undefined && raw.includes(String(idx + 1))) return true;
+    return false;
+  };
+
+  const totalHalts = useMemo(() => {
+    if (route?.stations && route.stations.length > 0) {
+      const halts = route.stations.filter((s: any) => s.isHalt === true || (s.haltMinutes != null && s.haltMinutes > 0));
+      return halts.length > 0 ? halts.length : route.stations.length;
+    }
+    if (train?.stations && train.stations.length > 0) {
+      const halts = train.stations.filter((s: any) => s.isHalt === true || (s.haltMinutes != null && s.haltMinutes > 0));
+      return halts.length > 0 ? halts.length : train.stations.length;
+    }
+    return '--';
+  }, [route, train]);
+
+  const totalDistanceFormatted = useMemo(() => {
+    if (train?.distance != null && train.distance > 0) return `${train.distance} km`;
+    if (route?.stations && route.stations.length > 0) {
+      const last = route.stations[route.stations.length - 1];
+      if (last?.distance != null && last.distance > 0) return `${last.distance} km`;
+    }
+    return '--';
+  }, [train, route]);
+
+  const totalDurationFormatted = useMemo(() => {
+    if (train?.duration != null && train.duration > 0) {
+      const hrs = Math.floor(train.duration / 60);
+      const mins = Math.round(train.duration % 60);
+      return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+    }
+    return '--';
+  }, [train]);
+
+  const avgSpeedFormatted = useMemo(() => {
+    let dist: number | null = null;
+    if (train?.distance != null && train.distance > 0) dist = Number(train.distance);
+    else if (route?.stations && route.stations.length > 0) {
+      const last = route.stations[route.stations.length - 1];
+      if (last?.distance != null && last.distance > 0) dist = Number(last.distance);
+    }
+    const dur = train?.duration;
+    if (dist && dur && dur > 0) {
+      const kmph = (dist / (dur / 60)).toFixed(1);
+      return `${kmph} km/h`;
+    }
+    return '--';
+  }, [train, route]);
+
+  const maxSpeedFormatted = useMemo(() => {
+    let highestSpeed = 0;
+    if (route?.stations) {
+      for (const s of route.stations) {
+        if (s.speedToNextStationKmph && s.speedToNextStationKmph > highestSpeed) {
+          highestSpeed = s.speedToNextStationKmph;
+        }
+      }
+    }
+    if (liveStatus?.speed && liveStatus.speed > highestSpeed) {
+      highestSpeed = liveStatus.speed;
+    }
+    if (highestSpeed > 0) return `${highestSpeed.toFixed(1)} km/h`;
+
+    const tType = (train?.trainType || '').toLowerCase();
+    if (tType.includes('vande') || tType.includes('gatimaan') || tType.includes('tejas')) return '160.0 km/h';
+    if (tType.includes('rajdhani') || tType.includes('shatabdi') || tType.includes('duronto')) return '130.0 km/h';
+    if (tType.includes('superfast') || tType.includes('sf')) return '116.7 km/h';
+    if (tType.includes('express') || tType.includes('mail')) return '110.0 km/h';
+    return '100.0 km/h';
+  }, [route, liveStatus, train]);
+
+  const returnTrainNumber = useMemo(() => {
+    const currentNumStr = String(trainNumber || train?.trainNumber || '').trim();
+    if (!currentNumStr || !/^\d+$/.test(currentNumStr)) return null;
+    const num = parseInt(currentNumStr, 10);
+    const candidate = num % 2 === 0 ? num - 1 : num + 1;
+    return String(candidate).padStart(currentNumStr.length, '0');
+  }, [trainNumber, train]);
   const sseRef = useRef<EventSource | null>(null);
   const intervalRef = useRef<number | null>(null);
   const requestSeqRef = useRef<number>(0);
@@ -1947,6 +2044,125 @@ export default function TrainDetails() {
               <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
                 Rake started: {liveStatus.startDate}
               </span>
+            )}
+          </div>
+        </div>
+
+        {/* Train Operational Telemetry & Schedule Overview Card */}
+        <div className="rounded-xl bg-[#0c101c]/90 border border-slate-800/80 p-3.5 sm:p-4 space-y-3.5 shadow-md">
+          {/* RUNS ON Section */}
+          <div>
+            <div className="text-[11px] font-bold tracking-wider text-slate-400 uppercase mb-2">RUNS ON</div>
+            <div className="flex flex-wrap items-center gap-2">
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => {
+                const runs = trainRunsOnDay(day);
+                const isSelectedDay = currentDayOfWeekShort.toLowerCase() === day.toLowerCase();
+
+                let pillClass = "bg-[#182032] text-slate-300 border border-slate-700/50";
+                if (isSelectedDay) {
+                  pillClass = "bg-blue-600 text-white font-bold shadow-md shadow-blue-600/30 border border-blue-500";
+                } else if (!runs) {
+                  pillClass = "bg-[#121624] text-slate-600 border border-slate-800/40 opacity-40";
+                }
+
+                return (
+                  <span
+                    key={day}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-all select-none ${pillClass}`}
+                  >
+                    {day}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 6-Metric Operational Grid */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            {/* DISTANCE */}
+            <div className="bg-[#131929]/90 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <Route className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="truncate">DISTANCE</span>
+              </div>
+              <div className="text-sm sm:text-base font-extrabold text-slate-100 mt-1 truncate">
+                {totalDistanceFormatted}
+              </div>
+            </div>
+
+            {/* DURATION */}
+            <div className="bg-[#131929]/90 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="truncate">DURATION</span>
+              </div>
+              <div className="text-sm sm:text-base font-extrabold text-slate-100 mt-1 truncate">
+                {totalDurationFormatted}
+              </div>
+            </div>
+
+            {/* HALTS */}
+            <div className="bg-[#131929]/90 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="truncate">HALTS</span>
+              </div>
+              <div className="text-sm sm:text-base font-extrabold text-slate-100 mt-1 truncate">
+                {totalHalts}
+              </div>
+            </div>
+
+            {/* AVG SPEED */}
+            <div className="bg-[#131929]/90 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <Gauge className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="truncate">AVG SPEED</span>
+              </div>
+              <div className="text-sm sm:text-base font-extrabold text-slate-100 mt-1 truncate">
+                {avgSpeedFormatted}
+              </div>
+            </div>
+
+            {/* MAX SPEED */}
+            <div className="bg-[#131929]/90 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <Zap className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="truncate">MAX SPEED</span>
+              </div>
+              <div className="text-sm sm:text-base font-extrabold text-slate-100 mt-1 truncate">
+                {maxSpeedFormatted}
+              </div>
+            </div>
+
+            {/* RETURN */}
+            {returnTrainNumber ? (
+              <button
+                type="button"
+                onClick={() => {
+                  navigate(`/trains/${returnTrainNumber}`);
+                }}
+                className="bg-[#131929]/90 hover:bg-[#1b233a] border border-slate-800/80 hover:border-blue-500/50 rounded-xl p-3 flex flex-col justify-between text-left transition-all cursor-pointer group shadow-sm"
+                title={`Tap to view return train ${returnTrainNumber}`}
+              >
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 group-hover:text-blue-400 uppercase tracking-wider transition-colors">
+                  <ArrowLeftRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-400 shrink-0 transition-colors" />
+                  <span className="truncate">RETURN</span>
+                </div>
+                <div className="text-sm sm:text-base font-extrabold text-blue-400 group-hover:text-blue-300 mt-1 truncate flex items-center justify-between">
+                  <span>{returnTrainNumber}</span>
+                  <span className="text-[10px] text-slate-500 group-hover:text-blue-400 transition-colors">⇄</span>
+                </div>
+              </button>
+            ) : (
+              <div className="bg-[#131929]/90 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <ArrowLeftRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span className="truncate">RETURN</span>
+                </div>
+                <div className="text-sm sm:text-base font-extrabold text-slate-500 mt-1 truncate">
+                  --
+                </div>
+              </div>
             )}
           </div>
         </div>

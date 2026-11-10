@@ -279,7 +279,7 @@ export default function WelcomeGuideModal({ isOpen, onClose, onMarkAsRead }: Wel
             </div>
             <ol className="list-decimal list-inside space-y-2.5 text-xs sm:text-sm text-slate-300">
               <li>
-                <strong className="text-white">Track a Live Train:</strong> On the Home page, type your 5-digit train number (e.g. <code>12758</code> or <code>12678</code>). Click the result to view real-time location, speed, intermediate stops, and live delay badges.
+                <strong className="text-white">Track Live Trains & Operational Telemetry:</strong> On the Home page, type your 5-digit train number (e.g. <code>12758</code> or <code>10105</code>). View real-time location, delay badges, and the top <strong>Operational Telemetry Card</strong> (operating days with active journey highlight, track distance, total duration, passenger halts, average speed, max permissible speed, and one-tap <strong>RETURN train</strong> navigation).
               </li>
               <li>
                 <strong className="text-white">Explore Live Station Boards:</strong> Visit the Station Explorer, type any station code (e.g. <code>MCI</code>, <code>NDLS</code>, <code>BPA</code>), pick a time window (2, 4, or 8 hours), and click <em>"Email Board"</em> to send an offline table to your inbox.
