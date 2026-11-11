@@ -3924,3 +3924,32 @@ $$\text{nextDelay} = \min\big(\text{delay}_{\text{distance}}, \text{delay}_{\tex
 
 This guarantees that whether a train is tracked by GPS coordinates, physical kilometer markers, or schedule timetables, polling frequency automatically intensifies as the train nears the station, eliminating approach blind spots while conserving battery during long journeys.
 
+---
+
+#### 4. The Kesamudram Case Study: Doze Mode 11-Minute Throttling & Stale Distance Notification
+
+##### A. The 11-Minute Deep Sleep Gap (Android Doze Mode):
+* **The Symptom:** At 6:47 PM, the status notification correctly calculated and displayed:
+  > *"Checked: 06:47 PM • Next live check: 06:49 PM"*
+  Yet from 6:47 PM to 6:59 PM (11.5 minutes), no API request reached the backend. The next batch of requests only fired at 6:59 PM, 7:00 PM, 7:01 PM, and 7:02 PM.
+* **The Root Cause:** Under Android OS specifications (Android 6.0 Marshmallow through Android 15), when the device screen is off and stationary, the kernel enters **Doze Mode**. In Doze mode:
+  - `AlarmManager.setExactAndAllowWhileIdle()` is **throttled to fire only once every 9 to 15 minutes** per application.
+  - The OS actively delayed the scheduled 6:49 PM sync intent until the system's 11.5-minute Doze maintenance window expired at 6:59:22 PM.
+  - Only `AlarmManager.setAlarmClock()` possesses statutory kernel exemption from Doze throttling.
+* **The Architectural Resolution:**
+  - In `AdaptiveAlarmManager.scheduleNextSync`, the dispatch logic dynamically splits:
+    - **Final Approach Phase (`delayMillis <= 5 minutes`):** Dispatches using `alarmManager.setAlarmClock()`. This bypasses Doze throttling completely, forcing the hardware RTC to wake the CPU and radio chip at the exact scheduled second (30s, 45s, 60s, or 2m).
+    - **Long-Haul Phase (`delayMillis > 5 minutes`):** Dispatches using `setExactAndAllowWhileIdle(RTC_WAKEUP)` to conserve device battery over hours of travel.
+
+##### B. The Stale "5.9 km away" Notification Mystery:
+* **The Symptom:** When the loud alarm rang at 7:02 PM with *"Kesamudram Approaching"*, a second notification sat directly underneath it reading:
+  > *"5.9 km away • Expected: 07:02 PM"*
+  Passengers mistakenly suspected that RailRadar was delivering erroneous live distance data.
+* **The Root Cause:**
+  - At 7:01:56 PM (the final approach check prior to arrival), the train was physically 5.9 km away from Kesamudram, and `postTelemetryStatusNotification` updated the progress notification to *"5.9 km away"*.
+  - 35 seconds later (at 7:02:31 PM), the train crossed into Kesamudram station. `AdaptiveSyncReceiver` recognized arrival (`isAtStation = true`) and invoked `triggerAlarmNow(...)`, which immediately launched `AlarmForegroundService` (notification ID `9901`) and returned.
+  - Because `triggerAlarmNow` returned without dismissing or updating the existing telemetry notification (notification ID `getNotificationId(trainNumber, stationCode)`), the 35-second-old notification remained frozen on the lockscreen beneath the ringing alarm.
+* **The Architectural Resolution:**
+  - Inside `triggerAlarmNow` across `AdaptiveSyncReceiver.java`, `AdaptiveTrackingService.java`, and `AlarmReceiver.java`, the system explicitly cancels the telemetry notification ID via `NotificationManager.cancel(getNotificationId(trainNumber, stationCode))` the exact millisecond the alarm fires.
+  - Only the loud, focused wake-up overlay and ringing alarm notification are shown, eliminating lockscreen confusion.
+

@@ -337,14 +337,21 @@ public class AdaptiveAlarmManager {
 
         long triggerAt = System.currentTimeMillis() + delayMillis;
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // For approach intervals (delayMillis <= 5 minutes), use setAlarmClock to bypass Android Doze 9-minute throttling!
+            if (delayMillis <= (5 * 60 * 1000L) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                Intent showIntent = new Intent(context, MainActivity.class);
+                PendingIntent showPI = PendingIntent.getActivity(context, syncReqCode, showIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                AlarmManager.AlarmClockInfo clockInfo = new AlarmManager.AlarmClockInfo(triggerAt, showPI);
+                alarmManager.setAlarmClock(clockInfo, syncPendingIntent);
+                Log.d(TAG, "Approach sync for [" + alarmId + "] scheduled via unthrottled AlarmClock in " + (delayMillis / 1000) + "s (" + new Date(triggerAt) + ")");
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, syncPendingIntent);
+                Log.d(TAG, "Standard sync for [" + alarmId + "] scheduled via exact RTC in " + (delayMillis / 1000) + "s (" + new Date(triggerAt) + ")");
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, syncPendingIntent);
             } else {
                 alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, syncPendingIntent);
             }
-            Log.d(TAG, "Next adaptive sync for [" + alarmId + "] scheduled via exact RTC in " + (delayMillis / 1000) + "s (" + new Date(triggerAt) + ")");
         } catch (Exception e) {
             Log.e(TAG, "Error scheduling adaptive sync: " + e.getMessage());
         }

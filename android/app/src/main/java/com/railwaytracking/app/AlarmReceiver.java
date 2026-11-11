@@ -102,6 +102,14 @@ public class AlarmReceiver extends BroadcastReceiver {
             }
         }
 
+        // Dismiss the stale telemetry progress notification so user never sees old distance (e.g. 5.9km away) when alarm rings!
+        try {
+            android.app.NotificationManager nm = (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null && trainNumber != null && stationCode != null) {
+                nm.cancel(AdaptiveAlarmManager.getNotificationId(trainNumber, stationCode));
+            }
+        } catch (Exception ignored) {}
+
         // Delegate execution to un-killable Foreground Service
         Intent serviceIntent = new Intent(context, AlarmForegroundService.class);
         serviceIntent.putExtra("title", title);

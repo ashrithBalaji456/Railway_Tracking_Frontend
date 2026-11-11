@@ -519,6 +519,14 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
     private void triggerAlarmNow(Context context, String stationName, String trainNumber, String stationCode, String platform, int triggerMinutes) {
         String cleanPlatform = (platform != null && !platform.equalsIgnoreCase("null") && !platform.equalsIgnoreCase("undefined")) ? platform : "";
 
+        // Dismiss the stale telemetry progress notification so user never sees old distance (e.g. 5.9km away) when alarm rings!
+        try {
+            android.app.NotificationManager nm = (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.cancel(AdaptiveAlarmManager.getNotificationId(trainNumber, stationCode));
+            }
+        } catch (Exception ignored) {}
+
         Intent serviceIntent = new Intent(context, AlarmForegroundService.class);
         serviceIntent.putExtra("title", "🔔 " + stationName + " Approaching (" + triggerMinutes + "m Warning)");
         serviceIntent.putExtra("body", "Train " + trainNumber + " is nearing " + stationName + "! Tap to open or silence.");
