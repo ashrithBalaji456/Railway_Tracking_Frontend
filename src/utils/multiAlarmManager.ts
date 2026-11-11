@@ -80,7 +80,7 @@ class MultiAlarmManager {
 
   public async armAlarm(
     config: WakeUpAlarmConfig,
-    liveContext?: { expectedArrival?: string; journeyDate?: string; trainName?: string; platform?: string; distanceKm?: number; currentDistanceKm?: number; scheduledTime?: string }
+    liveContext?: { expectedArrival?: string; journeyDate?: string; trainName?: string; platform?: string; distanceKm?: number; currentDistanceKm?: number; scheduledTime?: string; stationDistances?: Record<string, number> }
   ): Promise<void> {
     const id = this.buildId(config.trainNumber, config.stationCode);
     const fullConfig: WakeUpAlarmConfig = {
@@ -130,7 +130,8 @@ class MultiAlarmManager {
       distanceKm: fullConfig.distanceKm,
       currentDistanceKm: fullConfig.currentDistanceKm,
       journeyDate: fullConfig.journeyDate,
-      backupEmail: fullConfig.backupEmail
+      backupEmail: fullConfig.backupEmail,
+      stationDistances: liveContext?.stationDistances
     });
 
     this.notifyUpdate();

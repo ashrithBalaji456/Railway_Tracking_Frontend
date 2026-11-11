@@ -4208,6 +4208,14 @@ export default function TrainDetails() {
               updateNativeTrainDistance(Number(currentTrainDist));
             }
 
+            const stationDistancesMap: Record<string, number> = {};
+            const allStns = route?.stations || train?.stations || [];
+            allStns.forEach((s: any) => {
+              if (s.stationCode && s.distance !== undefined && s.distance !== null) {
+                stationDistancesMap[s.stationCode.toUpperCase()] = Number(s.distance);
+              }
+            });
+
             await multiAlarmManager.armAlarm({
               ...cfg,
               trainNumber: cfg.trainNumber || trainNumber || train?.trainNumber || '',
@@ -4222,7 +4230,8 @@ export default function TrainDetails() {
               platform: platform,
               distanceKm: targetDist,
               currentDistanceKm: currentTrainDist != null ? Number(currentTrainDist) : undefined,
-              scheduledTime: staticScheduleTime
+              scheduledTime: staticScheduleTime,
+              stationDistances: stationDistancesMap
             });
           }}
           onDisarmAlarm={async () => {

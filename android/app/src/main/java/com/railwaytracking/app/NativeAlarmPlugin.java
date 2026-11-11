@@ -157,6 +157,15 @@ public class NativeAlarmPlugin extends Plugin {
                     .apply();
         }
 
+        // Persist full route station distances map for offline & real-time physical milestone resolution
+        com.getcapacitor.JSObject stnDistances = call.getObject("stationDistances");
+        if (stnDistances != null && stnDistances.length() > 0) {
+            context.getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit()
+                    .putString("station_distances_" + trainNumber, stnDistances.toString())
+                    .apply();
+        }
+
         // Check exact alarm permission on Android 12+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);

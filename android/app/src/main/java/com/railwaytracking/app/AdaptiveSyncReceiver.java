@@ -229,6 +229,23 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                     if (liveDist > currentDist) currentDist = liveDist;
                 }
 
+                // Fallback to persisted route station distances map if currentDist or targetDist is missing
+                String stnDistJson = prefs.getString("station_distances_" + trainNumber, "{}");
+                try {
+                    JSONObject distMap = new JSONObject(stnDistJson);
+                    if (currentDist <= 0 && !currentStationCodeFromData.isEmpty() && distMap.has(currentStationCodeFromData.toUpperCase())) {
+                        currentDist = distMap.optDouble(currentStationCodeFromData.toUpperCase(), -1.0);
+                    }
+                    if (targetDist <= 0 && distMap.has(stationCode.toUpperCase())) {
+                        targetDist = distMap.optDouble(stationCode.toUpperCase(), -1.0);
+                    }
+                } catch (Exception ignored) {}
+
+                // If train's current reported station matches target station, mark arrived
+                if (stationCode.equalsIgnoreCase(currentStationCodeFromData)) {
+                    isAtStation = true;
+                }
+
                 if (currentDist > 0) {
                     context.getSharedPreferences(AdaptiveAlarmManager.PREFS_NAME, Context.MODE_PRIVATE)
                             .edit()
@@ -236,10 +253,12 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                             .apply();
                 }
 
-                // If train has physically arrived, departed, or reached within 1.0 km of landmark milestone, wake user immediately!
+                // If train has physically arrived, departed, or reached/passed station sequence or within 1.0 km of landmark milestone, wake user immediately!
+                boolean isSequenceReached = (currentSeq > 0 && targetSeq > 0 && currentSeq >= targetSeq);
                 boolean isMilestonePassed = (targetDist > 0 && currentDist > 0 && currentDist >= (targetDist - 1.0));
-                if (isAtStation || isMilestonePassed) {
-                    Log.d(TAG, "Train " + trainNumber + " physically arrived/passed " + stationCode + " (currentDist=" + currentDist + "km, target=" + targetDist + "km)! Firing alarm immediately.");
+                if (isAtStation || isMilestonePassed || isSequenceReached) {
+                    Log.d(TAG, "Train " + trainNumber + " physically arrived/passed " + stationCode
+                            + " (isAtStation=" + isAtStation + ", isSequenceReached=" + isSequenceReached + ", currentDist=" + currentDist + "km, target=" + targetDist + "km)! Firing alarm immediately.");
                     triggerAlarmNow(context, stationName, trainNumber, stationCode, livePlatform, triggerMinutes);
                     return;
                 }
@@ -359,7 +378,9 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                                 trainNumber,
                                 stationName,
                                 newTargetMillis,
-                                currentDelay
+                                currentDelay,
+                                remainingKm,
+                                triggerMinutes
                         );
                     } else {
                         Log.d(TAG, "Train " + trainNumber + " timing steady. Shift delta: " + (shiftDifference / 1000) + "s.");
@@ -369,31 +390,48 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                 // Calculate next sync interval with pre-flight check
                 long remainingToTarget = effectiveTargetMillis - System.currentTimeMillis();
                 long nextDelay;
-                if (remainingToTarget <= (3 * 60 * 1000L)) {
-                    if (remainingToTarget <= 0) {
-                        if (!isOriginStation && !hasDepartedOrigin) {
-                            Log.d(TAG, "Train " + trainNumber + " has not yet departed origin station! Delaying downline alarm.");
-                            AdaptiveAlarmManager.getInstance().scheduleNextSync(context, trainNumber, stationCode, 3 * 60 * 1000L);
+                if (remainingToTarget <= 0) {
+                    if (!isOriginStation && !hasDepartedOrigin) {
+                        Log.d(TAG, "Train " + trainNumber + " has not yet departed origin station! Delaying downline alarm.");
+                        AdaptiveAlarmManager.getInstance().scheduleNextSync(context, trainNumber, stationCode, 3 * 60 * 1000L);
+                        return;
+                    }
+
+                    // Landmark Alarms purely consider distance:
+                    // If alarm shifted to a time in the past or clock time passed, trigger ONLY IF physical distance condition is met!
+                    if (triggerMinutes == 0) {
+                        if (isDistanceTriggered || isAtStation || isMilestonePassed || isSequenceReached || (remainingKm >= 0.0 && remainingKm <= 1.0)) {
+                            Log.d(TAG, "Shifted time passed and train physically arrived/within 1.0km of " + stationCode + "! Firing landmark alarm now.");
+                            triggerAlarmNow(context, stationName, trainNumber, stationCode, livePlatform, triggerMinutes);
                             return;
                         }
-                        // Train running ahead of schedule or target reached: trigger alarm now!
+                        Log.d(TAG, "Clock time passed for Landmark Alarm [" + finalAlarmId
+                                + "], but landmark alarms purely consider distance. Train is " + String.format(Locale.getDefault(), "%.1f", remainingKm) + " km away. Polling rapidly (30s) until 1km radius or arrival!");
+                        nextDelay = 30 * 1000L;
+                    } else {
+                        // Dynamic / advance warning alarm (e.g. 15m, 30m, 45m warning)
                         Log.d(TAG, "Pre-flight check: target reached or train running early for [" + finalAlarmId + "]! Triggering alarm now.");
                         triggerAlarmNow(context, stationName, trainNumber, stationCode, livePlatform, triggerMinutes);
                         return;
                     }
-                    nextDelay = Math.max(30 * 1000L, remainingToTarget);
+                } else if (remainingToTarget <= (3 * 60 * 1000L)) {
+                    // Final approach (within 3 mins): poll every 45 seconds so train arrival is caught instantly
+                    nextDelay = 45 * 1000L;
                 } else if (remainingToTarget <= (8 * 60 * 1000L)) {
-                    // Pre-flight check: check exactly 3 minutes before the alarm
-                    nextDelay = remainingToTarget - (3 * 60 * 1000L);
-                } else if (remainingToTarget <= (20 * 60 * 1000L)) {
-                    // Approaching target: check every 5 minutes
+                    // Near station (within 8 mins): poll every 60 seconds (1 min)
+                    nextDelay = 60 * 1000L;
+                } else if (remainingToTarget <= (15 * 60 * 1000L)) {
+                    // Approaching target (within 15 mins): poll every 2 minutes
+                    nextDelay = 2 * 60 * 1000L;
+                } else if (remainingToTarget <= (30 * 60 * 1000L)) {
+                    // Within 30 mins: poll every 3 minutes
+                    nextDelay = 3 * 60 * 1000L;
+                } else if (remainingToTarget <= (60 * 60 * 1000L)) {
+                    // Within 1 hour: poll every 5 minutes
                     nextDelay = 5 * 60 * 1000L;
-                } else if (remainingToTarget <= (45 * 60 * 1000L)) {
-                    // Under 45 mins: check every 10 minutes
-                    nextDelay = 10 * 60 * 1000L;
                 } else {
-                    // Long delay / far destination (> 45 mins): check every 15 minutes
-                    nextDelay = 15 * 60 * 1000L;
+                    // Far destination (> 1 hour): check every 10 minutes
+                    nextDelay = 10 * 60 * 1000L;
                 }
 
                 // SMART ORIGIN SLEEP BACK-OFF:
@@ -411,14 +449,16 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                 // High-precision approach cadence:
                 // Rapid checks based on actual physical distance so high-speed trains (80-100 km/h) never bypass milestones
                 if (hasDepartedOrigin && remainingKm > 0) {
-                    if (remainingKm <= 3.0) {
-                        nextDelay = Math.min(nextDelay, 60 * 1000L); // 1 minute within 3 km
-                    } else if (remainingKm <= 10.0) {
-                        nextDelay = Math.min(nextDelay, 2 * 60 * 1000L); // 2 minutes within 10 km (e.g. 9 km from Mandamari)
-                    } else if (remainingKm <= 20.0) {
-                        nextDelay = Math.min(nextDelay, 3 * 60 * 1000L); // 3 minutes within 20 km
-                    } else if (remainingKm <= 35.0) {
-                        nextDelay = Math.min(nextDelay, 5 * 60 * 1000L); // 5 minutes within 35 km
+                    if (remainingKm <= 2.0) {
+                        nextDelay = Math.min(nextDelay, 30 * 1000L); // 30 seconds within 2 km
+                    } else if (remainingKm <= 5.0) {
+                        nextDelay = Math.min(nextDelay, 60 * 1000L); // 1 minute within 5 km
+                    } else if (remainingKm <= 12.0) {
+                        nextDelay = Math.min(nextDelay, 2 * 60 * 1000L); // 2 minutes within 12 km
+                    } else if (remainingKm <= 25.0) {
+                        nextDelay = Math.min(nextDelay, 3 * 60 * 1000L); // 3 minutes within 25 km
+                    } else if (remainingKm <= 40.0) {
+                        nextDelay = Math.min(nextDelay, 5 * 60 * 1000L); // 5 minutes within 40 km
                     }
                 }
 
@@ -436,7 +476,7 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                     arrivalDisplay = defaultExpectedArrival;
                 }
 
-                // Post visible status notification so user sees proof of live check + delay in hrs/mins
+                // Post visible status notification so user sees proof of live check + delay in hrs/mins + exact distance
                 AdaptiveAlarmManager.getInstance().postTelemetryStatusNotification(
                         context,
                         trainNumber,
@@ -445,7 +485,9 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
                         currentDelay,
                         arrivalDisplay,
                         effectiveTargetMillis,
-                        nextSyncMillis
+                        nextSyncMillis,
+                        remainingKm,
+                        triggerMinutes
                 );
 
                 Log.d(TAG, "Live check completed for [" + finalAlarmId + "]. Next check scheduled in " + (nextDelay / 60000) + "m (" + (nextDelay / 1000) + "s)");
@@ -509,9 +551,10 @@ public class AdaptiveSyncReceiver extends BroadcastReceiver {
 
     /**
      * Calibrated safe distance thresholds corresponding to the selected alarm advance minutes:
-     * 15m -> 12km, 30m -> 25km, 45m -> 38km, 60m -> 50km, 90m -> 75km, 120m -> 100km.
+     * 0m (Landmark) -> 1.0km, 15m -> 12km, 30m -> 25km, 45m -> 38km, 60m -> 50km, 90m -> 75km, 120m -> 100km.
      */
     private static double getSafeDistanceThresholdKm(int triggerMinutes) {
+        if (triggerMinutes == 0) return 1.0; // Strictly 1.0 km radius for At-Station Landmark Alarms!
         if (triggerMinutes <= 15) return 12.0;
         if (triggerMinutes <= 30) return 25.0;
         if (triggerMinutes <= 45) return 38.0;

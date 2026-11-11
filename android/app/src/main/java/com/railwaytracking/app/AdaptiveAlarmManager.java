@@ -148,17 +148,33 @@ public class AdaptiveAlarmManager {
             // 1. Schedule exact system alarm clock for this specific alarm
             scheduleAlarmClock(context, targetTriggerMillis, trainNumber, trainName, stationCode, stationName, platform, triggerMinutes);
 
-            // 2. Schedule adaptive periodic background sync with 3-minute pre-flight check
+            // 2. Schedule adaptive periodic background sync with high-precision approach ladder
             long timeUntilTarget = targetTriggerMillis - System.currentTimeMillis();
             long initialSyncDelay;
             if (timeUntilTarget <= (3 * 60 * 1000L)) {
-                initialSyncDelay = Math.max(30 * 1000L, timeUntilTarget);
+                initialSyncDelay = 45 * 1000L;
             } else if (timeUntilTarget <= (8 * 60 * 1000L)) {
-                initialSyncDelay = timeUntilTarget - (3 * 60 * 1000L);
-            } else if (timeUntilTarget <= (35 * 60 * 1000L)) {
+                initialSyncDelay = 60 * 1000L;
+            } else if (timeUntilTarget <= (15 * 60 * 1000L)) {
+                initialSyncDelay = 2 * 60 * 1000L;
+            } else if (timeUntilTarget <= (30 * 60 * 1000L)) {
+                initialSyncDelay = 3 * 60 * 1000L;
+            } else if (timeUntilTarget <= (60 * 60 * 1000L)) {
                 initialSyncDelay = 5 * 60 * 1000L;
             } else {
-                initialSyncDelay = 15 * 60 * 1000L;
+                initialSyncDelay = 10 * 60 * 1000L;
+            }
+
+            if (distanceKm > 0) {
+                if (distanceKm <= 2.0) {
+                    initialSyncDelay = Math.min(initialSyncDelay, 30 * 1000L);
+                } else if (distanceKm <= 5.0) {
+                    initialSyncDelay = Math.min(initialSyncDelay, 60 * 1000L);
+                } else if (distanceKm <= 12.0) {
+                    initialSyncDelay = Math.min(initialSyncDelay, 2 * 60 * 1000L);
+                } else if (distanceKm <= 25.0) {
+                    initialSyncDelay = Math.min(initialSyncDelay, 3 * 60 * 1000L);
+                }
             }
             scheduleNextSync(context, trainNumber, stationCode, initialSyncDelay);
 
@@ -256,16 +272,18 @@ public class AdaptiveAlarmManager {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
+        long effectiveAlarmClockMillis = Math.max(System.currentTimeMillis() + 30000L, targetTriggerMillis);
+
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                AlarmManager.AlarmClockInfo alarmClockInfo = new AlarmManager.AlarmClockInfo(targetTriggerMillis, showPendingIntent);
+                AlarmManager.AlarmClockInfo alarmClockInfo = new AlarmManager.AlarmClockInfo(effectiveAlarmClockMillis, showPendingIntent);
                 alarmManager.setAlarmClock(alarmClockInfo, pendingIntent);
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, targetTriggerMillis, pendingIntent);
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, effectiveAlarmClockMillis, pendingIntent);
             } else {
-                alarmManager.setExact(AlarmManager.RTC_WAKEUP, targetTriggerMillis, pendingIntent);
+                alarmManager.setExact(AlarmManager.RTC_WAKEUP, effectiveAlarmClockMillis, pendingIntent);
             }
-            Log.d(TAG, "Scheduled system AlarmClock for ID [" + alarmId + "] at: " + new Date(targetTriggerMillis));
+            Log.d(TAG, "Scheduled system AlarmClock for ID [" + alarmId + "] at: " + new Date(effectiveAlarmClockMillis));
 
             // Schedule 5-second CPU Pre-Wakeup so CPU and audio hardware are 100% warm before alarm rings
             long preWakeMillis = targetTriggerMillis - 5000L;
@@ -303,6 +321,13 @@ public class AdaptiveAlarmManager {
         syncIntent.putExtra("stationCode", stationCode);
         syncIntent.putExtra("alarmId", alarmId);
 
+        // Immediate sync request: send broadcast directly without AlarmManager so past timestamps are never discarded!
+        if (delayMillis <= 0) {
+            Log.d(TAG, "Immediate sync requested for [" + alarmId + "]. Triggering broadcast directly.");
+            context.sendBroadcast(syncIntent);
+            return;
+        }
+
         PendingIntent syncPendingIntent = PendingIntent.getBroadcast(
                 context,
                 syncReqCode,
@@ -312,17 +337,14 @@ public class AdaptiveAlarmManager {
 
         long triggerAt = System.currentTimeMillis() + delayMillis;
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                Intent showIntent = new Intent(context, MainActivity.class);
-                PendingIntent showPI = PendingIntent.getActivity(context, syncReqCode, showIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                AlarmManager.AlarmClockInfo clockInfo = new AlarmManager.AlarmClockInfo(triggerAt, showPI);
-                alarmManager.setAlarmClock(clockInfo, syncPendingIntent);
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, syncPendingIntent);
-            } else {
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, syncPendingIntent);
+            } else {
+                alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, syncPendingIntent);
             }
-            Log.d(TAG, "Next adaptive sync for [" + alarmId + "] scheduled via AlarmClock in " + (delayMillis / 60000) + " minutes (" + new Date(triggerAt) + ")");
+            Log.d(TAG, "Next adaptive sync for [" + alarmId + "] scheduled via exact RTC in " + (delayMillis / 1000) + "s (" + new Date(triggerAt) + ")");
         } catch (Exception e) {
             Log.e(TAG, "Error scheduling adaptive sync: " + e.getMessage());
         }
@@ -535,7 +557,9 @@ public class AdaptiveAlarmManager {
             String trainNumber,
             String stationName,
             long newTriggerMillis,
-            int delayMinutes
+            int delayMinutes,
+            double remainingKm,
+            int triggerMinutes
     ) {
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
@@ -547,7 +571,13 @@ public class AdaptiveAlarmManager {
         String delayText = formatDelayHoursAndMinutes(delayMinutes);
 
         String title = "🚆 Train " + trainNumber + " Schedule Update";
-        String body = "Train is " + delayText + ". Wake-up alarm automatically shifted to " + formattedTime + " for " + stationName + ".";
+        String body;
+        if (triggerMinutes == 0) {
+            String distPart = remainingKm >= 0.0 ? String.format(Locale.getDefault(), "%.1f km away", remainingKm) : "Approaching";
+            body = "Train is " + distPart + " (" + delayText + "). Expected arrival shifted to " + formattedTime + " for " + stationName + ". Alarm rings at station.";
+        } else {
+            body = "Train is " + delayText + ". Wake-up alarm automatically shifted to " + formattedTime + " for " + stationName + ".";
+        }
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, SYNC_CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
@@ -558,6 +588,16 @@ public class AdaptiveAlarmManager {
                 .setAutoCancel(true);
 
         nm.notify(SYNC_CHANNEL_ID.hashCode(), builder.build());
+    }
+
+    public void postScheduleShiftNotification(
+            Context context,
+            String trainNumber,
+            String stationName,
+            long newTriggerMillis,
+            int delayMinutes
+    ) {
+        postScheduleShiftNotification(context, trainNumber, stationName, newTriggerMillis, delayMinutes, -1.0, 30);
     }
 
     public static String formatTimeClean(String rawTime) {
@@ -606,7 +646,9 @@ public class AdaptiveAlarmManager {
             int delayMinutes,
             String expectedArrival,
             long targetTriggerMillis,
-            long nextSyncMillis
+            long nextSyncMillis,
+            double remainingKm,
+            int triggerMinutes
     ) {
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
@@ -621,7 +663,14 @@ public class AdaptiveAlarmManager {
         String cleanArrival = formatTimeClean(expectedArrival);
         String delayText = formatDelayHoursAndMinutes(delayMinutes);
         String title = "🚆 Train " + trainNumber + " • " + stationCode + " (" + delayText + ")";
-        String summary = "Arrival: " + cleanArrival + " • Alarm: " + alarmTimeStr;
+        String summary;
+        if (triggerMinutes == 0) {
+            String distPart = remainingKm >= 0.0 ? String.format(Locale.getDefault(), "%.1f km away", remainingKm) : "At station";
+            summary = distPart + " • Expected: " + cleanArrival;
+        } else {
+            summary = "Arrival: " + cleanArrival + " • Alarm: " + alarmTimeStr;
+        }
+
         String fullBody = summary + "\n"
                 + "Status: " + delayText + " • Checked: " + checkedNowStr + " • Next live check: " + nextSyncStr;
 
@@ -638,6 +687,19 @@ public class AdaptiveAlarmManager {
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT);
 
         nm.notify(getNotificationId(trainNumber, stationCode), builder.build());
+    }
+
+    public void postTelemetryStatusNotification(
+            Context context,
+            String trainNumber,
+            String stationName,
+            String stationCode,
+            int delayMinutes,
+            String expectedArrival,
+            long targetTriggerMillis,
+            long nextSyncMillis
+    ) {
+        postTelemetryStatusNotification(context, trainNumber, stationName, stationCode, delayMinutes, expectedArrival, targetTriggerMillis, nextSyncMillis, -1.0, 30);
     }
 
     private void createSyncChannel(NotificationManager nm) {

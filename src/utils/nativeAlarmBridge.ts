@@ -183,6 +183,7 @@ export const armAdaptiveNativeAlarm = async (options: {
   journeyDate?: string;
   backendUrl?: string;
   backupEmail?: string;
+  stationDistances?: Record<string, number>;
 }) => {
   if (isNativeApp()) {
     try {

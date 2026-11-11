@@ -77,6 +77,7 @@ This documentation is engineered for frontend developers, mobile engineers, UI/U
 19. [Route Disruption & Weather Safety Advisory Alerts](#19-route-disruption--weather-safety-advisory-alerts)
 20. [Step-by-Step Notification & Email Services Handbook](#20-step-by-step-notification--email-services-handbook)
 21. [Deep-Dive: Station Wake-Up Alarm Engine, Indian Railways Operational Rules & Technical Q&A](#21-deep-dive-station-wake-up-alarm-engine-indian-railways-operational-rules--technical-qa)
+    - 21.13. [High-Precision At-Station Landmark Alarms & Adaptive Approach Polling Ladder](#2113-high-precision-at-station-landmark-alarms--adaptive-approach-polling-ladder)
 
 ## 1. High-Level Architecture & User Interface Flow
 
@@ -3864,3 +3865,62 @@ To give travelers an instantaneous executive briefing of the train's operating c
 #### Zero Impact on Audio / Alarm Subsystems:
 * All telemetry calculations are contained within isolated memoized hooks (`useMemo`) and presentation components.
 * No changes were introduced to `alarmAudioService.ts`, `customAlarmSoundService.ts`, `multiAlarmManager.ts`, `nativeAlarmBridge.ts`, or `RingingAlarmOverlay.tsx`.
+
+---
+
+### 21.13. High-Precision At-Station Landmark Alarms & Adaptive Approach Polling Ladder
+
+#### 1. Architectural Overview & The Passenger Problem
+In real-world railway travel across Indian Railways, passengers frequently set **At-Station Landmark Alarms** (`triggerMinutes == 0`), expecting the phone to wake them up the exact moment the train arrives at or passes a specific station (e.g. Ravindrakhani `RVKH`, Hasanparthi `HSP`, Raghavapuram `RGPM`).
+
+However, two major operational challenges emerged in live field testing:
+1. **Pass-Through Station Detection Failure (The Ravindrakhani Bug):** For express trains that do not have a scheduled passenger halt at an intermediate station, railway live telemetry APIs often mark station status as `"UPCOMING"` or `"RUNNING"` inside the timetable array, even while the top-level train status reports `currentStationCode = "RVKH"`. Additionally, live status DTO payloads lack cumulative track kilometer distances. Because native receivers evaluated status only against `"AT_STATION"` on individual station records, the alarm failed to trigger even though the train icon was visibly at the station.
+2. **The Approach Telemetry Blind Spot (The Hasanparthi 11-Minute Gap):** When a train is 10 to 15 minutes away from the target station, the background polling ladder previously relaxed into a 5–10 minute wait and an outright 3-minute sleep right before the target time. Because trains cover 4–6 km in 5 minutes at speed, the train arrived, stopped, and departed Hasanparthi before the next API check occurred.
+
+---
+
+#### 2. Comprehensive Edge Cases & Technical Resolutions
+
+| Edge Case | Root Cause | Engineering Solution |
+|---|---|---|
+| **Pass-Through Station Status Mismatch** | Non-stopping stations remain `"UPCOMING"` in the `stations` array while top-level status reports `currentStationCode = "RVKH"`. | Added direct matching: `stationCode.equalsIgnoreCase(currentStationCodeFromData)`. Arrival is immediately acknowledged the instant the top-level tracker reports the train at the target station. |
+| **Missing Distance in Live Telemetry DTO** | `TrainLiveStatusDto` and `StationStatusDto` do not contain cumulative distance fields, causing `currentDist` to remain `-1.0` and distance thresholds to fail. | Full route `stationDistancesMap` is captured from `route.stations` in `TrainDetails.tsx` and persisted to native `SharedPreferences` as `station_distances_<trainNumber>`. Native background workers resolve cumulative distances instantly. |
+| **Sequential Station Ordering Guard** | Train may pass through a station at line speed without triggering a discrete dwell event. | Added sequential order check: `isSequenceReached = (currentSeq > 0 && targetSeq > 0 && currentSeq >= targetSeq)`. If the train sequence number meets or exceeds the target station sequence, the milestone is confirmed. |
+| **Shifted Schedule Time in the Past** | Train delayed and scheduled arrival time has passed, but train is physically held at an outer signal 2–3 km away. | For Landmark Alarms (`triggerMinutes == 0`), clock-only triggering is suppressed. The system triggers ONLY if physical criteria are met ($\le 1.0\text{ km}$, `isAtStation`, `isSequenceReached`, or `isMilestonePassed`). Otherwise, it switches to rapid 30s polling until arrival. |
+| **Android OS AlarmClock Throttling for Background Syncs** | `scheduleNextSync` previously used `AlarmManager.setAlarmClock()`, which conflicted with the actual ringing alarm clock and caused OEMs (Realme, OnePlus, Xiaomi) to drop or throttle frequent background syncs. | Background syncs switched to `alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, ...)`. The high-priority `setAlarmClock()` is strictly reserved for the actual user-facing wake-up alarm that plays audio. |
+| **Asynchronous Handler Rescheduling in Foreground Service** | `AdaptiveTrackingService` was rescheduling its handler synchronously on the main thread before the asynchronous network check finished, locking it to stale polling intervals. | Moved handler rescheduling to a `finally` block executed on completion of the background network worker, ensuring the next interval is scheduled using the newly calculated distance and time. |
+| **Remaining Distance in Status Notifications** | Notifications previously only displayed the shifted time (e.g. *"Alarm shifted to 01:29 PM"*), leaving passengers unaware of physical distance. | Updated `AdaptiveAlarmManager.postScheduleShiftNotification` and `postTelemetryStatusNotification` to compute and display remaining kilometers: *"Train is 2.4 km away. Wake-up alarm automatically shifted to 01:33 PM for Ravindrakhani"*. |
+
+---
+
+#### 3. Unified High-Frequency Approach Polling Ladder
+
+Both `AdaptiveSyncReceiver.java` (exact hardware RTC wakeup) and `AdaptiveTrackingService.java` (foreground data sync) implement the following dual-dimension approach cadence:
+
+```
++-----------------------------------------------------------------------------+
+|                           TELEMETRY EVALUATOR                               |
+|                  (Physical Distance & Time-to-Arrival)                      |
++--------------------------------------+--------------------------------------+
+                                       |
+                   +-------------------+-------------------+
+                   |                                       |
+                   v                                       v
+         PHYSICAL DISTANCE                          TIME TO ARRIVAL
+         <= 2.0 km  -> 30 seconds                   <= 3 mins   -> 45 seconds
+         <= 5.0 km  -> 60 seconds                   <= 8 mins   -> 60 seconds
+         <= 12.0 km -> 2 minutes                    <= 15 mins  -> 2 minutes
+         <= 25.0 km -> 3 minutes                    <= 30 mins  -> 3 minutes
+         <= 40.0 km -> 5 minutes                    <= 60 mins  -> 5 minutes
+         > 40.0 km  -> 10 minutes                   > 60 mins   -> 10 minutes
+                   |                                       |
+                   +-------------------+-------------------+
+                                       |
+                                       v
+                      FINAL CADENCE = MIN(Distance, Time)
+```
+
+$$\text{nextDelay} = \min\big(\text{delay}_{\text{distance}}, \text{delay}_{\text{time}}\big)$$
+
+This guarantees that whether a train is tracked by GPS coordinates, physical kilometer markers, or schedule timetables, polling frequency automatically intensifies as the train nears the station, eliminating approach blind spots while conserving battery during long journeys.
+
