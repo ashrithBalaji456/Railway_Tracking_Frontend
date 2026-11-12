@@ -3999,4 +3999,174 @@ To permanently prevent this across all stations nationwide without manual blackl
 * If traveling to the transfer station moves the passenger further away from the destination by more than 30 km, the itinerary is classified as geographic backtracking and discarded.
 * Legitimate forward transit hubs (e.g., `WL` $\rightarrow$ `SC` $\rightarrow$ `TPTY`, `WL` $\rightarrow$ `BZA` $\rightarrow$ `TPTY`, or `WL` $\rightarrow$ `KZJ` $\rightarrow$ `TPTY`) are preserved because their transfer stations maintain or reduce distance to the destination.
 
+---
+
+## 23. 🌐 Nationwide Railway Station Clustering, Outer Bypass Network, and UI Nearby Badge Architecture
+
+### 23.1. Overview & Problem Solved
+
+When users search for trains with **"Search nearby stations"** enabled, two severe pitfalls previously plagued rail applications:
+
+1. **Suburban Wayside Halts Overloading Queries (The Moula Ali `MLY` & Ghatkesar `GT` Problem):**
+   - In metro cities, small local suburban or MMTS halts are physically 5–15 km from the main junction.
+   - A naive GPS radius search for Secunderabad (`SC`) picked **Moula Ali (`MLY`, 7 km)** and **Ghatkesar (`GT`, 18 km)**.
+   - Long-distance express trains (such as those from Mancherial, Delhi, or Mumbai) never terminate at `MLY` or `GT`. Querying combinations like `/v1/trains/between/MCI/MLY` resulted in empty responses (`[]`), wasting API quota and cluttering search flows.
+2. **Missing Satellite Terminals and Outer Bypasses:**
+   - Conversely, Indian Railways intentionally routes trains to **outer bypass stations** to decongest central junctions:
+     - **Vijayawada (`BZA`):** Heavy through-trains between Howrah/Kazipet and Chennai/Bengaluru bypass `BZA` via **Rayanapadu (`RYP`)**.
+     - **Hyderabad (`SC`):** Modern express trains terminate across **Hyderabad Deccan (`HYB`)**, **Kacheguda (`KCG`)**, the newly inaugurated terminal **Charlapalli (`CHZ`)**, and IT corridor **Lingampalli (`LPI`)**.
+     - **Vadodara (`BRC`):** Delhi–Mumbai bypasses halt at **Chhayapuri (`CYI`)**.
+     - **Surat (`ST`):** East–West trains divert through **Udhna Jn (`UDN`)**.
+     - **Kolkata / Howrah (`HWH`):** Trains terminate across **`SDAH`**, **`KOAA`**, **`SHM`**, and **`SRC`** (Santragachi).
+     - **Chennai (`MAS`):** Southbound/westbound trains halt at **Egmore (`MS`)**, **Tambaram (`TBM`)**, or bypass via **Perambur (`PER`)**.
+     - **Goa, Haryana, Chandigarh, and North-Eastern capitals:** Terminals like **`MAO`** (Madgaon), **`KRMI`** (Karmali), **`CDG`** (Chandigarh), **`UMB`** (Ambala), **`AGTL`** (Agartala), **`DMV`** (Dimapur), **`NHLN`** (Naharlagun), etc.
+
+To solve this permanently, the frontend synchronizes a comprehensive predefined **Nationwide Station Cluster Registry** (`stationClusters.ts`), coordinates with the backend corridor engine, deduplicates combinatorial train options, and renders intuitive UI **"Nearby"** badges.
+
+---
+
+### 23.2. Nationwide Station Cluster Registry (`src/utils/stationClusters.ts`)
+
+`stationClusters.ts` defines explicit, reciprocal station clusters across **27 States & Union Territories** containing **175+ major passenger stations and bypass junctions**:
+
+```typescript
+export interface StationCluster {
+  city: string;
+  stations: string[];
+}
+
+export const STATION_CLUSTERS: Record<string, StationCluster> = {
+  // Telangana - Hyderabad & Secunderabad Hub (Excluding minor halts MLY/GT)
+  SC:   { city: 'Hyderabad / Secunderabad', stations: ['SC', 'HYB', 'KCG', 'CHZ', 'LPI'] },
+  HYB:  { city: 'Hyderabad / Secunderabad', stations: ['SC', 'HYB', 'KCG', 'CHZ', 'LPI'] },
+  KCG:  { city: 'Hyderabad / Secunderabad', stations: ['SC', 'HYB', 'KCG', 'CHZ', 'LPI'] },
+  CHZ:  { city: 'Hyderabad / Secunderabad', stations: ['SC', 'HYB', 'KCG', 'CHZ', 'LPI'] },
+  LPI:  { city: 'Hyderabad / Secunderabad', stations: ['SC', 'HYB', 'KCG', 'CHZ', 'LPI'] },
+
+  // Andhra Pradesh - Vijayawada Junction & Rayanapadu Bypass
+  BZA:  { city: 'Vijayawada', stations: ['BZA', 'RYP'] },
+  RYP:  { city: 'Vijayawada', stations: ['BZA', 'RYP'] },
+
+  // Delhi NCR
+  NDLS: { city: 'Delhi NCR', stations: ['NDLS', 'DLI', 'NZM', 'ANVT', 'DEE', 'DEC', 'GZB'] },
+  // ... Mumbai, Bengaluru, Kolkata, Chennai, Gujarat, UP, Bihar, Goa, NE states, etc.
+};
+```
+
+#### Key Stations Covered by Region:
+| Region | Core Hubs & Satellite Terminals |
+| :--- | :--- |
+| **Telangana** | `SC` (Secunderabad), `HYB` (Nampally), `KCG` (Kacheguda), `CHZ` (Charlapalli), `LPI` (Lingampalli), `KZJ` (Kazipet), `WL` (Warangal) |
+| **Andhra Pradesh** | `BZA` (Vijayawada), `RYP` (Rayanapadu), `VSKP` (Visakhapatnam), `DVD` (Duvvada), `TPTY` (Tirupati), `RU` (Renigunta) |
+| **Delhi NCR** | `NDLS` (New Delhi), `DLI` (Old Delhi), `NZM` (Hazrat Nizamuddin), `ANVT` (Anand Vihar), `DEE` (Sarai Rohilla), `DEC` (Delhi Cantt), `GZB` (Ghaziabad) |
+| **Maharashtra (MMR)** | `CSMT`, `MMCT`, `BDTS`, `LTT`, `DR` (Dadar), `TNA` (Thane), `KYN` (Kalyan), `BVI` (Borivali), `PNVL` (Panvel), `PUNE`, `SVJR` |
+| **Karnataka** | `SBC` (KSR Bengaluru), `YPR` (Yesvantpur), `SMVB` (Sir M. Visvesvaraya), `BNC` (Cantonment), `KJM` (Krishnarajapuram) |
+| **West Bengal** | `HWH` (Howrah), `SDAH` (Sealdah), `KOAA` (Kolkata Chitpur), `SHM` (Shalimar), `SRC` (Santragachi Bypass) |
+| **Tamil Nadu** | `MAS` (Chennai Central), `MS` (Chennai Egmore), `TBM` (Tambaram), `PER` (Perambur Bypass) |
+| **Gujarat** | `ADI` (Ahmedabad), `SBT` (Sabarmati), `BRC` (Vadodara) $\leftrightarrow$ `CYI` (Chhayapuri Bypass), `ST` (Surat) $\leftrightarrow$ `UDN` (Udhna Bypass) |
+| **Uttar Pradesh** | `LKO` / `LJN` (Lucknow), `CNB` / `GOY` (Kanpur), `PRYJ` / `PCOI` (Prayagraj), `BSB` / `BSBS` / `DDU` (Varanasi/Banaras/Mughalsarai), `AF` / `AGC` (Agra) |
+| **Bihar** | `PNBE` (Patna), `RJPB` (Rajendra Nagar), `DNR` (Danapur), `PPTA` (Patliputra) |
+| **Goa** | `MAO` (Madgaon Jn), `VSG` (Vasco-da-Gama), `KRMI` (Karmali), `THVM` (Thivim) |
+| **Haryana & Punjab** | `UMB` (Ambala Cantt), `CDG` (Chandigarh), `KLK` (Kalka), `ASR`, `LDH` |
+| **North-Eastern States**| `AGTL` (Agartala, Tripura), `DMV` (Dimapur, Nagaland), `NHLN` (Naharlagun, Arunachal), `MNDP` (Mendipathar, Meghalaya), `JIRB` (Jiribam, Manipur), `BHRB` (Bhairabi, Mizoram) |
+
+---
+
+### 23.3. Client-Backend Search Coordination (`FindTrains.tsx`)
+
+When a user initiates a train search with nearby stations toggled:
+1. **Unified Endpoint Call:**
+   The frontend calls:
+   ```typescript
+   GET /api/v1/journey/plan?source=${source}&destination=${dest}&date=${date}&nearby=${searchNearby}
+   ```
+2. **Preserving Searched User Intent:**
+   - The user's input fields (`fromStation` and `toStation`) are retained in component state (`searchedOrigin`, `searchedDestination`).
+   - The main search header always reads: **"Trains from Ravindrakhani (RVKH) to Secunderabad (SC)"**, never mutating or confusing the user by silently renaming their search.
+3. **Backend Priority Insertion:**
+   - The backend guarantees that the searched station is always placed at index 0 of the query list.
+   - For non-predefined stations (like `RVKH`), the backend applies a two-tier sort (`NSG1-NSG4` category rank $\rightarrow$ Haversine proximity) capped by the circuit-breaker (`maxLimit = isDestination ? 4 : 3`).
+
+---
+
+### 23.4. Deduplication & Route Anchoring (`deduplicateJourneys`)
+
+Because multiple origin/destination combinations are queried concurrently (e.g., `RVKH-SC`, `MCI-SC`, `RDM-SC`, `MCI-HYB`, etc.), the same train (e.g., *12724 Telangana Express*) may be returned under multiple station pairs.
+
+`FindTrains.tsx` performs smart deduplication:
+```typescript
+const deduplicateJourneys = (journeys: JourneyOptionDto[], searchedSrc: string, searchedDst: string) => {
+  const seen = new Map<string, JourneyOptionDto>();
+  for (const j of journeys) {
+    const key = j.trainNumber;
+    if (!seen.has(key)) {
+      seen.set(key, j);
+    } else {
+      // Prioritize the journey whose departure station matches the searched station
+      const existing = seen.get(key)!;
+      if (j.fromStation === searchedSrc || (j.toStation === searchedDst && existing.fromStation !== searchedSrc)) {
+        seen.set(key, j);
+      }
+    }
+  }
+  return Array.from(seen.values());
+};
+```
+
+---
+
+### 23.5. UI "Nearby" Badge Presentation & Visual Clarity
+
+To provide complete transparency so passengers don't miss departures from sibling stations:
+1. **Dynamic Identification:**
+   ```typescript
+   const isOriginNearby = train.fromStation !== searchedOrigin;
+   const isDestinationNearby = train.toStation !== searchedDestination;
+   ```
+2. **Visual Badging in Train Cards:**
+   - When `isOriginNearby === true`:
+     Renders a distinctive purple badge:
+     ```tsx
+     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+       <MapPin className="w-3 h-3" />
+       Nearby Origin: {getStationName(train.fromStation)} ({train.fromStation})
+     </span>
+     ```
+   - When `isDestinationNearby === true`:
+     Renders a distinctive purple badge:
+     ```tsx
+     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+       <MapPin className="w-3 h-3" />
+       Nearby Dest: {getStationName(train.toStation)} ({train.toStation})
+     </span>
+     ```
+3. **Exact Matches:**
+   Trains departing exactly from the requested station and arriving at the requested destination show standard route badges with zero visual noise.
+
+---
+
+### 23.6. Future Modification & Developer Guide
+
+#### 1. How to Add a New Cluster or Satellite Station in Frontend:
+Open `Frontend/src/utils/stationClusters.ts`. Inside `STATION_CLUSTERS`, add symmetrical key-value mappings for each station in the group:
+```typescript
+NEW_JUNCTION: { city: 'CityName', stations: ['NEW_JUNCTION', 'BYPASS_STATION_1', 'SATELLITE_TERMINAL_2'] },
+BYPASS_STATION_1: { city: 'CityName', stations: ['NEW_JUNCTION', 'BYPASS_STATION_1', 'SATELLITE_TERMINAL_2'] },
+SATELLITE_TERMINAL_2: { city: 'CityName', stations: ['NEW_JUNCTION', 'BYPASS_STATION_1', 'SATELLITE_TERMINAL_2'] },
+```
+*(Always mirror these entries in `Backend/.../JourneyServiceImpl.java` using `registerCluster(List.of(...))` for complete symmetry).*
+
+#### 2. How Nearby Discovery Behaves for Rural Stations / Wayside Halts:
+If a passenger searches a rural halt (e.g. `RVKH` Ravindrakhani) that is not in `STATION_CLUSTERS`:
+- The backend's Layer 2 dynamic GPS scan automatically discovers nearby stations within a 55 km radius.
+- It filters exclusively for major commercial categories (`NSG1`, `NSG2`, `NSG3`, `NSG4`).
+- It applies the two-tier sort: category weight first (`NSG1` > `NSG2` > `NSG3` > `NSG4`), then geographical distance.
+- It caps origin selections at `maxLimit = 3` (searched station + 2 nearest major junctions, such as `MCI` at 6.6 km and `RDM` at 19.5 km).
+- The client receives and renders all combinations under unified deduplication.
+
+#### 3. How to Allow More Stations in Future Searches:
+- **Backend Limit:** In `JourneyServiceImpl.java`, change `int maxLimit = isDestination ? 4 : 3;` to higher thresholds (e.g., `isDestination ? 5 : 4`) if you wish to query 3 or 4 nearby origin hubs simultaneously.
+- **Frontend Fallback Radius:** In `stationClusters.ts`, `MAX_RADIUS_KM` can be adjusted from `30` to `45` km if wider geographical clustering is desired for offline mode.
+
+
 
