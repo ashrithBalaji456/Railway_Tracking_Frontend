@@ -74,7 +74,8 @@ export default function TrainsBetweenStations() {
     if (!mins || mins <= 0) return '0m';
     const hours = Math.floor(mins / 60);
     const m = mins % 60;
-    if (hours > 0) return `${hours}h ${m}m`;
+    if (hours > 0 && m > 0) return `${hours}h ${m}m`;
+    if (hours > 0) return `${hours}h`;
     return `${m}m`;
   };
 
@@ -982,7 +983,7 @@ export default function TrainsBetweenStations() {
                         {/* Layover indicator */}
                         <div className="flex items-center justify-center gap-1.5 py-0.5 text-[11px] text-amber-400 font-medium">
                           <Clock className="w-3 h-3 text-amber-400" />
-                          <span>{t.layoverMinutes || 0}m transfer layover at {t.transferStationCode}</span>
+                          <span>{formatDurationCompact(t.layoverMinutes)} transfer layover at {t.transferStationCode}</span>
                         </div>
 
                         {/* Leg 2 */}
