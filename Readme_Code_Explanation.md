@@ -3528,7 +3528,7 @@ flowchart TD
   1. **Direct vs Connecting Route Separation (`routeFilter === 'DIRECT'` vs `'CONNECTING'`):**
      - The underlying route planner API (`/api/v1/journey/plan`) returns both direct trains (e.g., ~14 direct trains for WL $\rightarrow$ TPTY) and 1-transfer connecting itineraries (e.g., 17 connecting options via SC/BZA).
      - To prevent connecting itineraries from appearing as confusing direct trains (e.g., showing Bidar SF Express 12749 with only its 141.9 km first leg), `routeFilter` defaults strictly to `'DIRECT'`, showing only genuine direct services.
-     - A dedicated "Connecting Routes" pill segregates transfer journeys into dual-leg cards displaying Leg 1, transfer station layover duration, Leg 2, and combined travel distance.
+     - A dedicated "Connecting Routes" pill segregates transfer journeys into dual-leg cards displaying Leg 1, transfer station layover duration (formatted in human-readable hours and minutes, e.g., `3h 9m transfer layover at AJJ`), Leg 2, and combined travel distance.
   2. **Accurate Journey Distance & True Running Days Highlighting:**
      - Computes distance via `totalDistanceKm || firstLegDistanceKm`, displaying the authentic complete route length (e.g., 536.3 km / 596.4 km instead of partial leg lengths).
      - Dynamic `runDaysStr` parsing highlights only genuine operating days in blue pills (`bg-blue-600 text-white font-bold`) while dimming non-operating days in muted text (`text-slate-600`), replacing previous hardcoded `"Daily"` fallbacks.
