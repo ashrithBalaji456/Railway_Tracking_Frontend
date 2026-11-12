@@ -5,6 +5,7 @@ import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
 import { searchHistoryService } from '../services/searchHistoryService';
+import { getStationCluster, getClusterCityName } from '../utils/stationClusters';
 
 export default function TrainsBetweenStations() {
   const { language } = useLanguage();
@@ -143,23 +144,67 @@ export default function TrainsBetweenStations() {
     return () => clearTimeout(delayDebounce);
   }, [destQuery]);
 
-  // Fetch trains function
-  const fetchTrainsBetween = async (srcCode: string, dstCode: string, dateParamStr: string) => {
+  // Fetch trains function with optional nearby cluster expansion
+  const fetchTrainsBetween = async (srcCode: string, dstCode: string, dateParamStr: string, useNearby?: boolean) => {
     if (!srcCode || !dstCode) return;
     setLoading(true);
     setError('');
     setSearched(true);
+    const nearbyActive = useNearby !== undefined ? useNearby : searchNearby;
     try {
       const dateQuery = dateParamStr ? `&date=${dateParamStr}` : '';
-      const response: any = await api.get(
-        `/api/v1/journey/plan?source=${srcCode}&destination=${dstCode}${dateQuery}`
-      );
-      if (response && response.success && response.data) {
-        setTrains(response.data);
-      } else if (Array.isArray(response)) {
-        setTrains(response);
+
+      if (!nearbyActive) {
+        // Direct single station pair query
+        const response: any = await api.get(
+          `/api/v1/journey/plan?source=${srcCode}&destination=${dstCode}${dateQuery}`
+        );
+        if (response && response.success && response.data) {
+          setTrains(response.data);
+        } else if (Array.isArray(response)) {
+          setTrains(response);
+        } else {
+          setTrains([]);
+        }
       } else {
-        setTrains([]);
+        // Nearby cluster expansion (e.g. Warangal=[WL, KZJ], Tirupati=[TPTY, RU])
+        const srcCluster = getStationCluster(srcCode);
+        const dstCluster = getStationCluster(dstCode);
+
+        // Build list of pairs to query (capped at max 6 for network speed)
+        const pairs: Array<{ from: string; to: string }> = [];
+        for (const s of srcCluster) {
+          for (const d of dstCluster) {
+            if (s !== d && pairs.length < 6) {
+              pairs.push({ from: s, to: d });
+            }
+          }
+        }
+        if (pairs.length === 0) pairs.push({ from: srcCode, to: dstCode });
+
+        const responses = await Promise.allSettled(
+          pairs.map(p => api.get(`/api/v1/journey/plan?source=${p.from}&destination=${p.to}${dateQuery}`))
+        );
+
+        const merged: any[] = [];
+        const seenKeys = new Set<string>();
+
+        for (const res of responses) {
+          if (res.status === 'fulfilled') {
+            const data = res.value?.data || (Array.isArray(res.value) ? res.value : []);
+            for (const item of data) {
+              const trainKey = item.direct 
+                ? (item.firstTrainNumber + '_' + item.originStationCode + '_' + item.destinationStationCode)
+                : (item.firstTrainNumber + '_' + item.transferStationCode + '_' + item.secondTrainNumber);
+              
+              if (!seenKeys.has(trainKey)) {
+                seenKeys.add(trainKey);
+                merged.push(item);
+              }
+            }
+          }
+        }
+        setTrains(merged);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch trains between stations.');
@@ -175,8 +220,9 @@ export default function TrainsBetweenStations() {
     const dst = searchParams.get('destination');
     const dt = searchParams.get('date') || '';
     const nb = searchParams.get('nearby');
+    const nearbyVal = nb === 'true';
 
-    if (nb !== null) setSearchNearby(nb === 'true');
+    if (nb !== null) setSearchNearby(nearbyVal);
     setTravelDate(dt);
 
     if (src && dst) {
@@ -197,7 +243,7 @@ export default function TrainsBetweenStations() {
           setSelectedDest(dMatch);
           setDestQuery(`${dMatch.stationName} (${dMatch.stationCode})`);
 
-          await fetchTrainsBetween(src, dst, dt);
+          await fetchTrainsBetween(src, dst, dt, nearbyVal);
         } catch (err: any) {
           setError(err.message || 'Failed to load stations.');
         } finally {
@@ -235,7 +281,7 @@ export default function TrainsBetweenStations() {
 
     const dateQuery = travelDate ? `&date=${travelDate}` : '';
     navigate(`/trains-between?source=${src}&destination=${dst}${dateQuery}&nearby=${searchNearby}`, { replace: true });
-    fetchTrainsBetween(src, dst, travelDate);
+    fetchTrainsBetween(src, dst, travelDate, searchNearby);
   };
 
   // Swap Stations button
@@ -251,7 +297,7 @@ export default function TrainsBetweenStations() {
     if (selectedDest && tempSrc) {
       const dateQuery = travelDate ? `&date=${travelDate}` : '';
       navigate(`/trains-between?source=${selectedDest.stationCode}&destination=${tempSrc.stationCode}${dateQuery}&nearby=${searchNearby}`, { replace: true });
-      fetchTrainsBetween(selectedDest.stationCode, tempSrc.stationCode, travelDate);
+      fetchTrainsBetween(selectedDest.stationCode, tempSrc.stationCode, travelDate, searchNearby);
     }
   };
 
@@ -264,7 +310,19 @@ export default function TrainsBetweenStations() {
     if (src && dst) {
       const dateQuery = dateVal ? `&date=${dateVal}` : '';
       navigate(`/trains-between?source=${src}&destination=${dst}${dateQuery}&nearby=${searchNearby}`, { replace: true });
-      fetchTrainsBetween(src, dst, dateVal);
+      fetchTrainsBetween(src, dst, dateVal, searchNearby);
+    }
+  };
+
+  // Toggle Search Nearby helper
+  const handleToggleNearby = (checked: boolean) => {
+    setSearchNearby(checked);
+    const src = selectedSource?.stationCode || searchParams.get('source');
+    const dst = selectedDest?.stationCode || searchParams.get('destination');
+    if (src && dst) {
+      const dateQuery = travelDate ? `&date=${travelDate}` : '';
+      navigate(`/trains-between?source=${src}&destination=${dst}${dateQuery}&nearby=${checked}`, { replace: true });
+      fetchTrainsBetween(src, dst, travelDate, checked);
     }
   };
 
@@ -280,8 +338,17 @@ export default function TrainsBetweenStations() {
   };
   const activeDayOfWeek = getSelectedDayOfWeek(travelDate);
 
-  // Compute Categories with counts
-  const categoryCounts = trains.reduce((acc: Record<string, number>, t: any) => {
+  // Route Filter: DIRECT vs CONNECTING
+  const [routeFilter, setRouteFilter] = useState<'DIRECT' | 'CONNECTING'>('DIRECT');
+
+  // Compute direct and connecting trains
+  const directTrains = trains.filter((t: any) => t.direct !== false);
+  const connectingTrains = trains.filter((t: any) => t.direct === false);
+
+  const activeRouteTrains = routeFilter === 'DIRECT' ? directTrains : connectingTrains;
+
+  // Compute Categories with counts based on active route filter
+  const categoryCounts = activeRouteTrains.reduce((acc: Record<string, number>, t: any) => {
     const cat = getTrainCategory(t.firstTrainNumber, t.firstTrainName);
     acc[cat] = (acc[cat] || 0) + 1;
     return acc;
@@ -290,10 +357,17 @@ export default function TrainsBetweenStations() {
   const categories = Object.keys(categoryCounts).sort();
 
   // Filter and Sort trains
-  const filteredTrains = trains.filter((t: any) => {
+  const filteredTrains = activeRouteTrains.filter((t: any) => {
     if (selectedCategory !== 'ALL') {
       const cat = getTrainCategory(t.firstTrainNumber, t.firstTrainName);
       if (cat !== selectedCategory) return false;
+    }
+    // If travel date is selected, check if train runs on this day of week
+    if (activeDayOfWeek) {
+      const runDays = (t.firstTrainRunDays || '').toLowerCase();
+      if (runDays && !runDays.includes('daily') && !runDays.includes(activeDayOfWeek)) {
+        return false;
+      }
     }
     return true;
   });
@@ -341,6 +415,22 @@ export default function TrainsBetweenStations() {
     { code: 'sun', label: 'Sun' },
   ];
 
+  const getHeaderSourceTitle = () => {
+    const rawName = selectedSource?.stationName || searchParams.get('source') || 'Origin';
+    if (!searchNearby) return rawName;
+    const code = selectedSource?.stationCode || searchParams.get('source') || '';
+    const city = getClusterCityName(code);
+    return city ? `${city} (All Stations)` : `${rawName} (All Stations)`;
+  };
+
+  const getHeaderDestTitle = () => {
+    const rawName = selectedDest?.stationName || searchParams.get('destination') || 'Destination';
+    if (!searchNearby) return rawName;
+    const code = selectedDest?.stationCode || searchParams.get('destination') || '';
+    const city = getClusterCityName(code);
+    return city ? `${city} (All Stations)` : `${rawName} (All Stations)`;
+  };
+
   return (
     <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6 relative text-slate-200">
       {/* Top Header Row with Back to Home & Action Pills */}
@@ -357,12 +447,12 @@ export default function TrainsBetweenStations() {
           </button>
           <div>
             <h1 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              <span>{selectedSource?.stationName || searchParams.get('source') || 'Origin'}</span>
+              <span>{getHeaderSourceTitle()}</span>
               <span className="text-slate-500 font-normal">→</span>
-              <span>{selectedDest?.stationName || searchParams.get('destination') || 'Destination'}</span>
+              <span>{getHeaderDestTitle()}</span>
             </h1>
             <p className="text-[11px] text-slate-400">
-              {sortedTrains.length} trains available {travelDate ? `on ${travelDate}` : '(irrespective of dates)'}
+              {sortedTrains.length} {routeFilter === 'DIRECT' ? 'direct trains' : 'connecting routes'} available {travelDate ? `on ${travelDate}` : '(irrespective of dates)'}
             </p>
           </div>
         </div>
@@ -672,7 +762,7 @@ export default function TrainsBetweenStations() {
               type="checkbox"
               id="nearbyStations"
               checked={searchNearby}
-              onChange={(e) => setSearchNearby(e.target.checked)}
+              onChange={(e) => handleToggleNearby(e.target.checked)}
               className="rounded bg-slate-950 border-slate-700 text-blue-600 focus:ring-0 h-4 w-4 cursor-pointer"
             />
             <label htmlFor="nearbyStations" className="text-xs text-slate-400 cursor-pointer select-none">
@@ -731,8 +821,62 @@ export default function TrainsBetweenStations() {
         </div>
       )}
 
-      {/* Category Pills Filter Row (Matching screenshot) */}
+      {/* Route Mode Switcher: Direct Trains vs Connecting Options */}
       {trains.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setRouteFilter('DIRECT');
+                setSelectedCategory('ALL');
+              }}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                routeFilter === 'DIRECT'
+                  ? 'bg-[#2563eb] text-white shadow-md'
+                  : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-800'
+              }`}
+            >
+              <span>Direct Trains</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${routeFilter === 'DIRECT' ? 'bg-blue-800 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                {directTrains.length}
+              </span>
+            </button>
+
+            {connectingTrains.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setRouteFilter('CONNECTING');
+                  setSelectedCategory('ALL');
+                }}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                  routeFilter === 'CONNECTING'
+                    ? 'bg-purple-600 text-white shadow-md'
+                    : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-800'
+                }`}
+              >
+                <GitFork className="w-3.5 h-3.5 text-purple-400" />
+                <span>Connecting Routes</span>
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${routeFilter === 'CONNECTING' ? 'bg-purple-800 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                  {connectingTrains.length}
+                </span>
+              </button>
+            )}
+          </div>
+
+          <div className="text-[11px] text-slate-400">
+            {routeFilter === 'DIRECT' ? (
+              <span>Showing direct non-stop trains</span>
+            ) : (
+              <span>Showing 1-transfer connecting journey options</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Category Pills Filter Row (Matching screenshot) */}
+      {activeRouteTrains.length > 0 && (
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
           <button
             type="button"
@@ -743,7 +887,7 @@ export default function TrainsBetweenStations() {
                 : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-800'
             }`}
           >
-            All Trains <span className="ml-1 opacity-80">{trains.length}</span>
+            All {routeFilter === 'DIRECT' ? 'Trains' : 'Routes'} <span className="ml-1 opacity-80">{activeRouteTrains.length}</span>
           </button>
 
           {categories.map((cat) => (
@@ -777,8 +921,98 @@ export default function TrainsBetweenStations() {
           {sortedTrains.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {sortedTrains.map((t: any, idx: number) => {
+                // If this is a connecting route (1 transfer)
+                if (t.direct === false) {
+                  return (
+                    <div
+                      key={idx}
+                      className="bg-[#0c1322] border border-purple-500/30 hover:border-purple-500/60 rounded-xl p-4 sm:p-5 space-y-3.5 transition shadow-lg flex flex-col justify-between"
+                    >
+                      <div className="space-y-3">
+                        {/* Top Row: Transfer header & Total Distance */}
+                        <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-2.5">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-purple-300 truncate">
+                            <GitFork className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                            <span className="truncate">Via {t.transferStationCode} ({translateName(t.transferStationName || t.transferStationCode, language)})</span>
+                          </div>
+                          <span className="text-[10px] font-semibold bg-purple-950/70 text-purple-300 border border-purple-800/40 px-2 py-0.5 rounded shrink-0">
+                            {formatDistanceKm(t.totalDistanceKm, t.totalDurationMinutes)}
+                          </span>
+                        </div>
+
+                        {/* Leg 1 */}
+                        <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5 space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-extrabold text-white">{t.firstTrainNumber} - {translateName(t.firstTrainName, language)}</span>
+                            <span className="text-[11px] text-slate-300 font-semibold">{formatTimeToAMPM(t.originDepartureTime)} → {formatTimeToAMPM(t.transferArrivalTime)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span>{t.originStationCode} → {t.transferStationCode}</span>
+                            <span>{formatDistanceKm(t.firstLegDistanceKm)}</span>
+                          </div>
+                        </div>
+
+                        {/* Layover indicator */}
+                        <div className="flex items-center justify-center gap-1.5 py-0.5 text-[11px] text-amber-400 font-medium">
+                          <Clock className="w-3 h-3 text-amber-400" />
+                          <span>{t.layoverMinutes || 0}m transfer layover at {t.transferStationCode}</span>
+                        </div>
+
+                        {/* Leg 2 */}
+                        <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5 space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-extrabold text-white">{t.secondTrainNumber} - {translateName(t.secondTrainName, language)}</span>
+                            <span className="text-[11px] text-slate-300 font-semibold">{formatTimeToAMPM(t.transferDepartureTime)} → {formatTimeToAMPM(t.destinationArrivalTime)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span>{t.transferStationCode} → {t.destinationStationCode}</span>
+                            <span>{formatDistanceKm(t.secondLegDistanceKm)}</span>
+                          </div>
+                        </div>
+
+                        {/* Total journey duration */}
+                        <div className="flex items-center justify-between text-xs pt-0.5 text-slate-400">
+                          <span>Total Journey Duration:</span>
+                          <span className="font-bold text-white">{formatDurationCompact(t.totalDurationMinutes)}</span>
+                        </div>
+                      </div>
+
+                      {/* Quick Action Footer */}
+                      <div className="flex items-center justify-between pt-3 mt-3 border-t border-white/5 text-[11px]">
+                        <div className="flex items-center gap-3">
+                          <Link
+                            to={`/trains/${t.firstTrainNumber}?date=${travelDate || todayStr}`}
+                            className="font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1 transition"
+                          >
+                            <Clock className="w-3 h-3" />
+                            <span>Leg 1 ({t.firstTrainNumber})</span>
+                          </Link>
+                          <span className="text-slate-700">|</span>
+                          <Link
+                            to={`/trains/${t.secondTrainNumber}?date=${travelDate || todayStr}`}
+                            className="font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1 transition"
+                          >
+                            <Clock className="w-3 h-3" />
+                            <span>Leg 2 ({t.secondTrainNumber})</span>
+                          </Link>
+                        </div>
+                        <Link
+                          to={`/journey?source=${t.originStationCode}&destination=${t.destinationStationCode}${travelDate ? `&date=${travelDate}` : ''}`}
+                          className="font-semibold text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                        >
+                          <span>Itinerary</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Direct Train Card
                 const category = getTrainCategory(t.firstTrainNumber, t.firstTrainName);
-                const runDaysStr = (t.firstTrainRunDays || 'mon,tue,wed,thu,fri,sat,sun').toLowerCase();
+                const runDaysStr = (t.firstTrainRunDays || '').toLowerCase();
+                const isDaily = runDaysStr.includes('daily');
+                const displayDistance = t.totalDistanceKm || t.firstLegDistanceKm;
 
                 return (
                   <div
@@ -827,7 +1061,7 @@ export default function TrainsBetweenStations() {
                             <div className="w-1.5 h-1.5 rounded-full bg-slate-500 shrink-0"></div>
                           </div>
                           <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium">
-                            {formatDistanceKm(t.firstLegDistanceKm, t.totalDurationMinutes)}
+                            {formatDistanceKm(displayDistance, t.totalDurationMinutes)}
                           </span>
                         </div>
 
@@ -848,7 +1082,7 @@ export default function TrainsBetweenStations() {
                       {/* Running Days Pill Row */}
                       <div className="flex items-center gap-1.5 pt-3">
                         {daysList.map((day) => {
-                          const isRunsOnDay = runDaysStr.includes(day.code) || runDaysStr.includes('daily');
+                          const isRunsOnDay = isDaily || (runDaysStr ? runDaysStr.includes(day.code) : true);
                           const isDayActive = activeDayOfWeek ? (activeDayOfWeek === day.code && isRunsOnDay) : isRunsOnDay;
 
                           if (!isRunsOnDay) {
