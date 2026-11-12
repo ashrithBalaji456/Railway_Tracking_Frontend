@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { ArrowLeft, ArrowUpDown, Calendar, ChevronDown, Clock, Navigation, RefreshCw, X, ArrowRight, GitFork } from 'lucide-react';
 import api from '../services/api';
@@ -369,9 +369,58 @@ export default function TrainsBetweenStations() {
   // Route Filter: DIRECT vs CONNECTING
   const [routeFilter, setRouteFilter] = useState<'DIRECT' | 'CONNECTING'>('DIRECT');
 
-  // Compute direct and connecting trains
+  // Compute direct trains
   const directTrains = trains.filter((t: any) => t.direct !== false);
-  const connectingTrains = trains.filter((t: any) => t.direct === false);
+
+  // Set of all direct train numbers operating between source cluster and destination cluster
+  const directTrainNumbers = useMemo(() => {
+    const set = new Set<string>();
+    for (const d of directTrains) {
+      const num = (d.firstTrainNumber || d.trainNumber || '').trim();
+      if (num) set.add(num);
+    }
+    return set;
+  }, [directTrains]);
+
+  // Average direct reference distance for excessive detour detection
+  const averageDirectDistanceKm = useMemo(() => {
+    const validDists = directTrains
+      .map((d: any) => d.totalDistanceKm || d.firstLegDistanceKm)
+      .filter((km: any) => typeof km === 'number' && km > 0);
+    if (validDists.length === 0) return 0;
+    return validDists.reduce((a: number, b: number) => a + b, 0) / validDists.length;
+  }, [directTrains]);
+
+  // Filter out redundant and backtracking connecting routes:
+  // 1. Same train cannot be both Leg 1 and Leg 2
+  // 2. Redundant Leg 2: If Leg 2 is ALREADY a direct train from the origin cluster,
+  //    traveling to an earlier station (like Ramagundam) just to board it is backtracking!
+  // 3. Redundant Leg 1: If Leg 1 already travels directly to destination, transferring midway is unnecessary
+  // 4. Excessive Detour: Reject itineraries that exceed 1.65x the direct rail distance
+  const connectingTrains = useMemo(() => {
+    return trains.filter((t: any) => {
+      if (t.direct !== false) return false;
+
+      const num1 = (t.firstTrainNumber || '').trim();
+      const num2 = (t.secondTrainNumber || '').trim();
+
+      // Rule 1: Not identical trains
+      if (num1 && num2 && num1 === num2) return false;
+
+      // Rule 2: If Leg 2 is already a direct train from our origin, traveling to another junction to catch it is backtracking
+      if (num2 && directTrainNumbers.has(num2)) return false;
+
+      // Rule 3: If Leg 1 is already a direct train, no need to transfer off it
+      if (num1 && directTrainNumbers.has(num1)) return false;
+
+      // Rule 4: Discard extreme circuitous detours (> 1.65x direct distance)
+      if (averageDirectDistanceKm > 0 && t.totalDistanceKm && t.totalDistanceKm > averageDirectDistanceKm * 1.65) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [trains, directTrainNumbers, averageDirectDistanceKm]);
 
   const activeRouteTrains = routeFilter === 'DIRECT' ? directTrains : connectingTrains;
 
