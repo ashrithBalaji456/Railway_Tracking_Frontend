@@ -137,6 +137,114 @@ export const STATION_CLUSTERS: Record<string, { city: string; stations: string[]
   BPA: { city: 'Bellampalli', stations: ['BPA', 'MCI', 'RDM', 'SKZR', 'PDPL'] },
   SKZR: { city: 'Sirpur Kaghaznagar', stations: ['SKZR', 'BPA', 'MCI', 'RDM', 'PDPL'] },
   PDPL: { city: 'Peddapalli', stations: ['PDPL', 'RDM', 'MCI', 'BPA', 'SKZR'] },
+
+  // Vadodara
+  BRC: { city: 'Vadodara', stations: ['BRC', 'CYI'] },
+  CYI: { city: 'Vadodara', stations: ['BRC', 'CYI'] },
+
+  // Surat / Udhna
+  ST: { city: 'Surat', stations: ['ST', 'UDN'] },
+  UDN: { city: 'Surat', stations: ['ST', 'UDN'] },
+
+  // Nagpur
+  NGP: { city: 'Nagpur', stations: ['NGP', 'AJNI'] },
+  AJNI: { city: 'Nagpur', stations: ['NGP', 'AJNI'] },
+
+  // Kanpur
+  CNB: { city: 'Kanpur', stations: ['CNB', 'GOY'] },
+  GOY: { city: 'Kanpur', stations: ['CNB', 'GOY'] },
+
+  // Prayagraj
+  PRYJ: { city: 'Prayagraj', stations: ['PRYJ', 'PCOI'] },
+  PCOI: { city: 'Prayagraj', stations: ['PRYJ', 'PCOI'] },
+
+  // Agra
+  AGC: { city: 'Agra', stations: ['AGC', 'AF', 'RKM'] },
+  AF: { city: 'Agra', stations: ['AGC', 'AF', 'RKM'] },
+  RKM: { city: 'Agra', stations: ['AGC', 'AF', 'RKM'] },
+
+  // Gwalior
+  GWL: { city: 'Gwalior', stations: ['GWL', 'BLNR'] },
+  BLNR: { city: 'Gwalior', stations: ['GWL', 'BLNR'] },
+
+  // Jabalpur
+  JBP: { city: 'Jabalpur', stations: ['JBP', 'MML'] },
+  MML: { city: 'Jabalpur', stations: ['JBP', 'MML'] },
+
+  // Indore
+  INDB: { city: 'Indore', stations: ['INDB', 'LMNR'] },
+  LMNR: { city: 'Indore', stations: ['INDB', 'LMNR'] },
+
+  // Kota
+  KOTA: { city: 'Kota', stations: ['KOTA', 'SGAC', 'DKNT'] },
+  SGAC: { city: 'Kota', stations: ['KOTA', 'SGAC', 'DKNT'] },
+  DKNT: { city: 'Kota', stations: ['KOTA', 'SGAC', 'DKNT'] },
+
+  // Jodhpur
+  JU: { city: 'Jodhpur', stations: ['JU', 'BGKT'] },
+  BGKT: { city: 'Jodhpur', stations: ['JU', 'BGKT'] },
+
+  // Amritsar
+  ASR: { city: 'Amritsar', stations: ['ASR', 'BEAS'] },
+  BEAS: { city: 'Amritsar', stations: ['ASR', 'BEAS'] },
+
+  // Ludhiana
+  LDH: { city: 'Ludhiana', stations: ['LDH', 'DDL'] },
+  DDL: { city: 'Ludhiana', stations: ['LDH', 'DDL'] },
+
+  // Jalandhar
+  JUC: { city: 'Jalandhar', stations: ['JUC', 'JRC'] },
+  JRC: { city: 'Jalandhar', stations: ['JUC', 'JRC'] },
+
+  // Kharagpur
+  KGP: { city: 'Kharagpur', stations: ['KGP', 'HIJ'] },
+  HIJ: { city: 'Kharagpur', stations: ['KGP', 'HIJ'] },
+
+  // Siliguri / NJP
+  NJP: { city: 'Siliguri', stations: ['NJP', 'SGUJ'] },
+  SGUJ: { city: 'Siliguri', stations: ['NJP', 'SGUJ'] },
+
+  // Dhanbad
+  DHN: { city: 'Dhanbad', stations: ['DHN', 'GMO'] },
+  GMO: { city: 'Dhanbad', stations: ['DHN', 'GMO'] },
+
+  // Jamshedpur
+  TATA: { city: 'Jamshedpur', stations: ['TATA', 'ADTP'] },
+  ADTP: { city: 'Jamshedpur', stations: ['TATA', 'ADTP'] },
+
+  // Ranchi
+  RNC: { city: 'Ranchi', stations: ['RNC', 'HTE'] },
+  HTE: { city: 'Ranchi', stations: ['RNC', 'HTE'] },
+
+  // Raipur / Durg
+  R: { city: 'Raipur', stations: ['R', 'DURG', 'BPHB'] },
+  DURG: { city: 'Raipur', stations: ['R', 'DURG', 'BPHB'] },
+  BPHB: { city: 'Raipur', stations: ['R', 'DURG', 'BPHB'] },
+
+  // Bilaspur
+  BSP: { city: 'Bilaspur', stations: ['BSP', 'USL'] },
+  USL: { city: 'Bilaspur', stations: ['BSP', 'USL'] },
+
+  // Haridwar / Dehradun
+  HW: { city: 'Haridwar', stations: ['HW', 'DDN'] },
+  DDN: { city: 'Haridwar', stations: ['HW', 'DDN'] },
+
+  // Jammu / Katra
+  JAT: { city: 'Jammu', stations: ['JAT', 'SVDK'] },
+  SVDK: { city: 'Jammu', stations: ['JAT', 'SVDK'] },
+
+  // Hubballi / Dharwad
+  UBL: { city: 'Hubballi', stations: ['UBL', 'DWR'] },
+  DWR: { city: 'Hubballi', stations: ['UBL', 'DWR'] },
+
+  // Mangaluru
+  MAQ: { city: 'Mangaluru', stations: ['MAQ', 'MAJN'] },
+  MAJN: { city: 'Mangaluru', stations: ['MAQ', 'MAJN'] },
+
+  // Kakinada / Samalkot
+  SLO: { city: 'Kakinada', stations: ['SLO', 'CCT', 'COA'] },
+  CCT: { city: 'Kakinada', stations: ['SLO', 'CCT', 'COA'] },
+  COA: { city: 'Kakinada', stations: ['SLO', 'CCT', 'COA'] },
 };
 
 // Station importance ranking for nearby station selection
