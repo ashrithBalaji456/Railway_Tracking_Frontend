@@ -4,8 +4,8 @@
 import stationCoordinates from '../data/stationCoordinates.json';
 import allStationsMeta from '../data/allStationsMeta.json';
 
-const coordsMap = stationCoordinates as Record<string, [number, number]>;
-const metaMap = allStationsMeta as Record<string, [string, string, string, string, string]>;
+const coordsMap = (stationCoordinates as unknown) as Record<string, [number, number]>;
+const metaMap = (allStationsMeta as unknown) as Record<string, [string, string, string, string, string]>;
 
 // Official Indian Railways PRS City Cluster Hubs
 export const STATION_CLUSTERS: Record<string, { city: string; stations: string[] }> = {
@@ -130,6 +130,13 @@ export const STATION_CLUSTERS: Record<string, { city: string; stations: string[]
   // Guwahati
   GHY: { city: 'Guwahati', stations: ['GHY', 'KYQ'] },
   KYQ: { city: 'Guwahati', stations: ['GHY', 'KYQ'] },
+
+  // Godavari Valley (Coal Belt) Corridor
+  MCI: { city: 'Mancherial', stations: ['MCI', 'RDM', 'BPA', 'SKZR', 'PDPL'] },
+  RDM: { city: 'Ramagundam', stations: ['RDM', 'MCI', 'BPA', 'PDPL', 'SKZR'] },
+  BPA: { city: 'Bellampalli', stations: ['BPA', 'MCI', 'RDM', 'SKZR', 'PDPL'] },
+  SKZR: { city: 'Sirpur Kaghaznagar', stations: ['SKZR', 'BPA', 'MCI', 'RDM', 'PDPL'] },
+  PDPL: { city: 'Peddapalli', stations: ['PDPL', 'RDM', 'MCI', 'BPA', 'SKZR'] },
 };
 
 // Station importance ranking for nearby station selection
@@ -171,7 +178,7 @@ export function haversineDistanceKm(lat1: number, lon1: number, lat2: number, lo
  * using GPS coordinates, while also incorporating official PRS city clusters.
  * The primary searched station is ALWAYS first in the returned array.
  */
-export function getStationCluster(stationCode?: string, maxRadiusKm = 30): string[] {
+export function getStationCluster(stationCode?: string, maxRadiusKm = 55): string[] {
   if (!stationCode) return [];
   const upper = stationCode.trim().toUpperCase();
 
@@ -196,8 +203,8 @@ export function getStationCluster(stationCode?: string, maxRadiusKm = 30): strin
       if (candCode === upper || result.has(candCode)) continue;
       const [lat2, lon2] = coords;
 
-      // Fast bounding box pre-filter (~0.35 deg ~= 38 km)
-      if (Math.abs(lat1 - lat2) > 0.35 || Math.abs(lon1 - lon2) > 0.35) {
+      // Fast bounding box pre-filter (~0.55 deg ~= 60 km)
+      if (Math.abs(lat1 - lat2) > 0.55 || Math.abs(lon1 - lon2) > 0.55) {
         continue;
       }
 
@@ -218,13 +225,24 @@ export function getStationCluster(stationCode?: string, maxRadiusKm = 30): strin
       return a.distance - b.distance;
     });
 
-    // Add top nearby stations (limit to 3-4 so queries stay fast and relevant)
-    for (const c of nearbyCandidates.slice(0, 4)) {
+    // Add top nearby stations (limit to 5 so regional corridors are thoroughly represented)
+    for (const c of nearbyCandidates.slice(0, 5)) {
       result.add(c.code);
     }
   }
 
   return Array.from(result);
+}
+
+/**
+ * Returns great-circle distance in kilometers between two stations by code.
+ */
+export function getStationDistanceKm(code1?: string, code2?: string): number | null {
+  if (!code1 || !code2) return null;
+  const c1 = coordsMap[code1.trim().toUpperCase()];
+  const c2 = coordsMap[code2.trim().toUpperCase()];
+  if (!c1 || !c2) return null;
+  return haversineDistanceKm(c1[0], c1[1], c2[0], c2[1]);
 }
 
 /**

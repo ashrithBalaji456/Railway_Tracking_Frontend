@@ -5,7 +5,7 @@ import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
 import { searchHistoryService } from '../services/searchHistoryService';
-import { getStationCluster, getClusterCityName, isBacktrackingRoute } from '../utils/stationClusters';
+import { getStationCluster, getClusterCityName, isBacktrackingRoute, getStationDistanceKm } from '../utils/stationClusters';
 
 export default function TrainsBetweenStations() {
   const { language } = useLanguage();
@@ -155,8 +155,32 @@ export default function TrainsBetweenStations() {
       let score = 0;
       const s = (item.originStationCode || '').trim().toUpperCase();
       const d = (item.destinationStationCode || '').trim().toUpperCase();
-      if (s === normSrc) score += 10;
-      if (d === normDst) score += 10;
+      
+      // Origin scoring: exact user origin gets highest priority (+100).
+      // If train only stops at nearby station, prefer closer stations to user's origin (+0..50).
+      if (s === normSrc) {
+        score += 100;
+      } else {
+        const dist = getStationDistanceKm(normSrc, s);
+        if (dist !== null) {
+          score += Math.max(0, 50 - Math.min(dist, 50));
+        } else {
+          score += 10;
+        }
+      }
+
+      // Destination scoring: exact user destination gets highest priority (+100).
+      if (d === normDst) {
+        score += 100;
+      } else {
+        const dist = getStationDistanceKm(normDst, d);
+        if (dist !== null) {
+          score += Math.max(0, 50 - Math.min(dist, 50));
+        } else {
+          score += 10;
+        }
+      }
+
       return score;
     };
 
@@ -204,15 +228,15 @@ export default function TrainsBetweenStations() {
         const data = response?.data || (Array.isArray(response) ? response : []);
         setTrains(deduplicateJourneys(data, srcCode, dstCode));
       } else {
-        // Nearby cluster expansion (e.g. Warangal=[WL, KZJ], Tirupati=[TPTY, RU])
+        // Nearby cluster expansion (e.g. Warangal=[WL, KZJ], Tirupati=[TPTY, RU], MCI=[MCI, RDM, BPA, SKZR, PDPL])
         const srcCluster = getStationCluster(srcCode);
         const dstCluster = getStationCluster(dstCode);
 
-        // Build list of pairs to query (capped at max 6 for network speed)
+        // Build list of pairs to query across regional corridors (expanded to 20 parallel queries)
         const pairs: Array<{ from: string; to: string }> = [];
-        for (const s of srcCluster) {
-          for (const d of dstCluster) {
-            if (s !== d && pairs.length < 6) {
+        for (const s of srcCluster.slice(0, 5)) {
+          for (const d of dstCluster.slice(0, 4)) {
+            if (s !== d && pairs.length < 20) {
               pairs.push({ from: s, to: d });
             }
           }
@@ -1127,8 +1151,15 @@ export default function TrainsBetweenStations() {
                           <div className="font-extrabold text-white text-xs sm:text-sm">
                             {formatTimeToAMPM(t.originDepartureTime)}
                           </div>
-                          <div className="font-bold text-slate-300 text-xs mt-0.5">
-                            {t.originStationCode}
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="font-bold text-slate-300 text-xs">
+                              {t.originStationCode}
+                            </span>
+                            {selectedSource?.stationCode && t.originStationCode !== selectedSource.stationCode && (
+                              <span className="text-[9px] font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1 py-0.2 rounded">
+                                Nearby
+                              </span>
+                            )}
                           </div>
                           <div className="text-[11px] text-slate-400 truncate max-w-[100px]">
                             {translateName(t.originStationName, language)}
@@ -1155,8 +1186,15 @@ export default function TrainsBetweenStations() {
                           <div className="font-extrabold text-white text-xs sm:text-sm">
                             {formatTimeToAMPM(t.destinationArrivalTime)}
                           </div>
-                          <div className="font-bold text-slate-300 text-xs mt-0.5">
-                            {t.destinationStationCode}
+                          <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                            {selectedDest?.stationCode && t.destinationStationCode !== selectedDest.stationCode && (
+                              <span className="text-[9px] font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30 px-1 py-0.2 rounded">
+                                Nearby
+                              </span>
+                            )}
+                            <span className="font-bold text-slate-300 text-xs">
+                              {t.destinationStationCode}
+                            </span>
                           </div>
                           <div className="text-[11px] text-slate-400 truncate max-w-[100px] text-right">
                             {translateName(t.destinationStationName, language)}
