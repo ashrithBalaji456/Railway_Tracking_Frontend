@@ -3517,27 +3517,35 @@ flowchart TD
 
 ---
 
-#### Q21: How is the dedicated "Trains Between Stations" feature (`TrainsBetweenStations.tsx`) architected, and how are 12-hour AM/PM formatting and instant stale clearing handled?
+#### Q21: How is the dedicated "Trains Between Stations" feature (`TrainsBetweenStations.tsx`) architected, and how are Direct/Connecting isolation, Station Clusters ("Search nearby stations"), and true operational day highlighting handled?
 * **Background & Requirement:**
-  - Users wanted a dedicated search page for trains between two stations (e.g. `Mancherial (MCI)` to `Kazipet Jn (KZJ)`), matching the RailRadar UI:
+  - Users wanted a dedicated search page for trains between two stations (e.g. `Warangal (WL)` to `Tirupati (TPTY)`), matching the authentic RailRadar UI:
     - Top "Find Trains" card with station badges, autocomplete, swap button, and nearby stations toggle.
     - Clean header displaying source $\rightarrow$ destination with Date Selector and Departure/Arrival Sort dropdowns.
-    - Category filter pills with dynamic counts: `All Trains (16)`, `Superfast Express (7)`, `Train on Demand (4)`, `Mail/Express (4)`, `Vande Bharat Express (1)`.
-    - Modern 2-column train cards with bold train number, category badge, 12-hour AM/PM times, duration, distance, and active running day pills (`[Thu]`).
+    - Category filter pills with dynamic counts: `All Trains (14)`, `Superfast Express (7)`, `Train on Demand (4)`, `Mail/Express (4)`, `Vande Bharat Express (1)`, plus a `Connecting Routes` tab.
+    - Modern 2-column train cards with bold train number, category badge, 12-hour AM/PM times, duration, total journey distance, and active running day pills (`[Mon] [Tue] [Wed] [Thu] [Fri] [Sat] [Sun]`).
 * **Implementation Details:**
-  1. **Route Integration (`/trains-between`):**
-     - Registered in `src/App.tsx` and linked from the Home page search widget.
-  2. **12-Hour AM/PM Time Conversion:**
+  1. **Direct vs Connecting Route Separation (`routeFilter === 'DIRECT'` vs `'CONNECTING'`):**
+     - The underlying route planner API (`/api/v1/journey/plan`) returns both direct trains (e.g., ~14 direct trains for WL $\rightarrow$ TPTY) and 1-transfer connecting itineraries (e.g., 17 connecting options via SC/BZA).
+     - To prevent connecting itineraries from appearing as confusing direct trains (e.g., showing Bidar SF Express 12749 with only its 141.9 km first leg), `routeFilter` defaults strictly to `'DIRECT'`, showing only genuine direct services.
+     - A dedicated "Connecting Routes" pill segregates transfer journeys into dual-leg cards displaying Leg 1, transfer station layover duration, Leg 2, and combined travel distance.
+  2. **Accurate Journey Distance & True Running Days Highlighting:**
+     - Computes distance via `totalDistanceKm || firstLegDistanceKm`, displaying the authentic complete route length (e.g., 536.3 km / 596.4 km instead of partial leg lengths).
+     - Dynamic `runDaysStr` parsing highlights only genuine operating days in blue pills (`bg-blue-600 text-white font-bold`) while dimming non-operating days in muted text (`text-slate-600`), replacing previous hardcoded `"Daily"` fallbacks.
+     - When a specific calendar travel date is chosen, the list automatically narrows down to trains operating on that weekday.
+  3. **Station Clusters & "Search nearby stations" (All Stations Expansion):**
+     - Powered by `src/utils/stationClusters.ts`, which maps major twin-hub railway junctions within $\le 30\text{ km}$ (e.g., Warangal cluster: `WL` and `KZJ` ~10 km apart; Tirupati cluster: `TPTY` and `RU` ~9.4 km apart; Secunderabad/Hyderabad: `SC`, `HYB`, `KCG`, `BMT`; Mumbai: `CSMT`, `BCT`, `BDTS`, `LTT`; Delhi: `NDLS`, `DLI`, `NZM`, `ANVT`).
+     - When "Search nearby stations" is ticked, the page executes concurrent `Promise.allSettled` queries across all cluster station pairs (e.g., `WL` $\rightarrow$ `TPTY`, `WL` $\rightarrow$ `RU`, `KZJ` $\rightarrow$ `TPTY`, `KZJ` $\rightarrow$ `RU`).
+     - Deduplicates results by `trainNumber` and updates page headers to `Warangal (All Stations) → Tirupati (All Stations)`.
+  4. **12-Hour AM/PM Time Conversion:**
      - Time strings (e.g. `"17:02"`, `"01:22"`) are parsed via `format12Hour()`:
        - Displays `1:22 AM`, `3:30 AM`, `5:02 PM`, `7:20 PM` with explicit AM/PM indicators.
-  3. **Multi-Criteria Sorting Dropdown:**
+  5. **Multi-Criteria Sorting Dropdown:**
      - `Departure Time`: When trains leave from origin station.
      - `Arrival Time`: When trains reach destination station (default sort for convenient planning).
      - `Journey Duration`: Fastest trains first based on total travel minutes.
-  4. **Date Selection & "All Dates" Support:**
-     - Users can choose a specific date (e.g. Today, Tomorrow) to highlight running days, or select **"All Dates (Irrespective of Date)"** to view every train operating on that route regardless of day.
-  5. **Instant Stale Result Clearing & Auto-Search:**
-     - When a user changes the destination (e.g. from `KZJ` to `KTYM` Kottayam), previous results are immediately cleared (`setJourneys([])`), and new train data is fetched automatically.
+  6. **Instant Stale Result Clearing & Auto-Search:**
+     - When a user changes stations, previous results are cleared immediately (`setJourneys([])`), showing smooth skeletons until fresh cluster data arrives.
 
 ---
 
