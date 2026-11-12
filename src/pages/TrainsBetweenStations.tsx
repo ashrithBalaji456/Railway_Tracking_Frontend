@@ -144,6 +144,47 @@ export default function TrainsBetweenStations() {
     return () => clearTimeout(delayDebounce);
   }, [destQuery]);
 
+  // Helper to deduplicate journeys across cluster queries while prioritizing exact user inputs
+  const deduplicateJourneys = (items: any[], primarySrc: string, primaryDst: string): any[] => {
+    if (!Array.isArray(items)) return [];
+    const normSrc = (primarySrc || '').trim().toUpperCase();
+    const normDst = (primaryDst || '').trim().toUpperCase();
+
+    const getScore = (item: any): number => {
+      let score = 0;
+      const s = (item.originStationCode || '').trim().toUpperCase();
+      const d = (item.destinationStationCode || '').trim().toUpperCase();
+      if (s === normSrc) score += 10;
+      if (d === normDst) score += 10;
+      return score;
+    };
+
+    const map = new Map<string, { item: any; score: number }>();
+
+    for (const item of items) {
+      if (!item) continue;
+      const isDirect = item.direct !== false;
+      const tNum1 = (item.firstTrainNumber || item.trainNumber || '').trim();
+      if (!tNum1) continue;
+
+      // Unique train key: each direct physical train is identified purely by its train number.
+      // Connecting routes are identified by the train pair (first + second train).
+      const trainKey = isDirect
+        ? `DIR_${tNum1}`
+        : `CONN_${tNum1}_${(item.secondTrainNumber || '').trim()}`;
+
+      const score = getScore(item);
+      const existing = map.get(trainKey);
+
+      // If train not yet stored, or this instance matches user's exact stations better, keep it!
+      if (!existing || score > existing.score) {
+        map.set(trainKey, { item, score });
+      }
+    }
+
+    return Array.from(map.values()).map(v => v.item);
+  };
+
   // Fetch trains function with optional nearby cluster expansion
   const fetchTrainsBetween = async (srcCode: string, dstCode: string, dateParamStr: string, useNearby?: boolean) => {
     if (!srcCode || !dstCode) return;
@@ -159,13 +200,8 @@ export default function TrainsBetweenStations() {
         const response: any = await api.get(
           `/api/v1/journey/plan?source=${srcCode}&destination=${dstCode}${dateQuery}`
         );
-        if (response && response.success && response.data) {
-          setTrains(response.data);
-        } else if (Array.isArray(response)) {
-          setTrains(response);
-        } else {
-          setTrains([]);
-        }
+        const data = response?.data || (Array.isArray(response) ? response : []);
+        setTrains(deduplicateJourneys(data, srcCode, dstCode));
       } else {
         // Nearby cluster expansion (e.g. Warangal=[WL, KZJ], Tirupati=[TPTY, RU])
         const srcCluster = getStationCluster(srcCode);
@@ -186,25 +222,16 @@ export default function TrainsBetweenStations() {
           pairs.map(p => api.get(`/api/v1/journey/plan?source=${p.from}&destination=${p.to}${dateQuery}`))
         );
 
-        const merged: any[] = [];
-        const seenKeys = new Set<string>();
-
+        const allItems: any[] = [];
         for (const res of responses) {
           if (res.status === 'fulfilled') {
             const data = res.value?.data || (Array.isArray(res.value) ? res.value : []);
-            for (const item of data) {
-              const trainKey = item.direct 
-                ? (item.firstTrainNumber + '_' + item.originStationCode + '_' + item.destinationStationCode)
-                : (item.firstTrainNumber + '_' + item.transferStationCode + '_' + item.secondTrainNumber);
-              
-              if (!seenKeys.has(trainKey)) {
-                seenKeys.add(trainKey);
-                merged.push(item);
-              }
+            if (Array.isArray(data)) {
+              allItems.push(...data);
             }
           }
         }
-        setTrains(merged);
+        setTrains(deduplicateJourneys(allItems, srcCode, dstCode));
       }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch trains between stations.');
