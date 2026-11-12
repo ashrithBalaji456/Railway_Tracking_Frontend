@@ -245,6 +245,68 @@ export const STATION_CLUSTERS: Record<string, { city: string; stations: string[]
   SLO: { city: 'Kakinada', stations: ['SLO', 'CCT', 'COA'] },
   CCT: { city: 'Kakinada', stations: ['SLO', 'CCT', 'COA'] },
   COA: { city: 'Kakinada', stations: ['SLO', 'CCT', 'COA'] },
+
+  // Goa
+  MAO: { city: 'Goa', stations: ['MAO', 'KRMI', 'THVM', 'VSG'] },
+  KRMI: { city: 'Goa', stations: ['MAO', 'KRMI', 'THVM', 'VSG'] },
+  THVM: { city: 'Goa', stations: ['MAO', 'KRMI', 'THVM', 'VSG'] },
+  VSG: { city: 'Goa', stations: ['MAO', 'KRMI', 'THVM', 'VSG'] },
+
+  // Chandigarh & Ambala
+  CDG: { city: 'Chandigarh', stations: ['CDG', 'UMB', 'KLK'] },
+  UMB: { city: 'Chandigarh', stations: ['CDG', 'UMB', 'KLK'] },
+  KLK: { city: 'Chandigarh', stations: ['CDG', 'UMB', 'KLK'] },
+
+  // Haryana (GT Road Corridor)
+  PNP: { city: 'Panipat', stations: ['PNP', 'SNP', 'KUN', 'KKDE'] },
+  SNP: { city: 'Panipat', stations: ['PNP', 'SNP', 'KUN', 'KKDE'] },
+  KUN: { city: 'Panipat', stations: ['PNP', 'SNP', 'KUN', 'KKDE'] },
+  KKDE: { city: 'Panipat', stations: ['PNP', 'SNP', 'KUN', 'KKDE'] },
+
+  // Haryana (Western Corridor)
+  ROK: { city: 'Rohtak', stations: ['ROK', 'HSR', 'BNW'] },
+  HSR: { city: 'Rohtak', stations: ['ROK', 'HSR', 'BNW'] },
+  BNW: { city: 'Rohtak', stations: ['ROK', 'HSR', 'BNW'] },
+
+  // Haryana (Rewari / Gurgaon)
+  RE: { city: 'Rewari', stations: ['RE', 'GGN'] },
+  GGN: { city: 'Rewari', stations: ['RE', 'GGN'] },
+
+  // Himachal Pradesh (Una / Amb Andaura)
+  UHL: { city: 'Una Himachal', stations: ['UHL', 'AADR', 'NLDM'] },
+  AADR: { city: 'Una Himachal', stations: ['UHL', 'AADR', 'NLDM'] },
+  NLDM: { city: 'Una Himachal', stations: ['UHL', 'AADR', 'NLDM'] },
+
+  // Puducherry
+  PDY: { city: 'Puducherry', stations: ['PDY', 'VM'] },
+  VM: { city: 'Puducherry', stations: ['PDY', 'VM'] },
+
+  // Tripura
+  AGTL: { city: 'Agartala', stations: ['AGTL', 'DMR', 'TLMR'] },
+  DMR: { city: 'Agartala', stations: ['AGTL', 'DMR', 'TLMR'] },
+  TLMR: { city: 'Agartala', stations: ['AGTL', 'DMR', 'TLMR'] },
+
+  // Nagaland
+  DMV: { city: 'Dimapur', stations: ['DMV', 'DPU', 'BXJ'] },
+  DPU: { city: 'Dimapur', stations: ['DMV', 'DPU', 'BXJ'] },
+  BXJ: { city: 'Dimapur', stations: ['DMV', 'DPU', 'BXJ'] },
+
+  // Arunachal Pradesh
+  NHLN: { city: 'Naharlagun', stations: ['NHLN', 'HMY'] },
+  HMY: { city: 'Naharlagun', stations: ['NHLN', 'HMY'] },
+
+  // Meghalaya
+  MNDP: { city: 'Mendipathar', stations: ['MNDP', 'DDNI'] },
+  DDNI: { city: 'Mendipathar', stations: ['MNDP', 'DDNI'] },
+
+  // Manipur
+  JRBM: { city: 'Jiribam', stations: ['JRBM', 'SCL'] },
+  SCL: { city: 'Jiribam', stations: ['JRBM', 'SCL'] },
+
+  // Mizoram
+  BHRB: { city: 'Bairabi', stations: ['BHRB', 'KTX', 'HKD'] },
+  KTX: { city: 'Bairabi', stations: ['BHRB', 'KTX', 'HKD'] },
+  HKD: { city: 'Bairabi', stations: ['BHRB', 'KTX', 'HKD'] },
 };
 
 // Station importance ranking for nearby station selection
