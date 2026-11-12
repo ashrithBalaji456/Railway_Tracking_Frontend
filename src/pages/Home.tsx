@@ -7,6 +7,7 @@ import { searchHistoryService } from '../services/searchHistoryService';
 import { getStationDisplayName, formatRouteSubtitle } from '../utils/stationUtils';
 import RecentSearchesBar from '../components/RecentSearchesBar';
 import RecentSearchesDropdown from '../components/RecentSearchesDropdown';
+import { searchStationsFast, ALPHABETICAL_POPULAR_TRAINS } from '../utils/stationSearchHelper';
 
 export default function Home() {
   const [trainQuery, setTrainQuery] = useState('');
@@ -62,12 +63,22 @@ export default function Home() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Debounced Train Search with client-side caching (saves tokens and reduces calls)
+  // Debounced Train Search with client-side caching & instant alphabetical fallback
   useEffect(() => {
     const trimmed = trainQuery.trim();
-    if (trimmed.length < 2) {
-      setTrainsList([]);
+    if (!trimmed) {
+      setTrainsList(ALPHABETICAL_POPULAR_TRAINS);
       return;
+    }
+
+    // Filter popular trains locally first for instant response (<1ms)
+    const localMatches = ALPHABETICAL_POPULAR_TRAINS.filter(
+      (t) =>
+        t.trainNumber.startsWith(trimmed) ||
+        t.trainName.toLowerCase().includes(trimmed.toLowerCase())
+    );
+    if (localMatches.length > 0) {
+      setTrainsList(localMatches);
     }
 
     const cacheKey = trimmed.toLowerCase();
@@ -79,25 +90,25 @@ export default function Home() {
     const delayDebounce = setTimeout(async () => {
       try {
         const response: any = await api.get(`/api/v1/trains?query=${trimmed}`);
-        if (response.success && response.data) {
+        if (response.success && response.data && Array.isArray(response.data) && response.data.length > 0) {
           trainCacheRef.current[cacheKey] = response.data;
           setTrainsList(response.data);
         }
       } catch (err) {
         console.error('Error fetching trains', err);
       }
-    }, 400);
+    }, 300);
 
     return () => clearTimeout(delayDebounce);
   }, [trainQuery]);
 
-  // Debounced Station Search with client-side caching
+  // Debounced Station Search with instant local A-Z directory & relevance ranking
   useEffect(() => {
     const trimmed = stationQuery.trim();
-    if (trimmed.length < 2) {
-      setStationsList([]);
-      return;
-    }
+    // Instant local results (A-Z if empty, relevance-ranked if query)
+    setStationsList(searchStationsFast(trimmed));
+
+    if (trimmed.length < 2) return;
 
     const cacheKey = trimmed.toLowerCase();
     if (stationCacheRef.current[cacheKey]) {
@@ -108,14 +119,18 @@ export default function Home() {
     const delayDebounce = setTimeout(async () => {
       try {
         const response: any = await api.get(`/api/v1/stations?query=${trimmed}`);
-        if (response.success && response.data) {
-          stationCacheRef.current[cacheKey] = response.data;
-          setStationsList(response.data);
+        if (response.success && response.data && Array.isArray(response.data) && response.data.length > 0) {
+          const apiStations = response.data;
+          const existingCodes = new Set(apiStations.map((s: any) => s.stationCode.toUpperCase()));
+          const localSupplement = searchStationsFast(trimmed).filter((s) => !existingCodes.has(s.stationCode));
+          const merged = [...apiStations, ...localSupplement].slice(0, 50);
+          stationCacheRef.current[cacheKey] = merged;
+          setStationsList(merged);
         }
       } catch (err) {
         console.error('Error fetching stations', err);
       }
-    }, 400);
+    }, 300);
 
     return () => clearTimeout(delayDebounce);
   }, [stationQuery]);
@@ -123,10 +138,10 @@ export default function Home() {
   // Debounced Search for Trains Between Stations: Origin
   useEffect(() => {
     const trimmed = betweenSourceQuery.trim();
-    if (trimmed.length < 2) {
-      setBetweenSourceList([]);
-      return;
-    }
+    // Instant local results (A-Z if empty, relevance-ranked if query)
+    setBetweenSourceList(searchStationsFast(trimmed));
+
+    if (trimmed.length < 2) return;
 
     const cacheKey = trimmed.toLowerCase();
     if (stationCacheRef.current[cacheKey]) {
@@ -137,14 +152,18 @@ export default function Home() {
     const delayDebounce = setTimeout(async () => {
       try {
         const response: any = await api.get(`/api/v1/stations?query=${trimmed}`);
-        if (response.success && response.data) {
-          stationCacheRef.current[cacheKey] = response.data;
-          setBetweenSourceList(response.data);
+        if (response.success && response.data && Array.isArray(response.data) && response.data.length > 0) {
+          const apiStations = response.data;
+          const existingCodes = new Set(apiStations.map((s: any) => s.stationCode.toUpperCase()));
+          const localSupplement = searchStationsFast(trimmed).filter((s) => !existingCodes.has(s.stationCode));
+          const merged = [...apiStations, ...localSupplement].slice(0, 50);
+          stationCacheRef.current[cacheKey] = merged;
+          setBetweenSourceList(merged);
         }
       } catch (err) {
         console.error('Error fetching source stations', err);
       }
-    }, 300);
+    }, 250);
 
     return () => clearTimeout(delayDebounce);
   }, [betweenSourceQuery]);
@@ -152,10 +171,10 @@ export default function Home() {
   // Debounced Search for Trains Between Stations: Destination
   useEffect(() => {
     const trimmed = betweenDestQuery.trim();
-    if (trimmed.length < 2) {
-      setBetweenDestList([]);
-      return;
-    }
+    // Instant local results (A-Z if empty, relevance-ranked if query)
+    setBetweenDestList(searchStationsFast(trimmed));
+
+    if (trimmed.length < 2) return;
 
     const cacheKey = trimmed.toLowerCase();
     if (stationCacheRef.current[cacheKey]) {
@@ -166,14 +185,18 @@ export default function Home() {
     const delayDebounce = setTimeout(async () => {
       try {
         const response: any = await api.get(`/api/v1/stations?query=${trimmed}`);
-        if (response.success && response.data) {
-          stationCacheRef.current[cacheKey] = response.data;
-          setBetweenDestList(response.data);
+        if (response.success && response.data && Array.isArray(response.data) && response.data.length > 0) {
+          const apiStations = response.data;
+          const existingCodes = new Set(apiStations.map((s: any) => s.stationCode.toUpperCase()));
+          const localSupplement = searchStationsFast(trimmed).filter((s) => !existingCodes.has(s.stationCode));
+          const merged = [...apiStations, ...localSupplement].slice(0, 50);
+          stationCacheRef.current[cacheKey] = merged;
+          setBetweenDestList(merged);
         }
       } catch (err) {
         console.error('Error fetching dest stations', err);
       }
-    }, 300);
+    }, 250);
 
     return () => clearTimeout(delayDebounce);
   }, [betweenDestQuery]);
@@ -338,7 +361,10 @@ export default function Home() {
                       setBetweenSourceQuery(e.target.value);
                       setShowBetweenSourceDrop(true);
                     }}
-                    onFocus={() => setShowBetweenSourceDrop(true)}
+                    onFocus={() => {
+                      setShowBetweenSourceDrop(true);
+                      if (!betweenSourceQuery) setBetweenSourceList(searchStationsFast(''));
+                    }}
                     placeholder="From Station (e.g. KZJ, Kazipet Jn)"
                     className="bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl w-full px-3.5 py-2.5 text-slate-200 outline-none text-xs sm:text-sm placeholder:text-slate-500"
                   />
@@ -347,6 +373,10 @@ export default function Home() {
                 {/* Dropdown for Source */}
                 {showBetweenSourceDrop && betweenSourceList.length > 0 && !selectedBetweenSource && (
                   <div className="absolute left-0 right-0 mt-2 bg-[#1c212e] border border-white/10 rounded-xl shadow-2xl max-h-60 overflow-y-auto z-30 backdrop-blur-xl divide-y divide-white/5 animate-fade-in">
+                    <div className="px-4 py-2 text-[10px] font-bold text-slate-400 bg-slate-950/90 sticky top-0 flex items-center justify-between border-b border-white/5 uppercase tracking-wider backdrop-blur-md">
+                      <span>{betweenSourceQuery.trim() ? 'Relevant Stations' : 'All Major Stations (A - Z)'}</span>
+                      <span className="text-[9px] text-sky-400 font-mono">{betweenSourceList.length} stations</span>
+                    </div>
                     {betweenSourceList.map((s) => (
                       <button
                         key={s.stationCode}
@@ -404,7 +434,10 @@ export default function Home() {
                       setBetweenDestQuery(e.target.value);
                       setShowBetweenDestDrop(true);
                     }}
-                    onFocus={() => setShowBetweenDestDrop(true)}
+                    onFocus={() => {
+                      setShowBetweenDestDrop(true);
+                      if (!betweenDestQuery) setBetweenDestList(searchStationsFast(''));
+                    }}
                     placeholder="To Station (e.g. MCI, Mancherial)"
                     className="bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl w-full px-3.5 py-2.5 text-slate-200 outline-none text-xs sm:text-sm placeholder:text-slate-500"
                   />
@@ -413,6 +446,10 @@ export default function Home() {
                 {/* Dropdown for Dest */}
                 {showBetweenDestDrop && betweenDestList.length > 0 && !selectedBetweenDest && (
                   <div className="absolute left-0 right-0 mt-2 bg-[#1c212e] border border-white/10 rounded-xl shadow-2xl max-h-60 overflow-y-auto z-30 backdrop-blur-xl divide-y divide-white/5 animate-fade-in">
+                    <div className="px-4 py-2 text-[10px] font-bold text-slate-400 bg-slate-950/90 sticky top-0 flex items-center justify-between border-b border-white/5 uppercase tracking-wider backdrop-blur-md">
+                      <span>{betweenDestQuery.trim() ? 'Relevant Stations' : 'All Major Stations (A - Z)'}</span>
+                      <span className="text-[9px] text-sky-400 font-mono">{betweenDestList.length} stations</span>
+                    </div>
                     {betweenDestList.map((s) => (
                       <button
                         key={s.stationCode}
@@ -524,7 +561,10 @@ export default function Home() {
                     setTrainQuery(e.target.value);
                     setShowTrainDrop(true);
                   }}
-                  onFocus={() => setShowTrainDrop(true)}
+                  onFocus={() => {
+                    setShowTrainDrop(true);
+                    if (!trainQuery) setTrainsList(ALPHABETICAL_POPULAR_TRAINS);
+                  }}
                   className="bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-slate-200 outline-none transition-all placeholder:text-slate-650 text-xs sm:text-sm"
                   placeholder="e.g. 12760 or Charminar"
                 />
@@ -540,6 +580,10 @@ export default function Home() {
             {/* Dropdown for Live Search Results */}
             {showTrainDrop && trainsList.length > 0 && (
               <div className="absolute left-0 right-0 mt-2 bg-[#1c212e] border border-white/10 rounded-xl shadow-2xl max-h-64 overflow-y-auto z-20 backdrop-blur-xl divide-y divide-white/5 animate-fade-in">
+                <div className="px-4 py-2 text-[10px] font-bold text-slate-400 bg-slate-950/90 sticky top-0 flex items-center justify-between border-b border-white/5 uppercase tracking-wider backdrop-blur-md">
+                  <span>{trainQuery.trim() ? 'Matching Trains' : 'Popular Express Trains (A - Z)'}</span>
+                  <span className="text-[9px] text-indigo-400 font-mono">{trainsList.length} trains</span>
+                </div>
                 {trainsList.map((t) => (
                   <button
                     key={t.trainNumber}
@@ -561,14 +605,6 @@ export default function Home() {
                 ))}
               </div>
             )}
-
-            {/* Recent Searches Dropdown when input is empty & focused */}
-            <RecentSearchesDropdown
-              type="TRAIN"
-              limit={5}
-              isOpen={showTrainDrop && trainQuery.trim().length === 0}
-              onSelect={(code, item) => handleTrainSelect(code, { trainName: item.title, trainType: item.subtitle })}
-            />
 
             {/* Recent Searches Chips Bar near search bar (Last 5) */}
             <RecentSearchesBar
@@ -603,7 +639,10 @@ export default function Home() {
                     setStationQuery(e.target.value);
                     setShowStationDrop(true);
                   }}
-                  onFocus={() => setShowStationDrop(true)}
+                  onFocus={() => {
+                    setShowStationDrop(true);
+                    if (!stationQuery) setStationsList(searchStationsFast(''));
+                  }}
                   className="bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-slate-200 outline-none transition-all placeholder:text-slate-650 text-xs sm:text-sm"
                   placeholder="e.g. BZA or Vijayawada"
                 />
@@ -619,6 +658,10 @@ export default function Home() {
             {/* Dropdown for Live Station Search Results */}
             {showStationDrop && stationsList.length > 0 && (
               <div className="absolute left-0 right-0 mt-2 bg-[#1c212e] border border-white/10 rounded-xl shadow-2xl max-h-72 overflow-y-auto z-20 backdrop-blur-xl divide-y divide-white/5 animate-fade-in">
+                <div className="px-4 py-2 text-[10px] font-bold text-slate-400 bg-slate-950/90 sticky top-0 flex items-center justify-between border-b border-white/5 uppercase tracking-wider backdrop-blur-md">
+                  <span>{stationQuery.trim() ? 'Relevant Stations' : 'All Major Stations (A - Z)'}</span>
+                  <span className="text-[9px] text-sky-400 font-mono">{stationsList.length} stations</span>
+                </div>
                 {stationsList.map((s) => (
                   <button
                     key={s.stationCode}

@@ -6,6 +6,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
 import { searchHistoryService } from '../services/searchHistoryService';
 import { getStationCluster, getClusterCityName, isBacktrackingRoute, getStationDistanceKm } from '../utils/stationClusters';
+import { searchStationsFast } from '../utils/stationSearchHelper';
 
 export default function TrainsBetweenStations() {
   const { language } = useLanguage();
@@ -33,6 +34,8 @@ export default function TrainsBetweenStations() {
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const dateDropdownRef = useRef<HTMLDivElement>(null);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const sourceBoxRef = useRef<HTMLDivElement>(null);
+  const destBoxRef = useRef<HTMLDivElement>(null);
 
   // Data states
   const [trains, setTrains] = useState<any[]>([]);
@@ -48,6 +51,12 @@ export default function TrainsBetweenStations() {
       }
       if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target as Node)) {
         setShowSortDropdown(false);
+      }
+      if (sourceBoxRef.current && !sourceBoxRef.current.contains(e.target as Node)) {
+        setSourceList([]);
+      }
+      if (destBoxRef.current && !destBoxRef.current.contains(e.target as Node)) {
+        setDestList([]);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -107,17 +116,22 @@ export default function TrainsBetweenStations() {
     return 'Mail/Express';
   };
 
-  // Debounced search for source station
+  // Debounced search for source station with instant local A-Z & relevance ranking
   useEffect(() => {
-    if (sourceQuery.trim().length < 2) {
-      setSourceList([]);
-      return;
-    }
+    const trimmed = sourceQuery.trim();
+    // Instant local results (alphabetical if empty, relevance-ranked if query)
+    setSourceList(searchStationsFast(trimmed));
+
+    if (trimmed.length < 2) return;
+
     const delayDebounce = setTimeout(async () => {
       try {
-        const response: any = await api.get(`/api/v1/stations?query=${sourceQuery}`);
-        if (response?.success && response?.data) {
-          setSourceList(response.data);
+        const response: any = await api.get(`/api/v1/stations?query=${trimmed}`);
+        if (response?.success && response?.data && Array.isArray(response.data) && response.data.length > 0) {
+          const apiStations = response.data;
+          const existingCodes = new Set(apiStations.map((s: any) => s.stationCode.toUpperCase()));
+          const localSupplement = searchStationsFast(trimmed).filter((s) => !existingCodes.has(s.stationCode));
+          setSourceList([...apiStations, ...localSupplement].slice(0, 50));
         }
       } catch (err) {
         console.error('Error searching source stations', err);
@@ -126,17 +140,22 @@ export default function TrainsBetweenStations() {
     return () => clearTimeout(delayDebounce);
   }, [sourceQuery]);
 
-  // Debounced search for destination station
+  // Debounced search for destination station with instant local A-Z & relevance ranking
   useEffect(() => {
-    if (destQuery.trim().length < 2) {
-      setDestList([]);
-      return;
-    }
+    const trimmed = destQuery.trim();
+    // Instant local results (alphabetical if empty, relevance-ranked if query)
+    setDestList(searchStationsFast(trimmed));
+
+    if (trimmed.length < 2) return;
+
     const delayDebounce = setTimeout(async () => {
       try {
-        const response: any = await api.get(`/api/v1/stations?query=${destQuery}`);
-        if (response?.success && response?.data) {
-          setDestList(response.data);
+        const response: any = await api.get(`/api/v1/stations?query=${trimmed}`);
+        if (response?.success && response?.data && Array.isArray(response.data) && response.data.length > 0) {
+          const apiStations = response.data;
+          const existingCodes = new Set(apiStations.map((s: any) => s.stationCode.toUpperCase()));
+          const localSupplement = searchStationsFast(trimmed).filter((s) => !existingCodes.has(s.stationCode));
+          setDestList([...apiStations, ...localSupplement].slice(0, 50));
         }
       } catch (err) {
         console.error('Error searching destination stations', err);
@@ -723,7 +742,7 @@ export default function TrainsBetweenStations() {
 
         <div className="relative space-y-3">
           {/* Origin Station Row */}
-          <div className="relative">
+          <div ref={sourceBoxRef} className="relative">
             <div className="flex items-center gap-2.5 px-3 py-2 bg-slate-950/70 border border-slate-800 rounded-xl focus-within:border-blue-500/70 transition">
               <span className="w-3 h-3 rounded-full border-2 border-emerald-400 shrink-0"></span>
               {selectedSource && (
@@ -743,6 +762,7 @@ export default function TrainsBetweenStations() {
                     setSourceQuery('');
                     setSelectedSource(null);
                   }
+                  setSourceList(searchStationsFast(sourceQuery));
                 }}
                 placeholder="Search origin station..."
                 className="w-full bg-transparent text-xs sm:text-sm font-semibold text-white outline-none placeholder-slate-500"
@@ -764,6 +784,10 @@ export default function TrainsBetweenStations() {
             {/* Source Autocomplete Dropdown */}
             {sourceList.length > 0 && !selectedSource && (
               <div className="absolute left-0 right-0 mt-1 bg-[#151c2c] border border-slate-700/80 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-40 divide-y divide-white/5">
+                <div className="px-3.5 py-1.5 text-[10px] font-bold text-slate-400 bg-slate-950/90 sticky top-0 flex items-center justify-between border-b border-white/5 uppercase tracking-wider backdrop-blur-md">
+                  <span>{sourceQuery.trim() ? 'Relevant Stations' : 'All Major Stations (A - Z)'}</span>
+                  <span className="text-[9px] text-blue-400 font-mono">{sourceList.length} stations</span>
+                </div>
                 {sourceList.map((s) => (
                   <button
                     key={s.stationCode}
@@ -781,6 +805,11 @@ export default function TrainsBetweenStations() {
                       </span>
                       <span className="font-semibold text-white">{translateName(s.stationName, language)}</span>
                     </div>
+                    {(s.state || s.district) && (
+                      <span className="text-[10px] text-slate-400 font-normal">
+                        {[s.district, s.state].filter(Boolean).join(', ')}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -801,7 +830,7 @@ export default function TrainsBetweenStations() {
           </div>
 
           {/* Destination Station Row */}
-          <div className="relative">
+          <div ref={destBoxRef} className="relative">
             <div className="flex items-center gap-2.5 px-3 py-2 bg-slate-950/70 border border-slate-800 rounded-xl focus-within:border-blue-500/70 transition">
               <span className="w-3 h-3 rounded-full border-2 border-blue-400 shrink-0"></span>
               {selectedDest && (
@@ -821,6 +850,7 @@ export default function TrainsBetweenStations() {
                     setDestQuery('');
                     setSelectedDest(null);
                   }
+                  setDestList(searchStationsFast(destQuery));
                 }}
                 placeholder="Search destination station..."
                 className="w-full bg-transparent text-xs sm:text-sm font-semibold text-white outline-none placeholder-slate-500"
@@ -842,6 +872,10 @@ export default function TrainsBetweenStations() {
             {/* Destination Autocomplete Dropdown */}
             {destList.length > 0 && !selectedDest && (
               <div className="absolute left-0 right-0 mt-1 bg-[#151c2c] border border-slate-700/80 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-40 divide-y divide-white/5">
+                <div className="px-3.5 py-1.5 text-[10px] font-bold text-slate-400 bg-slate-950/90 sticky top-0 flex items-center justify-between border-b border-white/5 uppercase tracking-wider backdrop-blur-md">
+                  <span>{destQuery.trim() ? 'Relevant Stations' : 'All Major Stations (A - Z)'}</span>
+                  <span className="text-[9px] text-blue-400 font-mono">{destList.length} stations</span>
+                </div>
                 {destList.map((d) => (
                   <button
                     key={d.stationCode}
@@ -859,6 +893,11 @@ export default function TrainsBetweenStations() {
                       </span>
                       <span className="font-semibold text-white">{translateName(d.stationName, language)}</span>
                     </div>
+                    {(d.state || d.district) && (
+                      <span className="text-[10px] text-slate-400 font-normal">
+                        {[d.district, d.state].filter(Boolean).join(', ')}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
