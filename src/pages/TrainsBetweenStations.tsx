@@ -5,7 +5,7 @@ import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
 import { searchHistoryService } from '../services/searchHistoryService';
-import { getStationCluster, getClusterCityName } from '../utils/stationClusters';
+import { getStationCluster, getClusterCityName, isBacktrackingRoute } from '../utils/stationClusters';
 
 export default function TrainsBetweenStations() {
   const { language } = useLanguage();
@@ -415,6 +415,14 @@ export default function TrainsBetweenStations() {
 
       // Rule 4: Discard extreme circuitous detours (> 1.65x direct distance)
       if (averageDirectDistanceKm > 0 && t.totalDistanceKm && t.totalDistanceKm > averageDirectDistanceKm * 1.65) {
+        return false;
+      }
+
+      // Rule 5: Geographic Backtracking: transfer station cannot be further away from destination than origin
+      const transCode = (t.transferStationCode || '').trim();
+      const sCode = (t.originStationCode || searchParams.get('source') || '').trim();
+      const dCode = (t.destinationStationCode || searchParams.get('destination') || '').trim();
+      if (transCode && sCode && dCode && isBacktrackingRoute(sCode, transCode, dCode)) {
         return false;
       }
 

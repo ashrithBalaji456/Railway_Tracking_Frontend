@@ -3966,3 +3966,37 @@ This guarantees that whether a train is tracked by GPS coordinates, physical kil
   - Inside `triggerAlarmNow` across `AdaptiveSyncReceiver.java`, `AdaptiveTrackingService.java`, and `AlarmReceiver.java`, the system explicitly cancels the telemetry notification ID via `NotificationManager.cancel(getNotificationId(trainNumber, stationCode))` the exact millisecond the alarm fires.
   - Only the loud, focused wake-up overlay and ringing alarm notification are shown, eliminating lockscreen confusion.
 
+---
+
+### Dynamic Geospatial Nearby Station Discovery & Intelligent Route Filtering
+
+#### 1. The Challenge of Hardcoded Clusters vs. Any Indian Railway Station
+Previously, the "Search nearby stations" option only operated for ~20 hardcoded metro hubs (e.g., Delhi, Mumbai, Warangal/Kazipet, Hyderabad). If a user searched intermediate stations or smaller towns like **MCI (Mancherial)**, no nearby stations were found because Mancherial was not in the hardcoded cluster table, even though major junctions like **RDM (Ramagundam - 12.9 km)** and **BPA (Bellampalli - 19.8 km)** were right next to it.
+
+Furthermore, out of the ~10,500 active and halt stations in India, the application metadata was previously limited to 8,542 stations, missing thousands of smaller passenger halts and stations (such as `ALLP`, `AFK`, `AKOT`, etc.).
+
+#### 2. The Solution: Compact Geospatial Coordinates Dataset & Haversine Resolution
+1. **Station Coordinates Database (`stationCoordinates.json`):**
+   - Mapped 8,705 Indian railway stations to their exact decimal GPS coordinates `[latitude, longitude]`.
+   - Included canonical aliases for renames (e.g., `CSMT` $\leftrightarrow$ `CSTM`, `PRYJ` $\leftrightarrow$ `ALD`, `AYC` $\leftrightarrow$ `FD`, `VGLJ` $\leftrightarrow$ `JHS`, `DDU` $\leftrightarrow$ `MGS`, `RKMP` $\leftrightarrow$ `HBJ`, `SMVB`, etc.).
+   - Ultra-compact footprint (~220 KB) bundled directly in client memory for instant offline lookups.
+2. **Missing Station Onboarding:**
+   - Onboarded 2,252 missing stations into `Frontend/src/data/allStationsMeta.json` and `Backend/src/main/resources/stations_data.json`, bringing total station coverage to **10,794 stations**.
+   - Updated `DataInitializer.java` in Spring Boot to automatically populate `latitude` and `longitude` fields onto the `stations` PostgreSQL/JPA table and backfill existing records.
+3. **Dynamic Radius Discovery (`getStationCluster` in `stationClusters.ts`):**
+   - Applies the Haversine formula with a bounding box pre-filter ($\approx 38\text{ km}$):
+     $$d = 2R \arcsin\left(\sqrt{\sin^2\left(\frac{\Delta\text{lat}}{2}\right) + \cos(\text{lat}_1)\cos(\text{lat}_2)\sin^2\left(\frac{\Delta\text{lon}}{2}\right)}\right)$$
+   - Discovers all passenger stations within $30\text{ km}$.
+   - Ranks candidates by station classification (`NSG1` through `NSG6`) and geographic proximity, selecting up to 4 top nearby stations.
+   - Guaranteed ordering: the searched station is always first, preserving exact user intent.
+
+#### 3. Mathematical Elimination of Backtracking Connecting Routes
+When connecting route suggestions are enabled, third-party APIs can occasionally return counter-intuitive or backtracking itineraries (for example, advising a passenger at Warangal `WL` traveling south to Tirupati `TPTY` to take train `07563` 93 km north to Ramagundam `RDM`, wait 3 hours, and board train `01925` back south to Renigunta `RU`).
+
+To permanently prevent this across all stations nationwide without manual blacklisting:
+* **The Geospatial Rule:**
+  $$\text{isBacktracking} = \text{dist}(\text{transferStation}, \text{destination}) > \text{dist}(\text{origin}, \text{destination}) + 30\text{ km}$$
+* If traveling to the transfer station moves the passenger further away from the destination by more than 30 km, the itinerary is classified as geographic backtracking and discarded.
+* Legitimate forward transit hubs (e.g., `WL` $\rightarrow$ `SC` $\rightarrow$ `TPTY`, `WL` $\rightarrow$ `BZA` $\rightarrow$ `TPTY`, or `WL` $\rightarrow$ `KZJ` $\rightarrow$ `TPTY`) are preserved because their transfer stations maintain or reduce distance to the destination.
+
+
