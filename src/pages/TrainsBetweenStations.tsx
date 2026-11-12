@@ -5,7 +5,7 @@ import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
 import { searchHistoryService } from '../services/searchHistoryService';
-import { getStationCluster, getClusterCityName, isBacktrackingRoute, getStationDistanceKm } from '../utils/stationClusters';
+import { isBacktrackingRoute, getStationDistanceKm } from '../utils/stationClusters';
 import { searchStationsFast, TOTAL_STATIONS_COUNT } from '../utils/stationSearchHelper';
 
 export default function TrainsBetweenStations() {
@@ -239,44 +239,12 @@ export default function TrainsBetweenStations() {
     try {
       const dateQuery = dateParamStr ? `&date=${dateParamStr}` : '';
 
-      if (!nearbyActive) {
-        // Direct single station pair query
-        const response: any = await api.get(
-          `/api/v1/journey/plan?source=${srcCode}&destination=${dstCode}${dateQuery}`
-        );
-        const data = response?.data || (Array.isArray(response) ? response : []);
-        setTrains(deduplicateJourneys(data, srcCode, dstCode));
-      } else {
-        // Nearby cluster expansion (e.g. Warangal=[WL, KZJ], Tirupati=[TPTY, RU], MCI=[MCI, RDM, BPA, SKZR, PDPL])
-        const srcCluster = getStationCluster(srcCode);
-        const dstCluster = getStationCluster(dstCode);
-
-        // Build list of pairs to query across regional corridors (expanded to 20 parallel queries)
-        const pairs: Array<{ from: string; to: string }> = [];
-        for (const s of srcCluster.slice(0, 5)) {
-          for (const d of dstCluster.slice(0, 4)) {
-            if (s !== d && pairs.length < 20) {
-              pairs.push({ from: s, to: d });
-            }
-          }
-        }
-        if (pairs.length === 0) pairs.push({ from: srcCode, to: dstCode });
-
-        const responses = await Promise.allSettled(
-          pairs.map(p => api.get(`/api/v1/journey/plan?source=${p.from}&destination=${p.to}${dateQuery}`))
-        );
-
-        const allItems: any[] = [];
-        for (const res of responses) {
-          if (res.status === 'fulfilled') {
-            const data = res.value?.data || (Array.isArray(res.value) ? res.value : []);
-            if (Array.isArray(data)) {
-              allItems.push(...data);
-            }
-          }
-        }
-        setTrains(deduplicateJourneys(allItems, srcCode, dstCode));
-      }
+      // Single unified API call to backend (backend manages intelligent corridor discovery & caching)
+      const response: any = await api.get(
+        `/api/v1/journey/plan?source=${srcCode}&destination=${dstCode}${dateQuery}&nearby=${nearbyActive}`
+      );
+      const data = response?.data || (Array.isArray(response) ? response : []);
+      setTrains(deduplicateJourneys(data, srcCode, dstCode));
     } catch (err: any) {
       setError(err.message || 'Failed to fetch trains between stations.');
       setTrains([]);
@@ -546,17 +514,13 @@ export default function TrainsBetweenStations() {
   const getHeaderSourceTitle = () => {
     const rawName = selectedSource?.stationName || searchParams.get('source') || 'Origin';
     if (!searchNearby) return rawName;
-    const code = selectedSource?.stationCode || searchParams.get('source') || '';
-    const city = getClusterCityName(code);
-    return city ? `${city} (All Stations)` : `${rawName} (All Stations)`;
+    return `${rawName} & Nearby Stations`;
   };
 
   const getHeaderDestTitle = () => {
     const rawName = selectedDest?.stationName || searchParams.get('destination') || 'Destination';
     if (!searchNearby) return rawName;
-    const code = selectedDest?.stationCode || searchParams.get('destination') || '';
-    const city = getClusterCityName(code);
-    return city ? `${city} (All Stations)` : `${rawName} (All Stations)`;
+    return `${rawName} & Nearby Stations`;
   };
 
   return (
