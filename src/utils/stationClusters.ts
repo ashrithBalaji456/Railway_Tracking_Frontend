@@ -4,8 +4,8 @@
 import stationCoordinates from '../data/stationCoordinates.json';
 import allStationsMeta from '../data/allStationsMeta.json';
 
-const coordsMap = stationCoordinates as Record<string, number[]>;
-const metaMap = allStationsMeta as Record<string, string[]>;
+const coordsMap = stationCoordinates as Record<string, [number, number]>;
+const metaMap = allStationsMeta as Record<string, [string, string, string, string, string]>;
 
 // Official Indian Railways PRS City Cluster Hubs
 export const STATION_CLUSTERS: Record<string, { city: string; stations: string[] }> = {
