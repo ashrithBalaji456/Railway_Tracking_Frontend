@@ -7,7 +7,12 @@ import { searchHistoryService } from '../services/searchHistoryService';
 import { getStationDisplayName, formatRouteSubtitle } from '../utils/stationUtils';
 import RecentSearchesBar from '../components/RecentSearchesBar';
 import RecentSearchesDropdown from '../components/RecentSearchesDropdown';
-import { searchStationsFast, ALPHABETICAL_POPULAR_TRAINS } from '../utils/stationSearchHelper';
+import { 
+  searchStationsFast, 
+  searchTrainsFast, 
+  TOTAL_STATIONS_COUNT, 
+  TOTAL_TRAINS_COUNT 
+} from '../utils/stationSearchHelper';
 
 export default function Home() {
   const [trainQuery, setTrainQuery] = useState('');
@@ -63,23 +68,13 @@ export default function Home() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Debounced Train Search with client-side caching & instant alphabetical fallback
+  // Train Search across all 10,768 trains with instant local A-Z directory & relevance ranking
   useEffect(() => {
     const trimmed = trainQuery.trim();
-    if (!trimmed) {
-      setTrainsList(ALPHABETICAL_POPULAR_TRAINS);
-      return;
-    }
+    // Instant local results across all 10,768 trains (A-Z if empty, relevance-ranked if query)
+    setTrainsList(searchTrainsFast(trimmed, 100));
 
-    // Filter popular trains locally first for instant response (<1ms)
-    const localMatches = ALPHABETICAL_POPULAR_TRAINS.filter(
-      (t) =>
-        t.trainNumber.startsWith(trimmed) ||
-        t.trainName.toLowerCase().includes(trimmed.toLowerCase())
-    );
-    if (localMatches.length > 0) {
-      setTrainsList(localMatches);
-    }
+    if (trimmed.length < 2) return;
 
     const cacheKey = trimmed.toLowerCase();
     if (trainCacheRef.current[cacheKey]) {
@@ -363,7 +358,7 @@ export default function Home() {
                     }}
                     onFocus={() => {
                       setShowBetweenSourceDrop(true);
-                      if (!betweenSourceQuery) setBetweenSourceList(searchStationsFast(''));
+                      if (!betweenSourceQuery) setBetweenSourceList(searchStationsFast('', 100));
                     }}
                     placeholder="From Station (e.g. KZJ, Kazipet Jn)"
                     className="bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl w-full px-3.5 py-2.5 text-slate-200 outline-none text-xs sm:text-sm placeholder:text-slate-500"
@@ -374,8 +369,10 @@ export default function Home() {
                 {showBetweenSourceDrop && betweenSourceList.length > 0 && !selectedBetweenSource && (
                   <div className="absolute left-0 right-0 mt-2 bg-[#1c212e] border border-white/10 rounded-xl shadow-2xl max-h-60 overflow-y-auto z-30 backdrop-blur-xl divide-y divide-white/5 animate-fade-in">
                     <div className="px-4 py-2 text-[10px] font-bold text-slate-400 bg-slate-950/90 sticky top-0 flex items-center justify-between border-b border-white/5 uppercase tracking-wider backdrop-blur-md">
-                      <span>{betweenSourceQuery.trim() ? 'Relevant Stations' : 'All Major Stations (A - Z)'}</span>
-                      <span className="text-[9px] text-sky-400 font-mono">{betweenSourceList.length} stations</span>
+                      <span>{betweenSourceQuery.trim() ? 'Matching Stations' : 'All 10,794 Stations (A - Z)'}</span>
+                      <span className="text-[9px] text-sky-400 font-mono">
+                        {betweenSourceQuery.trim() ? `${betweenSourceList.length} matching` : `${TOTAL_STATIONS_COUNT.toLocaleString()} stations`}
+                      </span>
                     </div>
                     {betweenSourceList.map((s) => (
                       <button
@@ -436,7 +433,7 @@ export default function Home() {
                     }}
                     onFocus={() => {
                       setShowBetweenDestDrop(true);
-                      if (!betweenDestQuery) setBetweenDestList(searchStationsFast(''));
+                      if (!betweenDestQuery) setBetweenDestList(searchStationsFast('', 100));
                     }}
                     placeholder="To Station (e.g. MCI, Mancherial)"
                     className="bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl w-full px-3.5 py-2.5 text-slate-200 outline-none text-xs sm:text-sm placeholder:text-slate-500"
@@ -447,8 +444,10 @@ export default function Home() {
                 {showBetweenDestDrop && betweenDestList.length > 0 && !selectedBetweenDest && (
                   <div className="absolute left-0 right-0 mt-2 bg-[#1c212e] border border-white/10 rounded-xl shadow-2xl max-h-60 overflow-y-auto z-30 backdrop-blur-xl divide-y divide-white/5 animate-fade-in">
                     <div className="px-4 py-2 text-[10px] font-bold text-slate-400 bg-slate-950/90 sticky top-0 flex items-center justify-between border-b border-white/5 uppercase tracking-wider backdrop-blur-md">
-                      <span>{betweenDestQuery.trim() ? 'Relevant Stations' : 'All Major Stations (A - Z)'}</span>
-                      <span className="text-[9px] text-sky-400 font-mono">{betweenDestList.length} stations</span>
+                      <span>{betweenDestQuery.trim() ? 'Matching Stations' : 'All 10,794 Stations (A - Z)'}</span>
+                      <span className="text-[9px] text-sky-400 font-mono">
+                        {betweenDestQuery.trim() ? `${betweenDestList.length} matching` : `${TOTAL_STATIONS_COUNT.toLocaleString()} stations`}
+                      </span>
                     </div>
                     {betweenDestList.map((s) => (
                       <button
@@ -563,7 +562,7 @@ export default function Home() {
                   }}
                   onFocus={() => {
                     setShowTrainDrop(true);
-                    if (!trainQuery) setTrainsList(ALPHABETICAL_POPULAR_TRAINS);
+                    if (!trainQuery) setTrainsList(searchTrainsFast('', 100));
                   }}
                   className="bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-slate-200 outline-none transition-all placeholder:text-slate-650 text-xs sm:text-sm"
                   placeholder="e.g. 12760 or Charminar"
@@ -581,8 +580,10 @@ export default function Home() {
             {showTrainDrop && trainsList.length > 0 && (
               <div className="absolute left-0 right-0 mt-2 bg-[#1c212e] border border-white/10 rounded-xl shadow-2xl max-h-64 overflow-y-auto z-20 backdrop-blur-xl divide-y divide-white/5 animate-fade-in">
                 <div className="px-4 py-2 text-[10px] font-bold text-slate-400 bg-slate-950/90 sticky top-0 flex items-center justify-between border-b border-white/5 uppercase tracking-wider backdrop-blur-md">
-                  <span>{trainQuery.trim() ? 'Matching Trains' : 'Popular Express Trains (A - Z)'}</span>
-                  <span className="text-[9px] text-indigo-400 font-mono">{trainsList.length} trains</span>
+                  <span>{trainQuery.trim() ? 'Matching Trains' : 'All 10,768 Trains (A - Z)'}</span>
+                  <span className="text-[9px] text-indigo-400 font-mono">
+                    {trainQuery.trim() ? `${trainsList.length} matching` : `${TOTAL_TRAINS_COUNT.toLocaleString()} trains`}
+                  </span>
                 </div>
                 {trainsList.map((t) => (
                   <button
@@ -641,7 +642,7 @@ export default function Home() {
                   }}
                   onFocus={() => {
                     setShowStationDrop(true);
-                    if (!stationQuery) setStationsList(searchStationsFast(''));
+                    if (!stationQuery) setStationsList(searchStationsFast('', 100));
                   }}
                   className="bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-slate-200 outline-none transition-all placeholder:text-slate-650 text-xs sm:text-sm"
                   placeholder="e.g. BZA or Vijayawada"
@@ -659,8 +660,10 @@ export default function Home() {
             {showStationDrop && stationsList.length > 0 && (
               <div className="absolute left-0 right-0 mt-2 bg-[#1c212e] border border-white/10 rounded-xl shadow-2xl max-h-72 overflow-y-auto z-20 backdrop-blur-xl divide-y divide-white/5 animate-fade-in">
                 <div className="px-4 py-2 text-[10px] font-bold text-slate-400 bg-slate-950/90 sticky top-0 flex items-center justify-between border-b border-white/5 uppercase tracking-wider backdrop-blur-md">
-                  <span>{stationQuery.trim() ? 'Relevant Stations' : 'All Major Stations (A - Z)'}</span>
-                  <span className="text-[9px] text-sky-400 font-mono">{stationsList.length} stations</span>
+                  <span>{stationQuery.trim() ? 'Matching Stations' : 'All 10,794 Stations (A - Z)'}</span>
+                  <span className="text-[9px] text-sky-400 font-mono">
+                    {stationQuery.trim() ? `${stationsList.length} matching` : `${TOTAL_STATIONS_COUNT.toLocaleString()} stations`}
+                  </span>
                 </div>
                 {stationsList.map((s) => (
                   <button

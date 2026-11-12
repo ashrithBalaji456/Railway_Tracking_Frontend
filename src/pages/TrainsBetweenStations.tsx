@@ -6,7 +6,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { translateName } from '../utils/transliteration';
 import { searchHistoryService } from '../services/searchHistoryService';
 import { getStationCluster, getClusterCityName, isBacktrackingRoute, getStationDistanceKm } from '../utils/stationClusters';
-import { searchStationsFast } from '../utils/stationSearchHelper';
+import { searchStationsFast, TOTAL_STATIONS_COUNT } from '../utils/stationSearchHelper';
 
 export default function TrainsBetweenStations() {
   const { language } = useLanguage();
@@ -785,8 +785,10 @@ export default function TrainsBetweenStations() {
             {sourceList.length > 0 && !selectedSource && (
               <div className="absolute left-0 right-0 mt-1 bg-[#151c2c] border border-slate-700/80 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-40 divide-y divide-white/5">
                 <div className="px-3.5 py-1.5 text-[10px] font-bold text-slate-400 bg-slate-950/90 sticky top-0 flex items-center justify-between border-b border-white/5 uppercase tracking-wider backdrop-blur-md">
-                  <span>{sourceQuery.trim() ? 'Relevant Stations' : 'All Major Stations (A - Z)'}</span>
-                  <span className="text-[9px] text-blue-400 font-mono">{sourceList.length} stations</span>
+                  <span>{sourceQuery.trim() ? 'Matching Stations' : 'All 10,794 Stations (A - Z)'}</span>
+                  <span className="text-[9px] text-blue-400 font-mono">
+                    {sourceQuery.trim() ? `${sourceList.length} matching` : `${TOTAL_STATIONS_COUNT.toLocaleString()} stations`}
+                  </span>
                 </div>
                 {sourceList.map((s) => (
                   <button
@@ -873,8 +875,10 @@ export default function TrainsBetweenStations() {
             {destList.length > 0 && !selectedDest && (
               <div className="absolute left-0 right-0 mt-1 bg-[#151c2c] border border-slate-700/80 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-40 divide-y divide-white/5">
                 <div className="px-3.5 py-1.5 text-[10px] font-bold text-slate-400 bg-slate-950/90 sticky top-0 flex items-center justify-between border-b border-white/5 uppercase tracking-wider backdrop-blur-md">
-                  <span>{destQuery.trim() ? 'Relevant Stations' : 'All Major Stations (A - Z)'}</span>
-                  <span className="text-[9px] text-blue-400 font-mono">{destList.length} stations</span>
+                  <span>{destQuery.trim() ? 'Matching Stations' : 'All 10,794 Stations (A - Z)'}</span>
+                  <span className="text-[9px] text-blue-400 font-mono">
+                    {destQuery.trim() ? `${destList.length} matching` : `${TOTAL_STATIONS_COUNT.toLocaleString()} stations`}
+                  </span>
                 </div>
                 {destList.map((d) => (
                   <button

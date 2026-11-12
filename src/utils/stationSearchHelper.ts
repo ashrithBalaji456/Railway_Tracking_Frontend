@@ -1,7 +1,9 @@
-// Fast local station search and alphabetical directory helper
-// Built over 10,794 Indian Railway stations with instant (<3ms) relevance scoring
+// Fast local station and train search directory helper
+// Built over 10,794 Indian Railway stations and 10,768 Indian Railway trains
+// Provides instant (<5ms) client-side search, alphabetical A-Z browsing, and relevance scoring
 
 import allStationsMeta from '../data/allStationsMeta.json';
+import allTrainsMeta from '../data/allTrainsMeta.json';
 
 export interface StationSearchItem {
   stationCode: string;
@@ -12,7 +14,16 @@ export interface StationSearchItem {
   district?: string;
 }
 
-const metaMap = (allStationsMeta as unknown) as Record<string, [string, string, string, string, string]>;
+export interface TrainSearchItem {
+  trainNumber: string;
+  trainName: string;
+  trainType: string;
+  sourceStation?: string;
+  destinationStation?: string;
+}
+
+const stationMetaMap = (allStationsMeta as unknown) as Record<string, [string, string, string, string, string]>;
+const trainsRawList = (allTrainsMeta as unknown) as Array<[string, string, string, string, string]>;
 
 const CATEGORY_SCORES: Record<string, number> = {
   NSG1: 35,
@@ -26,39 +37,55 @@ const CATEGORY_SCORES: Record<string, number> = {
   SG3: 10,
 };
 
-// All 10,794 stations pre-indexed for fast search
-export const ALL_STATIONS: StationSearchItem[] = Object.entries(metaMap).map(([code, meta]) => {
-  const rawName = meta[0] || code;
-  // Format to clean title case for presentation
-  const formattedName = rawName
-    .toLowerCase()
-    .replace(/(?:^|\s|\/|-|\.)\S/g, (char) => char.toUpperCase());
+// All 10,794 stations indexed and sorted Alphabetically (A to Z)
+export const ALL_STATIONS: StationSearchItem[] = Object.entries(stationMetaMap)
+  .map(([code, meta]) => {
+    const rawName = meta[0] || code;
+    // Format to clean title case for presentation
+    const formattedName = rawName
+      .toLowerCase()
+      .replace(/(?:^|\s|\/|-|\.)\S/g, (char) => char.toUpperCase());
 
-  return {
-    stationCode: code.toUpperCase(),
-    stationName: formattedName,
-    state: meta[1] || '',
-    zone: meta[2] || '',
-    category: meta[3] || 'UNKNOWN',
-    district: meta[4] || '',
-  };
-});
-
-// Major stations (NSG1-NSG4 + SG1) sorted strictly Alphabetically (A to Z)
-export const ALPHABETICAL_MAJOR_STATIONS: StationSearchItem[] = ALL_STATIONS
-  .filter((s) => ['NSG1', 'NSG2', 'NSG3', 'NSG4', 'SG1'].includes(s.category || ''))
+    return {
+      stationCode: code.toUpperCase(),
+      stationName: formattedName,
+      state: meta[1] || '',
+      zone: meta[2] || '',
+      category: meta[3] || 'UNKNOWN',
+      district: meta[4] || '',
+    };
+  })
   .sort((a, b) => a.stationName.localeCompare(b.stationName));
 
+export const TOTAL_STATIONS_COUNT = ALL_STATIONS.length;
+
+// All 10,768 trains indexed and sorted Alphabetically (A to Z)
+export const ALL_TRAINS: TrainSearchItem[] = trainsRawList
+  .map(([trainNumber, trainName, trainType, sourceStation, destinationStation]) => ({
+    trainNumber,
+    trainName: trainName || `Train ${trainNumber}`,
+    trainType: trainType || 'Express',
+    sourceStation: sourceStation || '',
+    destinationStation: destinationStation || '',
+  }))
+  .sort((a, b) => a.trainName.localeCompare(b.trainName));
+
+export const TOTAL_TRAINS_COUNT = ALL_TRAINS.length;
+
+// Backward-compatible alias for existing imports
+export const ALPHABETICAL_MAJOR_STATIONS = ALL_STATIONS;
+export const ALPHABETICAL_POPULAR_TRAINS = ALL_TRAINS;
+
 /**
- * Searches stations locally with instant relevance ranking.
- * If query is empty, returns the major stations sorted alphabetically (A to Z).
+ * Searches all 10,794 stations locally with instant relevance ranking.
+ * If query is empty, returns all stations sorted alphabetically (A to Z).
  */
-export function searchStationsFast(query?: string, limit = 40): StationSearchItem[] {
+export function searchStationsFast(query?: string, limit = 100): StationSearchItem[] {
   const q = (query || '').trim().toLowerCase();
 
-  // Empty query -> Return alphabetical major stations
+  // Empty query -> Return alphabetical A-Z list
   if (!q) {
-    return ALPHABETICAL_MAJOR_STATIONS.slice(0, limit);
+    return ALL_STATIONS.slice(0, limit);
   }
 
   const matches: Array<{ item: StationSearchItem; score: number }> = [];
@@ -70,31 +97,31 @@ export function searchStationsFast(query?: string, limit = 40): StationSearchIte
 
     // 1. Exact match on station code (Highest priority)
     if (code === q) {
-      score += 1500;
+      score += 2000;
     }
     // 2. Exact match on station name
     else if (name === q) {
-      score += 1200;
+      score += 1500;
     }
     // 3. Station code starts with query (e.g. typing 'MC' -> MCI)
     else if (code.startsWith(q)) {
-      score += 900 - (code.length - q.length) * 10;
+      score += 1000 - (code.length - q.length) * 10;
     }
-    // 4. Station name starts with query (e.g. typing 'manch' -> Manchiryal)
+    // 4. Station name starts with query (e.g. typing 'manch' -> Mancherial)
     else if (name.startsWith(q)) {
-      score += 800;
+      score += 900;
     }
-    // 5. Station code contains query
+    // 5. Word in station name starts with query
+    else if (name.includes(' ' + q) || name.includes('-' + q) || name.includes('/' + q)) {
+      score += 600;
+    }
+    // 6. Station code contains query
     else if (code.includes(q)) {
       score += 400;
     }
-    // 6. Station name contains query as a distinct word
-    else if (name.includes(' ' + q)) {
-      score += 350;
-    }
     // 7. Station name contains query
     else if (name.includes(q)) {
-      score += 200;
+      score += 250;
     } else {
       continue;
     }
@@ -115,44 +142,64 @@ export function searchStationsFast(query?: string, limit = 40): StationSearchIte
   return matches.slice(0, limit).map((m) => m.item);
 }
 
-// Curated prominent trains across India sorted alphabetically (A to Z)
-export interface PopularTrainItem {
-  trainNumber: string;
-  trainName: string;
-  trainType: string;
-  sourceStation?: string;
-  destinationStation?: string;
-}
+/**
+ * Searches all 10,768 trains locally with instant relevance ranking.
+ * If query is empty, returns all trains sorted alphabetically (A to Z).
+ */
+export function searchTrainsFast(query?: string, limit = 100): TrainSearchItem[] {
+  const q = (query || '').trim().toLowerCase();
 
-export const ALPHABETICAL_POPULAR_TRAINS: PopularTrainItem[] = [
-  { trainNumber: '12708', trainName: 'Andhra Pradesh Sampark Kranti Express', trainType: 'Superfast', sourceStation: 'NZM', destinationStation: 'KCG' },
-  { trainNumber: '12724', trainName: 'Telangana Express', trainType: 'Superfast', sourceStation: 'NDLS', destinationStation: 'HYB' },
-  { trainNumber: '12760', trainName: 'Charminar Express', trainType: 'Superfast', sourceStation: 'HYB', destinationStation: 'TBM' },
-  { trainNumber: '12722', trainName: 'Dakshin Superfast Express', trainType: 'Superfast', sourceStation: 'NZM', destinationStation: 'SC' },
-  { trainNumber: '12842', trainName: 'Coromandel Express', trainType: 'Superfast', sourceStation: 'HWH', destinationStation: 'MAS' },
-  { trainNumber: '12124', trainName: 'Deccan Queen', trainType: 'Superfast', sourceStation: 'PUNE', destinationStation: 'CSMT' },
-  { trainNumber: '12285', trainName: 'Secunderabad - Hazrat Nizamuddin Duronto', trainType: 'Duronto', sourceStation: 'SC', destinationStation: 'NZM' },
-  { trainNumber: '12704', trainName: 'Falaknuma Express', trainType: 'Superfast', sourceStation: 'SC', destinationStation: 'HWH' },
-  { trainNumber: '12727', trainName: 'Godavari Superfast Express', trainType: 'Superfast', sourceStation: 'VSKP', destinationStation: 'HYB' },
-  { trainNumber: '12616', trainName: 'Grand Trunk Express', trainType: 'Superfast', sourceStation: 'NDLS', destinationStation: 'MAS' },
-  { trainNumber: '12810', trainName: 'Howrah Mail', trainType: 'Mail', sourceStation: 'CSMT', destinationStation: 'HWH' },
-  { trainNumber: '12628', trainName: 'Karnataka Express', trainType: 'Superfast', sourceStation: 'NDLS', destinationStation: 'SBC' },
-  { trainNumber: '12626', trainName: 'Kerala Express', trainType: 'Superfast', sourceStation: 'NDLS', destinationStation: 'TVC' },
-  { trainNumber: '11020', trainName: 'Konark Express', trainType: 'Express', sourceStation: 'BBS', destinationStation: 'CSMT' },
-  { trainNumber: '12618', trainName: 'Mangala Lakshadweep Express', trainType: 'Superfast', sourceStation: 'NZM', destinationStation: 'ERS' },
-  { trainNumber: '20101', trainName: 'Nagpur - Secunderabad Vande Bharat Express', trainType: 'Vande Bharat', sourceStation: 'NGP', destinationStation: 'SC' },
-  { trainNumber: '20833', trainName: 'Visakhapatnam - Secunderabad Vande Bharat Express', trainType: 'Vande Bharat', sourceStation: 'VSKP', destinationStation: 'SC' },
-  { trainNumber: '12431', trainName: 'Trivandrum Rajdhani Express', trainType: 'Rajdhani', sourceStation: 'TVC', destinationStation: 'NZM' },
-  { trainNumber: '12951', trainName: 'Mumbai Tejas Rajdhani Express', trainType: 'Rajdhani', sourceStation: 'MMCT', destinationStation: 'NDLS' },
-  { trainNumber: '20608', trainName: 'Mysuru - Chennai Central Vande Bharat Express', trainType: 'Vande Bharat', sourceStation: 'MYS', destinationStation: 'MAS' },
-  { trainNumber: '17234', trainName: 'Bhagyanagar Express', trainType: 'Express', sourceStation: 'BPQ', destinationStation: 'SC' },
-  { trainNumber: '12758', trainName: 'Kaghaznagar Superfast Express', trainType: 'Superfast', sourceStation: 'SKZR', destinationStation: 'SC' },
-  { trainNumber: '12792', trainName: 'Secunderabad Superfast Express', trainType: 'Superfast', sourceStation: 'DNR', destinationStation: 'SC' },
-  { trainNumber: '17012', trainName: 'Bidar Intercity Express', trainType: 'Express', sourceStation: 'SKZR', destinationStation: 'BIDR' },
-  { trainNumber: '12763', trainName: 'Padmavathi Superfast Express', trainType: 'Superfast', sourceStation: 'TPTY', destinationStation: 'SC' },
-  { trainNumber: '17406', trainName: 'Krishna Express', trainType: 'Express', sourceStation: 'ADB', destinationStation: 'TPTY' },
-  { trainNumber: '17202', trainName: 'Golconda Express', trainType: 'Express', sourceStation: 'SC', destinationStation: 'GNT' },
-  { trainNumber: '12714', trainName: 'Satavahana Superfast Express', trainType: 'Superfast', sourceStation: 'BZA', destinationStation: 'SC' },
-  { trainNumber: '12622', trainName: 'Tamil Nadu Express', trainType: 'Superfast', sourceStation: 'NDLS', destinationStation: 'MAS' },
-  { trainNumber: '12780', trainName: 'Goa Express', trainType: 'Superfast', sourceStation: 'NZM', destinationStation: 'VSG' },
-].sort((a, b) => a.trainName.localeCompare(b.trainName));
+  // Empty query -> Return alphabetical A-Z list of all 10,768 trains
+  if (!q) {
+    return ALL_TRAINS.slice(0, limit);
+  }
+
+  const matches: Array<{ item: TrainSearchItem; score: number }> = [];
+
+  for (const item of ALL_TRAINS) {
+    const num = item.trainNumber.toLowerCase();
+    const name = item.trainName.toLowerCase();
+    let score = 0;
+
+    // 1. Exact match on train number
+    if (num === q) {
+      score += 2500;
+    }
+    // 2. Train number starts with query (e.g. typing '127' -> 12760, 12724, 12708)
+    else if (num.startsWith(q)) {
+      score += 1800 - (num.length - q.length) * 10;
+    }
+    // 3. Exact match on train name
+    else if (name === q) {
+      score += 1500;
+    }
+    // 4. Train name starts with query (e.g. typing 'char' -> Charminar Express)
+    else if (name.startsWith(q)) {
+      score += 1200;
+    }
+    // 5. Word in train name starts with query (e.g. typing 'express' or 'sf')
+    else if (name.includes(' ' + q) || name.includes('-' + q)) {
+      score += 700;
+    }
+    // 6. Train number contains query
+    else if (num.includes(q)) {
+      score += 500;
+    }
+    // 7. Train name contains query anywhere
+    else if (name.includes(q)) {
+      score += 300;
+    } else {
+      continue;
+    }
+
+    matches.push({ item, score });
+  }
+
+  // Sort by score descending; break ties alphabetically by train name
+  matches.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.item.trainName.localeCompare(b.item.trainName);
+  });
+
+  return matches.slice(0, limit).map((m) => m.item);
+}
