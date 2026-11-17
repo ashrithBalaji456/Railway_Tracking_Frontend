@@ -21,6 +21,60 @@ import type { BlogArticle } from '../types';
 import { FALLBACK_BLOGS, BLOG_CATEGORIES } from '../data/fallbackBlogs';
 import { getSavedArticleSlugs, toggleSaveArticle } from '../utils/bookmarkUtils';
 
+function getCardThumbUrl(url: string | undefined): string {
+  if (!url) return '';
+  if (url.startsWith('/images/blogs/') && !url.includes('/thumbs/')) {
+    return url.replace('/images/blogs/', '/images/blogs/thumbs/');
+  }
+  return url;
+}
+
+function CardCoverImage({
+  src,
+  originalSrc,
+  alt,
+  isPriority,
+  className = "h-48 w-full"
+}: {
+  src: string;
+  originalSrc: string;
+  alt: string;
+  isPriority?: boolean;
+  className?: string;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className={`relative ${className} overflow-hidden bg-slate-900`}>
+      {!loaded && (
+        <div className="absolute inset-0 bg-slate-900 animate-pulse flex items-center justify-center">
+          <div className="w-5 h-5 rounded-full border-2 border-emerald-500/20 border-t-emerald-400 animate-spin" />
+        </div>
+      )}
+      <img
+        src={src}
+        alt={alt}
+        referrerPolicy="no-referrer"
+        loading={isPriority ? 'eager' : 'lazy'}
+        fetchPriority={isPriority ? 'high' : 'auto'}
+        onLoad={() => setLoaded(true)}
+        onError={(e) => {
+          const target = e.target as HTMLImageElement;
+          if (!target.dataset.triedOriginal) {
+            target.dataset.triedOriginal = 'true';
+            target.src = originalSrc;
+          } else {
+            target.src = '/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg';
+          }
+        }}
+        className={`h-full w-full object-cover transition-all duration-500 group-hover:scale-105 ${
+          loaded ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
+    </div>
+  );
+}
+
 export default function Blogs() {
   const navigate = useNavigate();
   const [articles, setArticles] = useState<BlogArticle[]>(FALLBACK_BLOGS);
@@ -419,8 +473,13 @@ export default function Blogs() {
                   >
                     <div className="relative h-24 w-full rounded-xl overflow-hidden bg-slate-950 mb-2.5 flex-shrink-0">
                       <img 
-                        src={art.coverImage} 
+                        src={getCardThumbUrl(art.coverImage)} 
                         alt={art.title} 
+                        loading="eager"
+                        fetchPriority="high"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = art.coverImage;
+                        }}
                         className={`w-full h-full object-cover transition-transform duration-500 ${isActive ? 'scale-105' : 'group-hover:scale-105'}`} 
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
@@ -544,33 +603,28 @@ export default function Blogs() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(searchQuery || selectedCategory !== 'All' ? articles : regularArticles).map((article) => (
+            {(searchQuery || selectedCategory !== 'All' ? articles : regularArticles).map((article, articleIdx) => (
               <div 
                 key={article.id}
                 onClick={() => navigate(`/blogs/${article.slug}`)}
                 className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-800/90 bg-slate-900/70 hover:bg-slate-900 hover:border-slate-700/80 transition-all duration-300 hover:shadow-xl hover:shadow-black/40 cursor-pointer"
               >
                 <div>
-                  {/* Card Cover Image */}
-                  <div className="relative h-48 w-full overflow-hidden bg-slate-800">
-                    <img 
-                      src={article.coverImage} 
+                  {/* Card Cover Image with Instant High-DPI Thumbnail & Smooth Fade */}
+                  <div className="relative">
+                    <CardCoverImage 
+                      src={getCardThumbUrl(article.coverImage)}
+                      originalSrc={article.coverImage}
                       alt={article.title}
-                      referrerPolicy="no-referrer"
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg';
-                      }}
+                      isPriority={articleIdx < 6}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
                     
                     {/* Category Pill Over Image */}
-                    <span className="absolute top-3 left-3 px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase bg-slate-950/80 backdrop-blur-md text-emerald-400 border border-emerald-500/30">
+                    <span className="absolute top-3 left-3 px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase bg-slate-950/80 backdrop-blur-md text-emerald-400 border border-emerald-500/30 z-10 pointer-events-none">
                       {article.category}
                     </span>
 
-                    <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
                       <button 
                         onClick={(e) => handleToggleSave(e, article)}
                         className={`p-2 rounded-lg backdrop-blur-md transition-colors ${
