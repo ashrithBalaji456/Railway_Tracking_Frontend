@@ -170,7 +170,7 @@ export default function BlogDetail() {
           id: `story-chapter-${chCount}`,
           chapterNumber: chCount,
           title: sec.title || `Chapter ${chCount}`,
-          paragraphs: sec.content ? [sec.content] : [],
+          paragraphs: sec.content ? sec.content.split('\n\n').map(s => s.trim()).filter(Boolean) : [],
           image: undefined,
           callout: undefined
         };
@@ -186,7 +186,10 @@ export default function BlogDetail() {
             callout: undefined
           };
         }
-        if (sec.content) current.paragraphs.push(sec.content);
+        if (sec.content) {
+          const splitParagraphs = sec.content.split('\n\n').map(s => s.trim()).filter(Boolean);
+          current.paragraphs.push(...splitParagraphs);
+        }
       } else if (sec.type === 'image') {
         if (current && !current.image) {
           current.image = {
