@@ -549,19 +549,25 @@ export default function BlogDetail() {
         </header>
 
         {/* Crystal-Clear Enhanced Main Cover Image */}
-        <div className="relative w-full rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 aspect-[16/9] sm:aspect-[21/9] group">
+        <div className="relative w-full rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 aspect-[16/9] max-h-[580px] group">
+          <img
+            src={article.coverImage}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-105 pointer-events-none"
+          />
           <img
             src={article.coverImage}
             alt={article.title}
             referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+            className="relative w-full h-full object-contain md:object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
             onError={(e) => {
               (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg';
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent pointer-events-none" />
 
-          <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 z-20 flex items-center gap-2 bg-slate-950/80 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 text-xs text-slate-200">
+          <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 z-20 flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 text-xs text-slate-200">
             <Camera className="w-3.5 h-3.5 text-emerald-400" />
             <span className="font-medium">4K Ultra HD Verified Heritage Photograph</span>
           </div>
@@ -628,7 +634,6 @@ export default function BlogDetail() {
         {/* Story Chapters List */}
         <div ref={storyContainerRef} className="space-y-12 sm:space-y-16">
           {chapters.map((ch, idx) => {
-            const isEven = idx % 2 === 0;
             const isActive = activeChapterIndex === idx;
 
             return (
@@ -641,7 +646,7 @@ export default function BlogDetail() {
                   }`}
               >
                 {/* Chapter Header Badge */}
-                <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
+                <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
                   <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold shadow-sm">
                     <MapPin className="w-3.5 h-3.5 text-emerald-400" />
                     <span>MILESTONE {String(idx + 1).padStart(2, '0')}</span>
@@ -652,168 +657,86 @@ export default function BlogDetail() {
                   </span>
                 </div>
 
-                {/* Alternating Zig-Zag Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-stretch">
+                {/* Chapter Title */}
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white leading-tight tracking-tight mb-6">
+                  {ch.title}
+                </h2>
 
-                  {/* EVEN CHAPTER: Text on Left (7 cols), Image on Right (5 cols) */}
-                  {isEven ? (
-                    <>
-                      {/* Info Column */}
-                      <div className="md:col-span-7 space-y-4 flex flex-col justify-center">
-                        <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
-                          {ch.title}
-                        </h2>
+                {/* Full-Width Showcase Landmark Photograph */}
+                {ch.image && (
+                  <div className="space-y-2.5 mb-8 w-full">
+                    <div className="group relative rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl aspect-[16/9] w-full max-h-[580px]">
+                      {/* Ambient background glow from the photograph */}
+                      <img
+                        src={ch.image.url}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-105 pointer-events-none"
+                      />
+                      {/* Master Photograph: object-contain ensures 100% of the scene is fully visible with ZERO cropping */}
+                      <img
+                        src={ch.image.url}
+                        alt={ch.image.altText || ch.title}
+                        referrerPolicy="no-referrer"
+                        loading="lazy"
+                        className="relative w-full h-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.01]"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-2.jpg';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-transparent pointer-events-none" />
 
-                        <div className="space-y-4 text-slate-300 text-sm sm:text-base leading-relaxed font-normal">
-                          {ch.paragraphs.map((p, pIdx) => (
-                            <div key={pIdx}>
-                              {renderFormattedParagraph(p)}
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Callout Box if present */}
-                        {ch.callout && (
-                          <div className={`mt-5 p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed ${ch.callout.type === 'tip'
-                              ? 'border-amber-500/30 bg-amber-500/10 text-amber-100'
-                              : ch.callout.type === 'trivia'
-                                ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-100'
-                                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100 italic'
-                            }`}>
-                            <div className="flex items-center gap-1.5 font-bold mb-1 uppercase tracking-wider text-xs">
-                              {ch.callout.type === 'tip' ? (
-                                <>
-                                  <Lightbulb className="w-4 h-4 text-amber-400" />
-                                  <span className="text-amber-400">{ch.callout.title || 'Pro Traveler Tip'}</span>
-                                </>
-                              ) : ch.callout.type === 'trivia' ? (
-                                <>
-                                  <Sparkles className="w-4 h-4 text-indigo-400" />
-                                  <span className="text-indigo-400">{ch.callout.title || 'Did You Know?'}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Compass className="w-4 h-4 text-emerald-400" />
-                                  <span className="text-emerald-400">{ch.callout.title || 'Heritage Lore'}</span>
-                                </>
-                              )}
-                            </div>
-                            <div>{renderFormattedParagraph(ch.callout.content)}</div>
-                          </div>
-                        )}
+                      <div className="absolute top-3.5 right-3.5 px-3 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-slate-700/70 text-[11px] font-bold text-emerald-400 shadow-lg flex items-center gap-1.5">
+                        <Sparkles className="w-3 h-3 text-emerald-400" />
+                        <span>4K Ultra HD</span>
                       </div>
+                    </div>
+                    {ch.image.caption && (
+                      <p className="text-center text-xs sm:text-sm text-slate-400 italic px-2">
+                        📸 {ch.image.caption}
+                      </p>
+                    )}
+                  </div>
+                )}
 
-                      {/* Image Column */}
-                      <div className="md:col-span-5 flex flex-col justify-center">
-                        {ch.image && (
-                          <div className="space-y-2.5 w-full h-full flex flex-col justify-center">
-                            <div className="group relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 shadow-2xl h-[320px] sm:h-[400px] md:h-full md:min-h-[440px] w-full">
-                              <img
-                                src={ch.image.url}
-                                alt={ch.image.altText || ch.title}
-                                referrerPolicy="no-referrer"
-                                loading="lazy"
-                                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-2.jpg';
-                                }}
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
-
-                                <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-[10px] font-bold text-emerald-400 shadow-md">
-                                  4K Ultra HD
-                                </div>
-                            </div>
-                            {ch.image.caption && (
-                              <p className="text-center text-xs text-slate-400 italic px-2">
-                                📸 {ch.image.caption}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    /* ODD CHAPTER: Image on Left (5 cols), Text on Right (7 cols) */
-                    <>
-                      {/* Image Column */}
-                      <div className="md:col-span-5 order-2 md:order-1 flex flex-col justify-center">
-                        {ch.image && (
-                          <div className="space-y-2.5 w-full h-full flex flex-col justify-center">
-                            <div className="group relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 shadow-2xl h-[320px] sm:h-[400px] md:h-full md:min-h-[440px] w-full">
-                              <img
-                                src={ch.image.url}
-                                alt={ch.image.altText || ch.title}
-                                referrerPolicy="no-referrer"
-                                loading="lazy"
-                                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-3.jpg';
-                                }}
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
-
-                                <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-[10px] font-bold text-cyan-400 shadow-md">
-                                  4K Ultra HD
-                                </div>
-                            </div>
-                            {ch.image.caption && (
-                              <p className="text-center text-xs text-slate-400 italic px-2">
-                                📸 {ch.image.caption}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Info Column */}
-                      <div className="md:col-span-7 order-1 md:order-2 space-y-4 flex flex-col justify-center">
-                        <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
-                          {ch.title}
-                        </h2>
-
-                        <div className="space-y-4 text-slate-300 text-sm sm:text-base leading-relaxed font-normal">
-                          {ch.paragraphs.map((p, pIdx) => (
-                            <div key={pIdx}>
-                              {renderFormattedParagraph(p)}
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Callout Box if present */}
-                        {ch.callout && (
-                          <div className={`mt-5 p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed ${ch.callout.type === 'tip'
-                              ? 'border-amber-500/30 bg-amber-500/10 text-amber-100'
-                              : ch.callout.type === 'trivia'
-                                ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-100'
-                                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100 italic'
-                            }`}>
-                            <div className="flex items-center gap-1.5 font-bold mb-1 uppercase tracking-wider text-xs">
-                              {ch.callout.type === 'tip' ? (
-                                <>
-                                  <Lightbulb className="w-4 h-4 text-amber-400" />
-                                  <span className="text-amber-400">{ch.callout.title || 'Pro Traveler Tip'}</span>
-                                </>
-                              ) : ch.callout.type === 'trivia' ? (
-                                <>
-                                  <Sparkles className="w-4 h-4 text-indigo-400" />
-                                  <span className="text-indigo-400">{ch.callout.title || 'Did You Know?'}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Compass className="w-4 h-4 text-emerald-400" />
-                                  <span className="text-emerald-400">{ch.callout.title || 'Heritage Lore'}</span>
-                                </>
-                              )}
-                            </div>
-                            <div>{renderFormattedParagraph(ch.callout.content)}</div>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
-
+                {/* Chapter Information */}
+                <div className="space-y-4 text-slate-300 text-sm sm:text-base leading-relaxed font-normal">
+                  {ch.paragraphs.map((p, pIdx) => (
+                    <div key={pIdx}>
+                      {renderFormattedParagraph(p)}
+                    </div>
+                  ))}
                 </div>
+
+                {/* Callout Box if present */}
+                {ch.callout && (
+                  <div className={`mt-6 p-4 sm:p-5 rounded-2xl border text-xs sm:text-sm leading-relaxed ${ch.callout.type === 'tip'
+                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-100'
+                      : ch.callout.type === 'trivia'
+                        ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-100'
+                        : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100 italic'
+                    }`}>
+                    <div className="flex items-center gap-1.5 font-bold mb-1.5 uppercase tracking-wider text-xs">
+                      {ch.callout.type === 'tip' ? (
+                        <>
+                          <Lightbulb className="w-4 h-4 text-amber-400" />
+                          <span className="text-amber-400">{ch.callout.title || 'Pro Traveler Tip'}</span>
+                        </>
+                      ) : ch.callout.type === 'trivia' ? (
+                        <>
+                          <Sparkles className="w-4 h-4 text-indigo-400" />
+                          <span className="text-indigo-400">{ch.callout.title || 'Did You Know?'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Compass className="w-4 h-4 text-emerald-400" />
+                          <span className="text-emerald-400">{ch.callout.title || 'Heritage Lore'}</span>
+                        </>
+                      )}
+                    </div>
+                    <div>{renderFormattedParagraph(ch.callout.content)}</div>
+                  </div>
+                )}
               </section>
             );
           })}

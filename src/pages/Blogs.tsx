@@ -43,6 +43,14 @@ function CardCoverImage({
   className?: string;
 }) {
   const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    if (imgRef.current && imgRef.current.complete) {
+      setLoaded(true);
+    }
+  }, [src]);
+
   return (
     <div className={`relative ${className} overflow-hidden bg-slate-900`}>
       {!loaded && (
@@ -51,6 +59,7 @@ function CardCoverImage({
         </div>
       )}
       <img
+        ref={imgRef}
         src={src}
         alt={alt}
         referrerPolicy="no-referrer"
@@ -65,6 +74,7 @@ function CardCoverImage({
           } else {
             target.src = '/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg';
           }
+          setLoaded(true);
         }}
         className={`h-full w-full object-cover transition-all duration-500 group-hover:scale-105 ${
           loaded ? 'opacity-100' : 'opacity-0'
