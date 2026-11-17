@@ -22,7 +22,8 @@ import {
   Bot,
   MessageSquare,
   MapPin,
-  Camera
+  Camera,
+  Sun
 } from 'lucide-react';
 import { getBlogBySlug } from '../services/api';
 import type { BlogArticle } from '../types';
@@ -46,6 +47,55 @@ interface StoryChapter {
     title?: string;
     content: string;
   };
+}
+
+// Helper to parse **bold** text and strip asterisks into styled strong elements
+function renderFormattedText(text: string) {
+  const parts = text.split(/(\*\*[^*]+?\*\*)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      const inner = part.slice(2, -2);
+      return (
+        <strong key={idx} className="font-bold text-white tracking-wide">
+          {inner}
+        </strong>
+      );
+    }
+    return <span key={idx}>{part}</span>;
+  });
+}
+
+// Helper to render paragraphs with clean bold text, bullet points, and proper spacing
+function renderFormattedParagraph(paragraph: string) {
+  const lines = paragraph.split('\n');
+  return (
+    <div className="space-y-2.5">
+      {lines.map((line, lineIdx) => {
+        const trimmed = line.trim();
+        if (!trimmed) return null;
+
+        const isBullet = trimmed.startsWith('- ') || trimmed.startsWith('• ') || trimmed.startsWith('* ');
+        const cleanLine = isBullet ? trimmed.replace(/^[-•*]\s+/, '') : trimmed;
+
+        if (isBullet) {
+          return (
+            <div key={lineIdx} className="flex items-start gap-2.5 pl-2 my-1 text-slate-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-2 shrink-0 shadow-sm shadow-emerald-400/60" />
+              <div className="flex-1 leading-relaxed text-sm sm:text-base">
+                {renderFormattedText(cleanLine)}
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <p key={lineIdx} className="leading-relaxed text-sm sm:text-base">
+            {renderFormattedText(trimmed)}
+          </p>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function BlogDetail() {
@@ -471,8 +521,8 @@ export default function BlogDetail() {
           </div>
         </header>
 
-        {/* Crystal-Clear Enhanced Main Cover Image */}
-        <div className="relative w-full rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 aspect-[16/9] sm:aspect-[21/9] group">
+        {/* Crystal-Clear Enhanced Main Cover Image with Radiant Sunlight Flare */}
+        <div className="relative w-full rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 aspect-[16/9] sm:aspect-[21/9] group flex items-center justify-center">
           <img 
             src={article.coverImage} 
             alt={article.title}
@@ -483,10 +533,21 @@ export default function BlogDetail() {
               (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg';
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
-          <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 flex items-center gap-2 bg-slate-950/80 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 text-xs text-slate-200">
+          {/* Radiant Sunlight / Golden Flare Overlays */}
+          <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full bg-gradient-to-br from-amber-200/40 via-amber-400/20 to-transparent blur-3xl pointer-events-none z-10 mix-blend-screen transition-transform duration-700 group-hover:scale-110" />
+          <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-amber-100/35 via-amber-300/15 to-transparent blur-2xl pointer-events-none z-10 mix-blend-screen" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-amber-500/[0.03] to-amber-200/[0.1] pointer-events-none z-10 mix-blend-screen" />
+          <div className="absolute top-4 right-8 w-4 h-4 bg-amber-100 rounded-full blur-[2px] opacity-80 pointer-events-none z-10 animate-pulse" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none z-10" />
+
+          <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 z-20 flex items-center gap-2 bg-slate-950/80 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 text-xs text-slate-200">
             <Camera className="w-3.5 h-3.5 text-emerald-400" />
             <span className="font-medium">Full HD Verified Heritage Photograph</span>
+          </div>
+
+          <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 flex items-center gap-1.5 bg-amber-950/70 backdrop-blur-md px-3 py-1 rounded-full border border-amber-500/40 text-xs text-amber-300 font-semibold shadow-lg">
+            <Sun className="w-3.5 h-3.5 text-amber-400 fill-amber-400/30" />
+            <span>Golden Sunlight</span>
           </div>
         </div>
 
@@ -592,9 +653,9 @@ export default function BlogDetail() {
 
                         <div className="space-y-4 text-slate-300 text-sm sm:text-base leading-relaxed font-normal">
                           {ch.paragraphs.map((p, pIdx) => (
-                            <p key={pIdx} className="whitespace-pre-line">
-                              {p}
-                            </p>
+                            <div key={pIdx}>
+                              {renderFormattedParagraph(p)}
+                            </div>
                           ))}
                         </div>
 
@@ -625,7 +686,7 @@ export default function BlogDetail() {
                                 </>
                               )}
                             </div>
-                            <p>{ch.callout.content}</p>
+                            <div>{renderFormattedText(ch.callout.content)}</div>
                           </div>
                         )}
                       </div>
@@ -634,20 +695,43 @@ export default function BlogDetail() {
                       <div className="md:col-span-5">
                         {ch.image && (
                           <div className="space-y-2">
-                            <div className="group relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 shadow-xl aspect-[4/3] max-h-[360px]">
+                            <div className="group relative rounded-2xl overflow-hidden border border-slate-800/80 bg-slate-950/90 shadow-2xl aspect-[4/3] max-h-[380px] w-full flex items-center justify-center p-2.5">
+                              {/* Ambient Blurred Background Fill (Adapts naturally to photo colors) */}
+                              <img 
+                                src={ch.image.url} 
+                                alt="" 
+                                aria-hidden="true"
+                                className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-125 pointer-events-none select-none transition-opacity duration-700 group-hover:opacity-55"
+                              />
+
+                              {/* Radiant Sunlight / Solar Flare Ray Effect */}
+                              <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-gradient-to-br from-amber-200/50 via-amber-400/25 to-transparent blur-3xl pointer-events-none z-20 mix-blend-screen transition-transform duration-700 group-hover:scale-110" />
+                              <div className="absolute top-0 right-0 w-36 h-36 bg-gradient-to-bl from-amber-100/40 via-amber-300/15 to-transparent blur-xl pointer-events-none z-20 mix-blend-screen" />
+                              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-amber-500/[0.04] to-amber-200/[0.12] pointer-events-none z-20 mix-blend-screen" />
+                              <div className="absolute top-3 right-5 w-3 h-3 bg-amber-100 rounded-full blur-[1px] opacity-80 pointer-events-none z-20" />
+                              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-slate-950/70 to-transparent pointer-events-none z-20" />
+
+                              {/* Complete Uncropped Foreground Image (Guarantees zero cut-off for spires, statues, horizons) */}
                               <img 
                                 src={ch.image.url} 
                                 alt={ch.image.altText || ch.title} 
                                 referrerPolicy="no-referrer"
                                 loading="lazy"
-                                className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
+                                className="relative z-10 max-w-full max-h-full w-auto h-auto rounded-xl object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.75)] transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                                 style={{ imageRendering: '-webkit-optimize-contrast' }}
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-2.jpg';
                                 }}
                               />
-                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent pointer-events-none" />
-                              <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-slate-950/70 backdrop-blur-md border border-slate-700/60 text-[10px] font-bold text-emerald-400">
+
+                              {/* Sunlight Ambiance Tag */}
+                              <div className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/75 backdrop-blur-md border border-amber-500/30 text-[10px] font-bold text-amber-300 shadow-lg">
+                                <Sun className="w-3 h-3 text-amber-400 fill-amber-400/30" />
+                                <span>Sunlight Flare</span>
+                              </div>
+
+                              {/* HD Quality Tag */}
+                              <div className="absolute top-3 left-3 z-20 px-2 py-0.5 rounded-full bg-slate-950/75 backdrop-blur-md border border-slate-700/60 text-[10px] font-bold text-emerald-400">
                                 HD 1080p
                               </div>
                             </div>
@@ -667,20 +751,43 @@ export default function BlogDetail() {
                       <div className="md:col-span-5 order-2 md:order-1">
                         {ch.image && (
                           <div className="space-y-2">
-                            <div className="group relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 shadow-xl aspect-[4/3] max-h-[360px]">
+                            <div className="group relative rounded-2xl overflow-hidden border border-slate-800/80 bg-slate-950/90 shadow-2xl aspect-[4/3] max-h-[380px] w-full flex items-center justify-center p-2.5">
+                              {/* Ambient Blurred Background Fill (Adapts naturally to photo colors) */}
+                              <img 
+                                src={ch.image.url} 
+                                alt="" 
+                                aria-hidden="true"
+                                className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-125 pointer-events-none select-none transition-opacity duration-700 group-hover:opacity-55"
+                              />
+
+                              {/* Radiant Sunlight / Solar Flare Ray Effect (from top-left for odd chapters) */}
+                              <div className="absolute -top-12 -left-12 w-48 h-48 rounded-full bg-gradient-to-br from-amber-200/50 via-amber-400/25 to-transparent blur-3xl pointer-events-none z-20 mix-blend-screen transition-transform duration-700 group-hover:scale-110" />
+                              <div className="absolute top-0 left-0 w-36 h-36 bg-gradient-to-br from-amber-100/40 via-amber-300/15 to-transparent blur-xl pointer-events-none z-20 mix-blend-screen" />
+                              <div className="absolute inset-0 bg-gradient-to-tl from-transparent via-amber-500/[0.04] to-amber-200/[0.12] pointer-events-none z-20 mix-blend-screen" />
+                              <div className="absolute top-3 left-5 w-3 h-3 bg-amber-100 rounded-full blur-[1px] opacity-80 pointer-events-none z-20" />
+                              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-slate-950/70 to-transparent pointer-events-none z-20" />
+
+                              {/* Complete Uncropped Foreground Image (Guarantees zero cut-off for spires, statues, horizons) */}
                               <img 
                                 src={ch.image.url} 
                                 alt={ch.image.altText || ch.title} 
                                 referrerPolicy="no-referrer"
                                 loading="lazy"
-                                className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
+                                className="relative z-10 max-w-full max-h-full w-auto h-auto rounded-xl object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.75)] transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                                 style={{ imageRendering: '-webkit-optimize-contrast' }}
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-3.jpg';
                                 }}
                               />
-                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent pointer-events-none" />
-                              <div className="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-slate-950/70 backdrop-blur-md border border-slate-700/60 text-[10px] font-bold text-cyan-400">
+
+                              {/* Sunlight Ambiance Tag */}
+                              <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/75 backdrop-blur-md border border-amber-500/30 text-[10px] font-bold text-amber-300 shadow-lg">
+                                <Sun className="w-3 h-3 text-amber-400 fill-amber-400/30" />
+                                <span>Sunlight Flare</span>
+                              </div>
+
+                              {/* HD Quality Tag */}
+                              <div className="absolute top-3 right-3 z-20 px-2 py-0.5 rounded-full bg-slate-950/75 backdrop-blur-md border border-slate-700/60 text-[10px] font-bold text-cyan-400">
                                 HD 1080p
                               </div>
                             </div>
@@ -701,9 +808,9 @@ export default function BlogDetail() {
 
                         <div className="space-y-4 text-slate-300 text-sm sm:text-base leading-relaxed font-normal">
                           {ch.paragraphs.map((p, pIdx) => (
-                            <p key={pIdx} className="whitespace-pre-line">
-                              {p}
-                            </p>
+                            <div key={pIdx}>
+                              {renderFormattedParagraph(p)}
+                            </div>
                           ))}
                         </div>
 
@@ -734,7 +841,7 @@ export default function BlogDetail() {
                                 </>
                               )}
                             </div>
-                            <p>{ch.callout.content}</p>
+                            <div>{renderFormattedText(ch.callout.content)}</div>
                           </div>
                         )}
                       </div>
