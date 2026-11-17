@@ -65,8 +65,15 @@ export default function Blogs() {
 
         if (isMounted) {
           let baseList = FALLBACK_BLOGS;
-          if (resArticles.status === 'fulfilled' && resArticles.value?.data) {
-            baseList = resArticles.value.data;
+          if (resArticles.status === 'fulfilled' && Array.isArray(resArticles.value?.data) && resArticles.value.data.length > 0) {
+            const backendMap = new Map(resArticles.value.data.map((a: BlogArticle) => [a.slug, a]));
+            const merged = [...resArticles.value.data];
+            for (const fallback of FALLBACK_BLOGS) {
+              if (!backendMap.has(fallback.slug)) {
+                merged.push(fallback);
+              }
+            }
+            baseList = merged;
           }
 
           let filtered = baseList;
@@ -86,9 +93,11 @@ export default function Blogs() {
           }
           setArticles(filtered);
 
-          if (resCategories.status === 'fulfilled' && resCategories.value?.data) {
-            setCategories(resCategories.value.data);
-          }
+          const backendCats = (resCategories.status === 'fulfilled' && Array.isArray(resCategories.value?.data))
+            ? resCategories.value.data
+            : [];
+          const allCatsSet = new Set(['All', ...BLOG_CATEGORIES, ...backendCats]);
+          setCategories(Array.from(allCatsSet));
         }
       } catch (err) {
         console.warn('Using fallback blog articles:', err);
