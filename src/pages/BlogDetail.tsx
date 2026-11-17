@@ -48,19 +48,29 @@ interface StoryChapter {
   };
 }
 
-// Helper to parse **bold** text and strip asterisks into styled strong elements
+// Helper to parse **bold** text and *italic* text and strip asterisks into styled strong/em elements
 function renderFormattedText(text: string) {
-  const parts = text.split(/(\*\*[^*]+?\*\*)/g);
+  const parts = text.split(/(\*\*[^*]+?\*\*|\*[^*]+?\*)/g);
   return parts.map((part, idx) => {
     if (part.startsWith('**') && part.endsWith('**')) {
-      const inner = part.slice(2, -2);
+      const inner = part.slice(2, -2).trim();
       return (
         <strong key={idx} className="font-bold text-white tracking-wide">
           {inner}
         </strong>
       );
     }
-    return <span key={idx}>{part}</span>;
+    if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+      const inner = part.slice(1, -1).trim();
+      return (
+        <em key={idx} className="italic text-slate-200">
+          {inner}
+        </em>
+      );
+    }
+    // Clean any stray dangling double asterisks from unclosed or boundary markdown
+    const cleaned = part.replace(/\*\*/g, '');
+    return <span key={idx}>{cleaned}</span>;
   });
 }
 
@@ -73,12 +83,16 @@ function renderFormattedParagraph(paragraph: string) {
         const trimmed = line.trim();
         if (!trimmed) return null;
 
-        // Subheadings like **1. Nearest Railway Station & Key Trains**:
-        const isSubheading = /^\*\*\d+\..*\*\*[:]?$/.test(trimmed) || (/^\d+\.\s+[A-Za-z]/.test(trimmed) && trimmed.length < 80);
+        // Subheadings like **1. Nearest Railway Station & Key Trains**: or 1. Nearest Railway Station & Key Trains:
+        const cleanForCheck = trimmed.replace(/\*\*/g, '').trim();
+        const isSubheading =
+          (/^\d+\.\s+[A-Za-z]/.test(cleanForCheck) && cleanForCheck.length < 90) ||
+          /^\*\*.+\*\*[:]?$/.test(trimmed);
+
         if (isSubheading) {
-          const cleanSubheading = trimmed.replace(/^\*\*|\*\*[:]?$/g, '').replace(/:$/, '');
+          const cleanSubheading = cleanForCheck.replace(/:$/, '').trim();
           return (
-            <h4 key={lineIdx} className="text-sm sm:text-base font-bold text-emerald-400 pt-2 pb-0.5 tracking-tight flex items-center gap-2">
+            <h4 key={lineIdx} className="text-sm sm:text-base font-bold text-emerald-400 pt-3 pb-1 tracking-tight flex items-center gap-2">
               <span className="w-1.5 h-3.5 bg-emerald-400 rounded-full inline-block shrink-0 shadow-sm shadow-emerald-400/50" />
               <span>{cleanSubheading}</span>
             </h4>
@@ -684,7 +698,7 @@ export default function BlogDetail() {
                                 </>
                               )}
                             </div>
-                            <div>{renderFormattedText(ch.callout.content)}</div>
+                            <div>{renderFormattedParagraph(ch.callout.content)}</div>
                           </div>
                         )}
                       </div>
@@ -792,7 +806,7 @@ export default function BlogDetail() {
                                 </>
                               )}
                             </div>
-                            <div>{renderFormattedText(ch.callout.content)}</div>
+                            <div>{renderFormattedParagraph(ch.callout.content)}</div>
                           </div>
                         )}
                       </div>
