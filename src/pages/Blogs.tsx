@@ -245,8 +245,8 @@ export default function Blogs() {
 
                   {/* Photo Resolution Badge */}
                   <div className="absolute top-4 right-4 hidden sm:block z-10">
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold font-mono tracking-wider bg-slate-950/80 text-slate-300 border border-slate-700/60 backdrop-blur-md">
-                      HD 1080p
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold font-mono tracking-wider bg-slate-950/80 text-emerald-400 border border-slate-700/60 backdrop-blur-md">
+                      4K Ultra HD
                     </span>
                   </div>
                 </div>

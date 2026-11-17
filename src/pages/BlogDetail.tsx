@@ -1,22 +1,22 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Clock, 
-  Calendar, 
-  Share2, 
-  Sparkles, 
-  Lightbulb, 
-  Compass, 
-  Train, 
-  Check, 
-  ExternalLink, 
-  ChevronRight, 
-  BookOpen, 
-  Route, 
-  Zap, 
-  Shield, 
-  Layers, 
+import {
+  ArrowLeft,
+  Clock,
+  Calendar,
+  Share2,
+  Sparkles,
+  Lightbulb,
+  Compass,
+  Train,
+  Check,
+  ExternalLink,
+  ChevronRight,
+  BookOpen,
+  Route,
+  Zap,
+  Shield,
+  Layers,
   Award,
   Bookmark,
   Bot,
@@ -73,6 +73,18 @@ function renderFormattedParagraph(paragraph: string) {
         const trimmed = line.trim();
         if (!trimmed) return null;
 
+        // Subheadings like **1. Nearest Railway Station & Key Trains**:
+        const isSubheading = /^\*\*\d+\..*\*\*[:]?$/.test(trimmed) || (/^\d+\.\s+[A-Za-z]/.test(trimmed) && trimmed.length < 80);
+        if (isSubheading) {
+          const cleanSubheading = trimmed.replace(/^\*\*|\*\*[:]?$/g, '').replace(/:$/, '');
+          return (
+            <h4 key={lineIdx} className="text-sm sm:text-base font-bold text-emerald-400 pt-2 pb-0.5 tracking-tight flex items-center gap-2">
+              <span className="w-1.5 h-3.5 bg-emerald-400 rounded-full inline-block shrink-0 shadow-sm shadow-emerald-400/50" />
+              <span>{cleanSubheading}</span>
+            </h4>
+          );
+        }
+
         const isBullet = trimmed.startsWith('- ') || trimmed.startsWith('• ') || trimmed.startsWith('* ');
         const cleanLine = isBullet ? trimmed.replace(/^[-•*]\s+/, '') : trimmed;
 
@@ -88,7 +100,7 @@ function renderFormattedParagraph(paragraph: string) {
         }
 
         return (
-          <p key={lineIdx} className="leading-relaxed text-sm sm:text-base">
+          <p key={lineIdx} className="leading-relaxed text-sm sm:text-base text-slate-300">
             {renderFormattedText(trimmed)}
           </p>
         );
@@ -375,7 +387,7 @@ export default function BlogDetail() {
         title: article.title,
         text: article.subtitle,
         url: url
-      }).catch(() => {});
+      }).catch(() => { });
     } else {
       navigator.clipboard.writeText(url);
       setCopied(true);
@@ -411,7 +423,7 @@ export default function BlogDetail() {
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4 text-center">
         <h2 className="text-xl font-bold text-white mb-2">Story Not Found</h2>
         <p className="text-xs text-slate-400 mb-4 max-w-sm">The article you are looking for may have been moved or archived.</p>
-        <button 
+        <button
           onClick={() => navigate('/blogs')}
           className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition-colors"
         >
@@ -425,7 +437,7 @@ export default function BlogDetail() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 pb-24 pt-4 px-4 sm:px-6 lg:px-8 selection:bg-emerald-500/30">
-      
+
       {/* Mobile Top Sticky Railway Progress Track */}
       <div className="lg:hidden sticky top-14 z-30 -mx-4 px-4 py-2 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 flex items-center justify-between gap-3 shadow-lg">
         <div className="flex items-center gap-2 overflow-hidden">
@@ -441,11 +453,11 @@ export default function BlogDetail() {
       </div>
 
       <article className="max-w-6xl mx-auto space-y-10">
-        
+
         {/* Top Navigation Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
           <div className="flex items-center gap-2 text-xs text-slate-400">
-            <button 
+            <button
               onClick={() => navigate('/blogs')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer font-medium"
             >
@@ -459,11 +471,10 @@ export default function BlogDetail() {
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <button
               onClick={handleToggleSave}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
-                isSaved
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${isSaved
                   ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
                   : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white'
-              }`}
+                }`}
               title={isSaved ? 'Remove from Saved' : 'Save for Offline Journey'}
             >
               <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-amber-400 text-amber-400' : ''}`} />
@@ -525,8 +536,8 @@ export default function BlogDetail() {
 
         {/* Crystal-Clear Enhanced Main Cover Image */}
         <div className="relative w-full rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 aspect-[16/9] sm:aspect-[21/9] group">
-          <img 
-            src={article.coverImage} 
+          <img
+            src={article.coverImage}
             alt={article.title}
             referrerPolicy="no-referrer"
             className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
@@ -581,15 +592,13 @@ export default function BlogDetail() {
                     key={ch.id}
                     type="button"
                     onClick={() => scrollToChapter(ch.id)}
-                    className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-semibold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer shrink-0 ${
-                      isActive
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-semibold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer shrink-0 ${isActive
                         ? 'bg-emerald-500/15 border-emerald-500/60 text-emerald-300 ring-2 ring-emerald-500/25 shadow-lg shadow-emerald-950/50 -translate-y-0.5'
                         : 'bg-slate-900/90 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
-                    }`}
+                      }`}
                   >
-                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                      isActive ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-400'
-                    }`}>
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${isActive ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+                      }`}>
                       {idx + 1}
                     </span>
                     <span className="truncate max-w-[120px] sm:max-w-[170px]">
@@ -609,14 +618,13 @@ export default function BlogDetail() {
             const isActive = activeChapterIndex === idx;
 
             return (
-              <section 
-                key={ch.id} 
+              <section
+                key={ch.id}
                 id={ch.id}
-                className={`scroll-mt-28 p-5 sm:p-8 md:p-10 rounded-2xl sm:rounded-3xl border transition-all duration-300 backdrop-blur-md shadow-2xl ${
-                  isActive 
-                    ? 'border-emerald-500/50 bg-gradient-to-br from-slate-900 via-slate-900/90 to-slate-950 shadow-emerald-950/20 ring-1 ring-emerald-500/30' 
+                className={`scroll-mt-28 p-5 sm:p-8 md:p-10 rounded-2xl sm:rounded-3xl border transition-all duration-300 backdrop-blur-md shadow-2xl ${isActive
+                    ? 'border-emerald-500/50 bg-gradient-to-br from-slate-900 via-slate-900/90 to-slate-950 shadow-emerald-950/20 ring-1 ring-emerald-500/30'
                     : 'border-slate-800/80 bg-gradient-to-br from-slate-900/80 via-slate-950/70 to-slate-900/40 hover:border-slate-700/80'
-                }`}
+                  }`}
               >
                 {/* Chapter Header Badge */}
                 <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
@@ -632,7 +640,7 @@ export default function BlogDetail() {
 
                 {/* Alternating Zig-Zag Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-stretch">
-                  
+
                   {/* EVEN CHAPTER: Text on Left (7 cols), Image on Right (5 cols) */}
                   {isEven ? (
                     <>
@@ -652,13 +660,12 @@ export default function BlogDetail() {
 
                         {/* Callout Box if present */}
                         {ch.callout && (
-                          <div className={`mt-5 p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed ${
-                            ch.callout.type === 'tip'
+                          <div className={`mt-5 p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed ${ch.callout.type === 'tip'
                               ? 'border-amber-500/30 bg-amber-500/10 text-amber-100'
                               : ch.callout.type === 'trivia'
-                              ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-100'
-                              : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100 italic'
-                          }`}>
+                                ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-100'
+                                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100 italic'
+                            }`}>
                             <div className="flex items-center gap-1.5 font-bold mb-1 uppercase tracking-wider text-xs">
                               {ch.callout.type === 'tip' ? (
                                 <>
@@ -687,9 +694,9 @@ export default function BlogDetail() {
                         {ch.image && (
                           <div className="space-y-2.5 w-full h-full flex flex-col justify-center">
                             <div className="group relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 shadow-2xl h-[320px] sm:h-[400px] md:h-full md:min-h-[440px] w-full">
-                              <img 
-                                src={ch.image.url} 
-                                alt={ch.image.altText || ch.title} 
+                              <img
+                                src={ch.image.url}
+                                alt={ch.image.altText || ch.title}
                                 referrerPolicy="no-referrer"
                                 loading="lazy"
                                 className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
@@ -699,9 +706,9 @@ export default function BlogDetail() {
                               />
                               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
 
-                              <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-[10px] font-bold text-emerald-400 shadow-md">
-                                HD 1080p
-                              </div>
+                                <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-[10px] font-bold text-emerald-400 shadow-md">
+                                  4K Ultra HD
+                                </div>
                             </div>
                             {ch.image.caption && (
                               <p className="text-center text-xs text-slate-400 italic px-2">
@@ -720,9 +727,9 @@ export default function BlogDetail() {
                         {ch.image && (
                           <div className="space-y-2.5 w-full h-full flex flex-col justify-center">
                             <div className="group relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 shadow-2xl h-[320px] sm:h-[400px] md:h-full md:min-h-[440px] w-full">
-                              <img 
-                                src={ch.image.url} 
-                                alt={ch.image.altText || ch.title} 
+                              <img
+                                src={ch.image.url}
+                                alt={ch.image.altText || ch.title}
                                 referrerPolicy="no-referrer"
                                 loading="lazy"
                                 className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
@@ -732,9 +739,9 @@ export default function BlogDetail() {
                               />
                               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
 
-                              <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-[10px] font-bold text-cyan-400 shadow-md">
-                                HD 1080p
-                              </div>
+                                <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-[10px] font-bold text-cyan-400 shadow-md">
+                                  4K Ultra HD
+                                </div>
                             </div>
                             {ch.image.caption && (
                               <p className="text-center text-xs text-slate-400 italic px-2">
@@ -761,13 +768,12 @@ export default function BlogDetail() {
 
                         {/* Callout Box if present */}
                         {ch.callout && (
-                          <div className={`mt-5 p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed ${
-                            ch.callout.type === 'tip'
+                          <div className={`mt-5 p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed ${ch.callout.type === 'tip'
                               ? 'border-amber-500/30 bg-amber-500/10 text-amber-100'
                               : ch.callout.type === 'trivia'
-                              ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-100'
-                              : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100 italic'
-                          }`}>
+                                ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-100'
+                                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100 italic'
+                            }`}>
                             <div className="flex items-center gap-1.5 font-bold mb-1 uppercase tracking-wider text-xs">
                               {ch.callout.type === 'tip' ? (
                                 <>
@@ -812,7 +818,7 @@ export default function BlogDetail() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {article.relatedTrains.map((tr, i) => (
-                <div 
+                <div
                   key={i}
                   className="p-3.5 rounded-xl border border-slate-800 bg-slate-900/90 hover:border-emerald-500/40 transition-all flex flex-col justify-between"
                 >
@@ -841,7 +847,7 @@ export default function BlogDetail() {
         <div className="pt-2 flex flex-wrap items-center gap-2">
           <span className="text-xs text-slate-500 font-medium">Topic Tags:</span>
           {article.tags.map((tag, i) => (
-            <span 
+            <span
               key={i}
               className="text-xs bg-slate-900 text-slate-300 px-3 py-1 rounded-lg border border-slate-800 hover:border-slate-700 transition-colors"
             >
@@ -891,7 +897,7 @@ export default function BlogDetail() {
               <BookOpen className="w-5 h-5 text-emerald-400" />
               <span>More Rail Stories</span>
             </h3>
-            <button 
+            <button
               onClick={() => navigate('/blogs')}
               className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
             >
@@ -907,9 +913,9 @@ export default function BlogDetail() {
                 className="group p-3 rounded-2xl border border-slate-800 bg-slate-900/60 hover:bg-slate-900 hover:border-slate-700 transition-all cursor-pointer space-y-2.5"
               >
                 <div className="h-32 rounded-xl overflow-hidden bg-slate-800 relative">
-                  <img 
-                    src={item.coverImage} 
-                    alt={item.title} 
+                  <img
+                    src={item.coverImage}
+                    alt={item.title}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     loading="lazy"
