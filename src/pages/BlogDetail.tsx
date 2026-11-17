@@ -640,7 +640,7 @@ export default function BlogDetail() {
                                 alt={ch.image.altText || ch.title} 
                                 referrerPolicy="no-referrer"
                                 loading="lazy"
-                                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                                className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
                                 style={{ imageRendering: '-webkit-optimize-contrast' }}
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-2.jpg';
@@ -673,7 +673,7 @@ export default function BlogDetail() {
                                 alt={ch.image.altText || ch.title} 
                                 referrerPolicy="no-referrer"
                                 loading="lazy"
-                                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                                className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
                                 style={{ imageRendering: '-webkit-optimize-contrast' }}
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-3.jpg';
