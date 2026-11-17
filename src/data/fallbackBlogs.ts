@@ -1,7 +1,12 @@
 import type { BlogArticle } from '../types';
+import { HIMACHAL_STORIES } from './himachalStories';
 
 export const BLOG_CATEGORIES: string[] = [
   'All',
+  'Hill Stations & Valleys',
+  'High Altitude & Adventure Valleys',
+  'Hidden & Offbeat Gems',
+  'Spiritual & Sacred Heritage',
   'Scenic Routes',
   'Train Tech',
   'Heritage & History',
@@ -10,6 +15,7 @@ export const BLOG_CATEGORIES: string[] = [
 ];
 
 export const FALLBACK_BLOGS: BlogArticle[] = [
+  ...HIMACHAL_STORIES,
   {
     "id": "1",
     "slug": "konkan-railway-scenic-odyssey",
