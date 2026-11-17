@@ -224,7 +224,6 @@ export default function Blogs() {
                     alt={currentFeatured.title} 
                     referrerPolicy="no-referrer"
                     className="h-full w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
-                    style={{ imageRendering: '-webkit-optimize-contrast' }}
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg';
                     }}
@@ -559,7 +558,6 @@ export default function Blogs() {
                       alt={article.title}
                       referrerPolicy="no-referrer"
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      style={{ imageRendering: '-webkit-optimize-contrast' }}
                       loading="lazy"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg';

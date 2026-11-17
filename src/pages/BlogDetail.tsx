@@ -530,7 +530,6 @@ export default function BlogDetail() {
             alt={article.title}
             referrerPolicy="no-referrer"
             className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-            style={{ imageRendering: '-webkit-optimize-contrast' }}
             onError={(e) => {
               (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg';
             }}
@@ -694,7 +693,6 @@ export default function BlogDetail() {
                                 referrerPolicy="no-referrer"
                                 loading="lazy"
                                 className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                                style={{ imageRendering: '-webkit-optimize-contrast' }}
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-2.jpg';
                                 }}
@@ -728,7 +726,6 @@ export default function BlogDetail() {
                                 referrerPolicy="no-referrer"
                                 loading="lazy"
                                 className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                                style={{ imageRendering: '-webkit-optimize-contrast' }}
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-3.jpg';
                                 }}
@@ -915,7 +912,6 @@ export default function BlogDetail() {
                     alt={item.title} 
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    style={{ imageRendering: '-webkit-optimize-contrast' }}
                     loading="lazy"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-1.jpg';
