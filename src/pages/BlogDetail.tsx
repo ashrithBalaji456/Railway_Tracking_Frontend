@@ -359,14 +359,39 @@ export default function BlogDetail() {
   };
 
   const handleAskRailAi = (prompt: string) => {
-    window.dispatchEvent(new CustomEvent('rail-ai:open', { detail: { prompt } }));
+    const primaryTrain = article?.relatedTrains?.[0]?.trainNumber || '';
+    const destName = article?.title.split(':')[0].trim();
+    window.dispatchEvent(new CustomEvent('rail-ai:open', {
+      detail: {
+        prompt,
+        trainNumber: primaryTrain,
+        context: {
+          destination: destName,
+          title: article?.title,
+          relatedTrains: article?.relatedTrains,
+          quickFacts: article?.quickFacts
+        }
+      }
+    }));
   };
 
   const getAiPrompts = (art: BlogArticle): string[] => {
+    const destName = art.title.split(':')[0].trim();
+    const primaryTrain = art.relatedTrains?.[0];
+    const railheadFact = art.quickFacts?.find(f => f.label.toLowerCase().includes('railhead'));
+    const railhead = railheadFact?.value || 'nearest railhead';
+
     switch (art.slug) {
+      case 'shimla-queen-of-hills':
+      case 'kalka-shimla-unesco-toy-train':
+        return [
+          'Which trains run from Kalka to Shimla on the UNESCO toy train line?',
+          'What are the timings and booking rules for the Himalayan Queen and Vistadome?',
+          'How to reach Shimla by train from Delhi and Chandigarh?'
+        ];
       case 'konkan-railway-scenic-odyssey':
         return [
-          'What is the best month to see Dudhsagar Falls by train?',
+          'What is the best month to see Dudhsagar Falls by train on Konkan Railway?',
           'Which side has Arabian Sea views on Mandovi Express from Mumbai to Goa?',
           'Why does Indian Railways operate a special Monsoon Timetable on Konkan Railway?'
         ];
@@ -388,12 +413,6 @@ export default function BlogDetail() {
           'Why is CSMT designated as a UNESCO World Heritage site?',
           'How many platforms are there at CSMT Mumbai?'
         ];
-      case 'kalka-shimla-unesco-toy-train':
-        return [
-          'How can I book the Him Darshan Vistadome toy train on IRCTC?',
-          'What is the story of Colonel Barog and Tunnel 33 on Kalka-Shimla line?',
-          'What is the travel duration from Kalka to Shimla by toy train?'
-        ];
       case 'nilgiri-mountain-railway-rack-pinion':
         return [
           'Why does the steam engine push the train from behind on Nilgiri Mountain Railway?',
@@ -414,9 +433,11 @@ export default function BlogDetail() {
         ];
       default:
         return [
-          `Tell me more about the history of ${art.title}`,
-          `Which trains run on this route in India?`,
-          `What are the best travel tips for this journey?`
+          primaryTrain
+            ? `Which trains connect to ${destName} via ${primaryTrain.trainName} (${primaryTrain.trainNumber})?`
+            : `Which trains connect to ${destName} via ${railhead}?`,
+          `How to plan a train journey to ${destName} from Delhi and major cities?`,
+          `What are the best mountain travel tips and railhead routes for ${destName}?`
         ];
     }
   };

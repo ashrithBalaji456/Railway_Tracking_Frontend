@@ -111,6 +111,8 @@ export default function RailAiWidget() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [storyContext, setStoryContext] = useState<any>(null);
+  const [customTrainNumber, setCustomTrainNumber] = useState<string>('');
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -152,10 +154,14 @@ export default function RailAiWidget() {
   useEffect(() => {
     const handleOpenWithPrompt = (e: any) => {
       const prompt = e.detail?.prompt;
+      const train = e.detail?.trainNumber;
+      const ctx = e.detail?.context;
+      if (train) setCustomTrainNumber(train);
+      if (ctx) setStoryContext(ctx);
       setIsOpen(true);
       if (prompt) {
         setTimeout(() => {
-          handleSendMessage(prompt);
+          handleSendMessage(prompt, train, ctx);
         }, 150);
       }
     };
@@ -163,8 +169,9 @@ export default function RailAiWidget() {
     return () => window.removeEventListener('rail-ai:open' as any, handleOpenWithPrompt);
   }, []);
 
-  const resolveLocalFallback = (query: string): string | null => {
+  const resolveLocalFallback = (query: string, ctxOverride?: any): string | null => {
     const q = query.toLowerCase();
+    const ctx = ctxOverride || storyContext;
 
     // 1. Food / Delicacy / Refreshment inquiries
     if (q.includes('food') || q.includes('specialt') || q.includes('stall') || q.includes('snack') || q.includes('delicac') || q.includes('eat')) {
@@ -179,7 +186,51 @@ export default function RailAiWidget() {
         `• **Recommended Platform Halt:** ${food.recommendedHaltMin} minutes`;
     }
 
-    // 2. Reservation Chart Preparation Timings
+    // 2. Mountain Railways, Story Corridors & Train Connectivity inquiries
+    if (
+      q.includes('train') ||
+      q.includes('route') ||
+      q.includes('connect') ||
+      q.includes('reach') ||
+      q.includes('how to go') ||
+      q.includes('schedule') ||
+      q.includes('halt') ||
+      q.includes('vistadome')
+    ) {
+      // Check for Shimla / Kalka Toy Train route
+      if (
+        q.includes('shimla') ||
+        q.includes('kalka') ||
+        q.includes('toy train') ||
+        q.includes('himalayan queen') ||
+        ctx?.destination?.toLowerCase().includes('shimla') ||
+        (ctx && q.includes('this route'))
+      ) {
+        return `🏔️ **Key Express & Heritage Trains for Shimla & Kalka Corridor:**\n\n` +
+          `• **52453 Himalayan Queen (UNESCO Toy Train):** Kalka (KLK) ➔ Shimla (SML)\n` +
+          `  *Departs:* 05:45 AM | *Arrives:* 11:05 AM (5h 20m) traversing 102 tunnels & 864 arched stone viaducts.\n\n` +
+          `• **52459 Him Darshan Express (Vistadome):** Kalka (KLK) ➔ Shimla (SML)\n` +
+          `  *Departs:* 07:00 AM | *Arrives:* 12:30 PM. Premium panoramic all-glass ceilings for 360° mountain vistas.\n\n` +
+          `• **12011 Kalka Shatabdi Express:** New Delhi (NDLS) ➔ Kalka (KLK)\n` +
+          `  *Departs NDLS:* 07:40 AM | *Arrives KLK:* 11:45 AM (Fast 4-hour executive connectivity connecting directly with connecting hill services).\n\n` +
+          `• **22447 Vande Bharat Express:** New Delhi (NDLS) ➔ Chandigarh (CDG) / Amb Andaura\n` +
+          `  *Departs NDLS:* 05:50 AM | *Arrives CDG:* 08:40 AM (High-speed 130 km/h semi-high speed corridor).\n\n` +
+          `💡 **Traveler Tip:** To reach Shimla from anywhere in India, book a morning Shatabdi or Vande Bharat to **Kalka (KLK)** or **Chandigarh (CDG)**. From Kalka Platform 3, board the historic mountain Toy Train for the final unforgettable ascent!`;
+      }
+
+      // If active story has featured trains, return their curated connectivity:
+      if (ctx?.relatedTrains && ctx.relatedTrains.length > 0) {
+        const dest = ctx.destination || 'this destination';
+        const trainBullets = ctx.relatedTrains.map((t: any) =>
+          `• **${t.trainNumber} - ${t.trainName}:** ${t.route}`
+        ).join('\n');
+        return `🚆 **Recommended Trains for ${dest}:**\n\n` +
+          `${trainBullets}\n\n` +
+          `💡 **Travel Guidance:** You can track live running status, platform halts, and calculate ticket fares for each of these trains directly in this app using the "Track Train" buttons featured in the story!`;
+      }
+    }
+
+    // 3. Reservation Chart Preparation Timings
     if (q.includes('chart') || q.includes('reservation chart') || q.includes('charting')) {
       return `📋 **Official Indian Railways Reservation Chart Timings:**\n\n` +
         `• **Trains departing after 2:00 PM or before 5:00 AM:** The first reservation chart is prepared **10 hours** before the scheduled departure from the originating station.\n` +
@@ -188,7 +239,7 @@ export default function RailAiWidget() {
         `• Any vacant berths after the first chart are available for booking via Current Reservation counters or online on IRCTC up until 30 minutes before departure.`;
     }
 
-    // 3. Station Amenities / Facilities
+    // 4. Station Amenities / Facilities
     if (q.includes('amenit') || q.includes('facilit') || q.includes('lounge') || q.includes('cloak') || q.includes('wifi') || q.includes('wheelchair')) {
       return `🏛️ **Indian Railways Key Platform Amenities & Facilities:**\n\n` +
         `• **IRCTC Executive Lounges:** Air-conditioned luxury waiting lounges with recliners, buffet dining, shower pods, and Wi-Fi (₹150-₹200 for 2 hrs) on Platform 1.\n` +
@@ -202,7 +253,7 @@ export default function RailAiWidget() {
     return null;
   };
 
-  const handleSendMessage = async (textToSend: string) => {
+  const handleSendMessage = async (textToSend: string, trainOverride?: string, ctxOverride?: any) => {
     if (!textToSend.trim() || loading) return;
 
     setError('');
@@ -211,14 +262,31 @@ export default function RailAiWidget() {
     setInput('');
     setLoading(true);
 
+    const effectiveTrain = trainOverride || customTrainNumber || trainCtx;
+    const effectiveCtx = ctxOverride || storyContext;
+
+    // Enforce destination context into prompt
+    const enrichedPrompt = (effectiveCtx && !textToSend.toLowerCase().includes(effectiveCtx.destination?.toLowerCase()))
+      ? `[Travel Context: Destination is "${effectiveCtx.destination}" from "${effectiveCtx.title}"]. ${textToSend}`
+      : textToSend;
+
     try {
       const response: any = await api.post('/api/v1/railai/chat', {
-        prompt: textToSend,
-        trainNumber: trainCtx
+        prompt: enrichedPrompt,
+        trainNumber: effectiveTrain
       });
 
       if (response && response.success && response.data) {
         const data: RailAiResponseData = response.data;
+        // Intercept unhelpful rule-based fallback response if Gemini is in fallback mode
+        if (data.response && (data.response.includes('Please select a train first') || data.response.includes('provide a valid train number'))) {
+          const smartFallback = resolveLocalFallback(textToSend, effectiveCtx);
+          if (smartFallback) {
+            data.response = smartFallback;
+            data.toolsUsed = ['Himalayan Rail Corridor & Heritage Knowledgebase'];
+          }
+        }
+
         setMessages((prev) => [...prev, {
           sender: 'ai',
           text: data.response,
@@ -227,12 +295,12 @@ export default function RailAiWidget() {
           responseType: data.responseType
         }]);
       } else {
-        const fallbackText = resolveLocalFallback(textToSend);
+        const fallbackText = resolveLocalFallback(textToSend, effectiveCtx);
         if (fallbackText) {
           setMessages((prev) => [...prev, {
             sender: 'ai',
             text: fallbackText,
-            toolsUsed: ['Local Station Gastronomy & Amenities Knowledgebase'],
+            toolsUsed: ['Himalayan Rail Corridor & Heritage Knowledgebase'],
             confidence: 'HIGH',
             responseType: 'KNOWLEDGE_BASE'
           }]);
@@ -244,7 +312,7 @@ export default function RailAiWidget() {
         }
       }
     } catch (err: any) {
-      const fallbackText = resolveLocalFallback(textToSend);
+      const fallbackText = resolveLocalFallback(textToSend, effectiveCtx);
       if (fallbackText) {
         setMessages((prev) => [...prev, {
           sender: 'ai',
