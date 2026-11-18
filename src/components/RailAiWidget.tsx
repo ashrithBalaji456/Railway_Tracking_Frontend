@@ -195,7 +195,11 @@ export default function RailAiWidget() {
       q.includes('how to go') ||
       q.includes('schedule') ||
       q.includes('halt') ||
-      q.includes('vistadome')
+      q.includes('vistadome') ||
+      q.includes('timing') ||
+      q.includes('booking') ||
+      q.includes('ticket') ||
+      q.includes('himalayan queen')
     ) {
       // Check for Shimla / Kalka Toy Train route
       if (
@@ -203,9 +207,27 @@ export default function RailAiWidget() {
         q.includes('kalka') ||
         q.includes('toy train') ||
         q.includes('himalayan queen') ||
+        q.includes('vistadome') ||
         ctx?.destination?.toLowerCase().includes('shimla') ||
         (ctx && q.includes('this route'))
       ) {
+        // Specific detailed timings and booking rules for Himalayan Queen & Vistadome
+        if (q.includes('timing') || q.includes('rule') || q.includes('book') || q.includes('ticket') || q.includes('fare') || q.includes('vistadome')) {
+          return `🎫 **Timings & IRCTC Booking Rules for Himalayan Queen & Vistadome:**\n\n` +
+            `• **52453 Himalayan Queen (UNESCO Toy Train):**\n` +
+            `  * **Kalka (KLK) Departure:** 05:45 AM | **Shimla (SML) Arrival:** 11:05 AM (5h 20m)\n` +
+            `  * **Return (52454):** Departs Shimla at 18:30 PM, arrives Kalka at 23:30 PM.\n` +
+            `  * **Classes & Fare:** Chair Car (CC) ~₹470. Features cushioned bucket seats with oversized observation windows across 102 tunnels.\n\n` +
+            `• **52459 Him Darshan Express (All-Vistadome):**\n` +
+            `  * **Kalka (KLK) Departure:** 07:00 AM | **Shimla (SML) Arrival:** 12:30 PM (5h 30m)\n` +
+            `  * **Return (52460):** Departs Shimla at 15:50 PM, arrives Kalka at 21:15 PM.\n` +
+            `  * **Classes & Fare:** Executive Vistadome (EV) ~₹630. Features all-glass ceilings, panoramic window blinds, and reversible swivel seats.\n\n` +
+            `📋 **Official IRCTC Booking Rules:**\n` +
+            `• **Advance Reservation Period (ARP):** Opens **30 days** in advance at 08:00 AM on IRCTC (unlike regular broad-gauge 60-day ARP).\n` +
+            `• **Peak Season Rush:** Tickets for May-June (summer) and Dec-Jan (snowfall) sell out within minutes of opening.\n` +
+            `• **Best Panoramic Seats:** Window seats on the **Right Side** of ascending trains offer the most dramatic valley vistas!`;
+        }
+
         return `🏔️ **Key Express & Heritage Trains for Shimla & Kalka Corridor:**\n\n` +
           `• **52453 Himalayan Queen (UNESCO Toy Train):** Kalka (KLK) ➔ Shimla (SML)\n` +
           `  *Departs:* 05:45 AM | *Arrives:* 11:05 AM (5h 20m) traversing 102 tunnels & 864 arched stone viaducts.\n\n` +
@@ -278,8 +300,15 @@ export default function RailAiWidget() {
 
       if (response && response.success && response.data) {
         const data: RailAiResponseData = response.data;
-        // Intercept unhelpful rule-based fallback response if Gemini is in fallback mode
-        if (data.response && (data.response.includes('Please select a train first') || data.response.includes('provide a valid train number'))) {
+        // Intercept unhelpful rule-based fallback response whenever backend operates in rules/fallback mode
+        if (
+          data.confidence === 'FALLBACK' ||
+          data.responseType === 'FALLBACK' ||
+          data.response?.includes('fallback rules-based mode') ||
+          data.response?.includes('Please select a train first') ||
+          data.response?.includes('provide a valid train number') ||
+          data.response?.includes('GEMINI_API_KEY')
+        ) {
           const smartFallback = resolveLocalFallback(textToSend, effectiveCtx);
           if (smartFallback) {
             data.response = smartFallback;
