@@ -814,28 +814,7 @@ export default function BlogDetail() {
                             (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-2.jpg';
                           }}
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-transparent pointer-events-none" />
-
-                        {/* Top-left: Docking status badge */}
-                        <div className="absolute top-3.5 left-3.5 px-3 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-slate-700/70 text-[11px] font-mono font-bold shadow-lg flex items-center gap-1.5 transition-all duration-500">
-                          {isSettled ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 text-emerald-400" />
-                              <span className="text-emerald-300">Docked from Deck</span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                              <span className="text-slate-300">Incoming from Deck...</span>
-                            </>
-                          )}
-                        </div>
-
-                        {/* Top-right: 4K Ultra HD badge */}
-                        <div className="absolute top-3.5 right-3.5 px-3 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-slate-700/70 text-[11px] font-bold text-emerald-400 shadow-lg flex items-center gap-1.5">
-                          <Sparkles className="w-3 h-3 text-emerald-400" />
-                          <span>4K Ultra HD</span>
-                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
                       </div>
                       {ch.image.caption && (
                         <p className="text-center text-xs sm:text-sm text-slate-400 italic px-2">
