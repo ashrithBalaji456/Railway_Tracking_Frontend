@@ -134,6 +134,8 @@ export default function BlogDetail() {
   // Animated Scroll Tracking
   const [scrollProgress, setScrollProgress] = useState<number>(0);
   const [activeChapterIndex, setActiveChapterIndex] = useState<number>(0);
+  const [settledChapters, setSettledChapters] = useState<Set<string>>(new Set());
+  const settledChaptersRef = useRef<Set<string>>(new Set());
   const storyContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -268,9 +270,12 @@ export default function BlogDetail() {
     return result;
   }, [article]);
 
+  // Chapters that contain milestone landmark images
+  const chaptersWithImages = useMemo(() => {
+    return chapters.filter(c => !!c.image?.url);
+  }, [chapters]);
 
-
-  // Scroll Progress and Active Milestone Tracking
+  // Scroll Progress and Active Milestone Tracking (Zero-Lag Hardware Accelerated)
   useEffect(() => {
     let ticking = false;
 
@@ -279,8 +284,10 @@ export default function BlogDetail() {
         window.requestAnimationFrame(() => {
           const windowHeight = window.innerHeight;
 
-          // Determine which milestone is currently in focus
+          // Determine which milestone is currently in focus and which have docked
           let newActiveIdx = 0;
+          const newSettled = new Set<string>();
+
           chapters.forEach((ch, idx) => {
             const el = document.getElementById(ch.id);
             if (el) {
@@ -288,9 +295,29 @@ export default function BlogDetail() {
               if (r.top <= windowHeight * 0.45) {
                 newActiveIdx = idx;
               }
+              // Milestone approaches view: landmark glides down from deck and settles
+              if (r.top <= windowHeight * 0.85) {
+                newSettled.add(ch.id);
+              }
             }
           });
           setActiveChapterIndex(newActiveIdx);
+
+          // Zero-lag threshold check: only trigger state update if settled set changed
+          const prev = settledChaptersRef.current;
+          let hasChanged = prev.size !== newSettled.size;
+          if (!hasChanged) {
+            for (const id of newSettled) {
+              if (!prev.has(id)) {
+                hasChanged = true;
+                break;
+              }
+            }
+          }
+          if (hasChanged) {
+            settledChaptersRef.current = newSettled;
+            setSettledChapters(new Set(newSettled));
+          }
 
           // Top global progress bar ratio
           const container = storyContainerRef.current;
@@ -594,6 +621,100 @@ export default function BlogDetail() {
         )}
 
         {/* ========================================================================= */}
+        {/* HERITAGE PHOTOGRAPHIC FLIGHT DECK (Option B: 3D Flying Deck)              */}
+        {/* ========================================================================= */}
+        {chaptersWithImages.length > 0 && (
+          <div className="relative rounded-2xl sm:rounded-3xl border border-slate-800/90 bg-gradient-to-br from-slate-900/95 via-slate-950 to-slate-900/80 p-4 sm:p-6 backdrop-blur-xl shadow-2xl overflow-hidden">
+            {/* Ambient background glow accents */}
+            <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-800/70">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 shrink-0">
+                  <Camera className="w-5 h-5 text-emerald-400 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-black text-white tracking-tight">
+                      Himalayan Landmark Flight Deck
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
+                      Live Deck
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Photographs rest in the deck and fly down to dock into their story milestone cards as you scroll.
+                  </p>
+                </div>
+              </div>
+
+              {/* Live Docking Status Counter */}
+              <div className="flex items-center gap-2 self-start sm:self-center bg-slate-950/90 border border-slate-800 px-3.5 py-1.5 rounded-xl text-xs font-mono shrink-0 shadow-inner">
+                <span className="text-slate-400">Docked:</span>
+                <span className="font-bold text-emerald-400">
+                  {chaptersWithImages.filter(ch => settledChapters.has(ch.id)).length} / {chaptersWithImages.length}
+                </span>
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping ml-1" />
+              </div>
+            </div>
+
+            {/* Deck Cards Carousel / Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+              {chaptersWithImages.map((ch) => {
+                const isSettled = settledChapters.has(ch.id);
+                return (
+                  <button
+                    key={ch.id}
+                    type="button"
+                    onClick={() => scrollToChapter(ch.id)}
+                    className={`group relative rounded-xl border p-2 text-left transition-all duration-500 cursor-pointer overflow-hidden ${
+                      isSettled
+                        ? 'bg-slate-950/70 border-emerald-500/40 opacity-75 hover:opacity-100 hover:border-emerald-500/80'
+                        : 'bg-slate-900/90 border-slate-700/80 shadow-lg shadow-emerald-950/30 hover:border-emerald-400/80 hover:-translate-y-1 hover:shadow-xl'
+                    }`}
+                  >
+                    {/* Thumbnail Frame */}
+                    <div className="relative aspect-video rounded-lg overflow-hidden bg-slate-950 mb-2 border border-slate-800">
+                      <img
+                        src={ch.image!.url}
+                        alt=""
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      {/* Milestone badge */}
+                      <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-slate-950/85 backdrop-blur-md border border-slate-700 text-[9px] font-mono font-bold text-slate-300">
+                        M-0{ch.chapterNumber}
+                      </div>
+
+                      {/* In Deck vs Docked Badge */}
+                      {isSettled ? (
+                        <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-emerald-950/90 border border-emerald-500/60 text-[9px] font-mono font-bold text-emerald-300 flex items-center gap-1">
+                          <Check className="w-2.5 h-2.5 text-emerald-400" />
+                          <span>Docked ↓</span>
+                        </div>
+                      ) : (
+                        <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-slate-900/90 border border-cyan-500/50 text-[9px] font-mono font-bold text-cyan-300 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                          <span>In Deck</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Milestone Title */}
+                    <p className="text-[11px] font-bold text-white truncate group-hover:text-emerald-300 transition-colors">
+                      {ch.title.replace(/^\d+\.\s*/, '')}
+                    </p>
+                    <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                      {isSettled ? 'Settled in milestone card' : 'Click to launch milestone'}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
         {/* EDITORIAL STORY CHAPTERS & MILESTONE QUICK NAVIGATION                     */}
         {/* ========================================================================= */}
 
@@ -662,42 +783,68 @@ export default function BlogDetail() {
                   {ch.title}
                 </h2>
 
-                {/* Full-Width Showcase Landmark Photograph */}
-                {ch.image && (
-                  <div className="space-y-2.5 mb-8 w-full">
-                    <div className="group relative rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl aspect-[16/9] w-full max-h-[580px]">
-                      {/* Ambient background glow from the photograph */}
-                      <img
-                        src={ch.image.url}
-                        alt=""
-                        aria-hidden="true"
-                        className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-105 pointer-events-none"
-                      />
-                      {/* Master Photograph: object-contain ensures 100% of the scene is fully visible with ZERO cropping */}
-                      <img
-                        src={ch.image.url}
-                        alt={ch.image.altText || ch.title}
-                        referrerPolicy="no-referrer"
-                        loading="lazy"
-                        className="relative w-full h-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.01]"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-2.jpg';
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-transparent pointer-events-none" />
+                {/* Full-Width Showcase Landmark Photograph with Option B Flight Transition */}
+                {ch.image && (() => {
+                  const isSettled = settledChapters.has(ch.id);
 
-                      <div className="absolute top-3.5 right-3.5 px-3 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-slate-700/70 text-[11px] font-bold text-emerald-400 shadow-lg flex items-center gap-1.5">
-                        <Sparkles className="w-3 h-3 text-emerald-400" />
-                        <span>4K Ultra HD</span>
+                  return (
+                    <div className="space-y-2.5 mb-8 w-full">
+                      <div
+                        className={`group relative rounded-2xl sm:rounded-3xl overflow-hidden border bg-slate-950 shadow-2xl aspect-[16/9] w-full max-h-[580px] transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform ${
+                          isSettled
+                            ? 'translate-y-0 scale-100 opacity-100 border-slate-700/80 shadow-emerald-950/30'
+                            : '-translate-y-8 scale-[0.97] opacity-40 border-slate-800/40 blur-[1px]'
+                        }`}
+                      >
+                        {/* Ambient background glow from the photograph */}
+                        <img
+                          src={ch.image.url}
+                          alt=""
+                          aria-hidden="true"
+                          className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-105 pointer-events-none"
+                        />
+                        {/* Master Photograph: object-contain ensures 100% of the scene is fully visible with ZERO cropping */}
+                        <img
+                          src={ch.image.url}
+                          alt={ch.image.altText || ch.title}
+                          referrerPolicy="no-referrer"
+                          loading="lazy"
+                          className="relative w-full h-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.01]"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/images/blogs/vande-bharat-evolution-future-sleeper-2.jpg';
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-transparent pointer-events-none" />
+
+                        {/* Top-left: Docking status badge */}
+                        <div className="absolute top-3.5 left-3.5 px-3 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-slate-700/70 text-[11px] font-mono font-bold shadow-lg flex items-center gap-1.5 transition-all duration-500">
+                          {isSettled ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-300">Docked from Deck</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                              <span className="text-slate-300">Incoming from Deck...</span>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Top-right: 4K Ultra HD badge */}
+                        <div className="absolute top-3.5 right-3.5 px-3 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-slate-700/70 text-[11px] font-bold text-emerald-400 shadow-lg flex items-center gap-1.5">
+                          <Sparkles className="w-3 h-3 text-emerald-400" />
+                          <span>4K Ultra HD</span>
+                        </div>
                       </div>
+                      {ch.image.caption && (
+                        <p className="text-center text-xs sm:text-sm text-slate-400 italic px-2">
+                          📸 {ch.image.caption}
+                        </p>
+                      )}
                     </div>
-                    {ch.image.caption && (
-                      <p className="text-center text-xs sm:text-sm text-slate-400 italic px-2">
-                        📸 {ch.image.caption}
-                      </p>
-                    )}
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Chapter Information */}
                 <div className="space-y-4 text-slate-300 text-sm sm:text-base leading-relaxed font-normal">
